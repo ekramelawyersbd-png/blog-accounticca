@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile record",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["email"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Professional commentary and Q&A discussion on legal and tax articles",
+      "type": "object",
+      "properties": {
+        "articleId": { "type": "string", "maxLength": 256 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 256 },
+        "authorEmail": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "maxLength": 128 },
+        "roleLabel": { "type": "string", "maxLength": 256 },
+        "organization": { "type": "string", "maxLength": 256 },
+        "statutoryRef": { "type": "string", "maxLength": 256 },
+        "topicTag": { "type": "string", "maxLength": 128 },
+        "commentType": { "type": "string", "maxLength": 64 },
+        "avatar": { "type": "string", "maxLength": 1024 },
+        "text": { "type": "string", "maxLength": 5000 },
+        "parentId": { "type": "string", "maxLength": 128 },
+        "helpfulCount": { "type": "number" },
+        "isVerifiedProfessional": { "type": "boolean" }
+      },
+      "required": ["articleId", "authorName", "text"]
+    },
+    "WorkspaceToolSigning": {
+      "title": "WorkspaceToolSigning",
+      "description": "Audit log of member tool sessions in Workspace Hub",
+      "type": "object",
+      "properties": {
+        "toolId": { "type": "string", "maxLength": 128 },
+        "toolName": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 128 },
+        "toolPath": { "type": "string", "maxLength": 256 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "userName": { "type": "string", "maxLength": 256 },
+        "userUid": { "type": "string", "maxLength": 128 },
+        "signedAtIso": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["toolId", "toolName", "userEmail"]
+    },
+    "ComplianceAnalyticsEvent": {
+      "title": "ComplianceAnalyticsEvent",
+      "description": "Telemetry event for compliance tools and statutory guides",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "eventName": { "type": "string", "maxLength": 128 },
+        "contentType": { "type": "string", "maxLength": 64 },
+        "contentId": { "type": "string", "maxLength": 256 },
+        "title": { "type": "string", "maxLength": 512 },
+        "category": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["eventName"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Client legal and tax consultation booking",
+      "type": "object",
+      "properties": {
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "clientName": { "type": "string", "maxLength": 256 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "practiceArea": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["clientName", "email"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Digital compliance template or advisory package",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 256 },
+        "slug": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 128 },
+        "price": { "type": "number" },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["title", "slug"]
+    },
+    "UserPurchase": {
+      "title": "UserPurchase",
+      "description": "Verified user product or course entitlement",
+      "type": "object",
+      "properties": {
+        "purchaseId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "productId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId", "productId"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "User bookmarked article or statutory tool",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "articleId": { "type": "string", "maxLength": 256 },
+        "title": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["userId", "articleId"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Client review and case outcome testimonial",
+      "type": "object",
+      "properties": {
+        "clientName": { "type": "string", "maxLength": 256 },
+        "headline": { "type": "string", "maxLength": 512 },
+        "story": { "type": "string", "maxLength": 3000 },
+        "rating": { "type": "number" }
+      },
+      "required": ["clientName", "story"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile records"
+    },
+    "/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Public article discussions and professional Q&A comments"
+    },
+    "/workspace_tool_signings/{signingId}": {
+      "schema": { "$ref": "#/entities/WorkspaceToolSigning" },
+      "description": "Workspace tool signing ledger records"
+    },
+    "/compliance_analytics_events/{eventId}": {
+      "schema": { "$ref": "#/entities/ComplianceAnalyticsEvent" },
+      "description": "Compliance tool and article telemetry events"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/Appointment" },
+      "description": "Client consultation bookings"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Digital legal and tax compliance products"
+    },
+    "/user_purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/UserPurchase" },
+      "description": "User product and course entitlements"
+    },
+    "/favorites/{favoriteId}": {
+      "schema": { "$ref": "#/entities/Favorite" },
+      "description": "Bookmarked articles and compliance tools"
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/Testimonial" },
+      "description": "Verified client testimonials"
+    }
+  }
+}

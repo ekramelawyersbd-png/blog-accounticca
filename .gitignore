@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+functions/lib/
+
+# Build & Output
+.aistudio/
+build/
+dist/
+coverage/
+server.js
+
+# Lockfiles (standardize on package-lock.json)
+bun.lock
+yarn.lock
+pnpm-lock.yaml
+
+# Runtime data & local state (contains runtime session tokens, bookings, invoices & signatures)
+data/*.json
+!data/.gitkeep
+
+# Secret Protection: All .env* files are strictly excluded from git (.env.example preserved for template)
+.env
+.env*
+.env.*
+!.env.example
+
+# Temporary & OS files
+.DS_Store
+*.log
+npm-debug.log*
+firebase-debug.log*
+DRAFT_firestore.rules
+public/assets/aistudio/

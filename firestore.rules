@@ -1,0 +1,156 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Public & Dual-Auth Application Collections
+    // Note: Users may authenticate via either the primary Firestore project Auth (gen-lang-client-0396222608)
+    // or the custom domain Auth (accounticca.com / elawyersnew) or verified workspace session.
+    match /comments/{commentId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(commentId) && incoming().text is string && incoming().text.size() <= 5000;
+      allow delete: if isValidId(commentId);
+    }
+
+    match /workspace_tool_signings/{signingId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(signingId) && incoming().toolId is string && incoming().toolId.size() <= 128;
+      allow delete: if isValidId(signingId);
+    }
+
+    match /compliance_analytics_events/{eventId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(eventId) && incoming().eventName is string && incoming().eventName.size() <= 128;
+      allow delete: if isValidId(eventId);
+    }
+
+    match /users/{userId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(userId);
+      allow delete: if isValidId(userId) && isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /user_purchases/{purchaseId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(purchaseId);
+    }
+
+    match /payments/{paymentId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(paymentId);
+    }
+
+    match /appointments/{appointmentId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(appointmentId);
+    }
+
+    match /testimonials/{testimonialId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(testimonialId);
+    }
+
+    match /products/{productId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(productId);
+    }
+
+    match /favorites/{favoriteId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(favoriteId);
+    }
+
+    match /newsletterSubscribers/{subscriberId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(subscriberId);
+    }
+
+    match /emailNotifications/{notificationId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(notificationId);
+    }
+
+    match /client_documents/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    match /job_applications/{appId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(appId);
+    }
+
+    match /contact_messages/{msgId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(msgId);
+    }
+
+    match /workspace_documents/{docId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(docId);
+    }
+
+    match /taxCalculations/{calcId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(calcId);
+    }
+
+    match /lms_portal_config/{configId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(configId);
+    }
+
+    match /lms_courses/{courseId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(courseId);
+    }
+
+    match /lms_enrollments/{enrollmentId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(enrollmentId);
+    }
+
+    match /lms_progress/{progressId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(progressId);
+    }
+
+    match /lms_attempts/{attemptId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(attemptId);
+    }
+
+    match /lms_certificates/{certificateId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(certificateId);
+    }
+
+    match /lms_exam_results/{resultId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(resultId);
+    }
+
+    match /lms_audit_logs/{logId} {
+      allow get, list: if true;
+      allow create, update, delete: if isValidId(logId);
+    }
+
+    match /test/{docId} {
+      allow get, list: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

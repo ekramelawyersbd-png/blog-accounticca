@@ -1,0 +1,8 @@
+{
+  "name": "eLawyers BD - Legal & Tax Compliance Suite",
+  "description": "Calculate Income Tax, VAT & RJSC fees, access NBR statutory updates, and streamline corporate compliance with Accounticca Insights for Bangladesh.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

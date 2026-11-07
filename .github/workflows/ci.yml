@@ -1,0 +1,50 @@
+name: Continuous Integration & Package Synchronization
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Verify Sync (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'package-lock.json'
+
+    - name: Synchronize and Install Dependencies
+      run: |
+        echo "Verifying lockfile consistency with package.json..."
+        if npm ci --dry-run > /dev/null 2>&1; then
+          echo "✓ package-lock.json is in sync. Running clean install (npm ci)..."
+          npm ci --prefer-offline
+        else
+          echo "⚠️ Lockfile mismatch detected. Synchronizing packages with npm install..."
+          npm install --no-audit --prefer-offline
+        fi
+
+    - name: Run Lint & Type Check (npm run lint)
+      run: npm run lint
+
+    - name: Build Production Bundle
+      run: npm run build
+      env:
+        NODE_ENV: production

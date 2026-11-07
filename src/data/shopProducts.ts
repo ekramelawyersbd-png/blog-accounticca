@@ -1,0 +1,1086 @@
+export type ProductType = 'Templates' | 'Consultation' | 'Legal Kits' | 'Books & Manuals' | 'Academy Courses';
+
+export const PRODUCT_TYPES: ('All Types' | ProductType)[] = [
+  'All Types',
+  'Academy Courses',
+  'Templates',
+  'Consultation',
+  'Legal Kits',
+  'Books & Manuals'
+];
+
+export interface ShopProduct {
+  id: string;
+  title: string;
+  slug: string;
+  category: 'Legal Contracts' | 'Tax & VAT Toolkits' | 'Books & Manuals' | 'Corporate & RJSC' | 'Expert Advisory' | 'Academy Courses';
+  productType?: ProductType;
+  price: number;
+  originalPrice: number;
+  rating: number;
+  reviewsCount: number;
+  format: string;
+  badge?: 'Bestseller' | 'New' | 'Popular' | 'Essential' | 'Updated for 2026';
+  shortDescription: string;
+  fullDescription: string;
+  governingLaw?: string;
+  pagesOrFiles: string;
+  features: string[];
+  samplePreviewSnippet?: string;
+  imageUrl: string;
+  authorOrVettedBy: string;
+  status?: 'published' | 'draft';
+  brochureUrl?: string;
+  requiresPurchaseToAccess?: boolean;
+  trainingCourseId?: string;
+  coursePath?: string;
+  cohortSchedule?: string;
+}
+
+export function inferProductType(product: Partial<ShopProduct>): ProductType {
+  if (product.productType) return product.productType;
+  if (product.category === 'Academy Courses') return 'Academy Courses';
+  if (product.category === 'Expert Advisory') return 'Consultation';
+  if (product.category === 'Books & Manuals') return 'Books & Manuals';
+  const title = (product.title || '').toLowerCase();
+  const format = (product.format || '').toLowerCase();
+  const cat = (product.category || '').toLowerCase();
+  if (title.includes('course') || title.includes('training') || title.includes('masterclass') || title.includes('cohort') || title.includes('academy') || cat.includes('academy')) {
+    return 'Academy Courses';
+  }
+  if (title.includes('kit') || title.includes('pack') || title.includes('starter') || title.includes('bundle') || cat.includes('corporate & rjsc')) {
+    return 'Legal Kits';
+  }
+  if (title.includes('consultation') || title.includes('session') || title.includes('advisory') || format.includes('video') || format.includes('consultation')) {
+    return 'Consultation';
+  }
+  if (title.includes('manual') || title.includes('book') || title.includes('ebook') || title.includes('guide')) {
+    return 'Books & Manuals';
+  }
+  return 'Templates';
+}
+
+export const SHOP_CATEGORIES = [
+  'All Products',
+  'Academy Courses',
+  'Legal Contracts',
+  'Tax & VAT Toolkits',
+  'Books & Manuals',
+  'Corporate & RJSC',
+  'Expert Advisory'
+] as const;
+
+export type ShopCategory = typeof SHOP_CATEGORIES[number];
+
+export const SHOP_PRODUCTS: ShopProduct[] = [
+  {
+    id: 'personal-income-tax-2025-recorded',
+    title: 'Personal Income Tax Masterclass 2025 (Recorded Session & Complete Filing Kit)',
+    slug: 'personal-income-tax-2025-recorded',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 1500,
+    originalPrice: 2500,
+    rating: 4.96,
+    reviewsCount: 89,
+    format: 'Full HD Video Workshop (3.5 Hours) + Excel Return Kit & PDF Guide',
+    badge: 'Popular',
+    shortDescription: 'Comprehensive recorded masterclass covering Bangladesh personal income tax computation, salary perquisites, Section 78 investment rebate, and NBR e-Return portal step-by-step.',
+    fullDescription: 'An intensive recorded masterclass conducted by Supreme Court Advocates and Chartered Accountants. This masterclass walks through every aspect of individual tax return filing under the Income Tax Act 2023. Includes complete video recordings of all sessions, step-by-step e-Return portal screen recordings, downloadable excel worksheets, IT-10B net wealth reconciliation guides, and sample calculation templates.',
+    governingLaw: 'Income Tax Act, 2023 & Finance Act (Bangladesh)',
+    pagesOrFiles: '3.5 Hours HD Video • Excel Templates (.xlsx) • PDF Guides',
+    features: [
+      '3.5 Hours Full HD video recordings with timestamp chapters',
+      'Step-by-step NBR Online e-Return portal filing walkthrough',
+      'Detailed calculation of salary, house property, and investment rebates',
+      'IT-10B net wealth statement reconciliation masterclass',
+      'Downloadable excel calculators and editable PDF forms',
+      'Certificate of completion upon passing the final quiz'
+    ],
+    samplePreviewSnippet: 'Welcome to the Personal Income Tax Masterclass 2025 Recorded Session. In this comprehensive module, we examine gross taxable income calculation, allowable exemptions under Sixth Schedule, and electronic return submission...',
+    imageUrl: 'https://pub-d893cbb677b6463eb69f13e1dbb40541.r2.dev/545724939_1360666282733871_784797782317144558_n.jpg',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh & Lead Tax Counsel',
+    trainingCourseId: 'personal-income-tax',
+    coursePath: '/course/personal-income-tax'
+  },
+  {
+    id: 'mutual-nda-pro-kit',
+    title: 'Mutual Non-Disclosure Agreement (NDA) Pro Kit',
+    slug: 'mutual-nda-pro-kit',
+    category: 'Legal Contracts',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 1500,
+    rating: 4.95,
+    reviewsCount: 142,
+    format: 'DOCX + PDF • Bilingual Clause Notes',
+    badge: 'Bestseller',
+    shortDescription: 'Bilateral confidentiality agreement protecting proprietary business secrets, trade algorithms, client lists, and technical data in Bangladesh.',
+    fullDescription: 'A comprehensive, practitioner-drafted bilateral non-disclosure agreement strictly tailored to Bangladesh jurisdiction under the Contract Act 1872 and Arbitration Act 2001. Formatted in clean, editable Microsoft Word (.docx) with clause-by-clause commentary, exclusions, survival covenants, and Dhaka-seated dispute resolution provisions.',
+    governingLaw: 'Contract Act, 1872 & Arbitration Act, 2001 (Bangladesh)',
+    pagesOrFiles: '6 Pages • 2 File Formats (.docx, .pdf)',
+    features: [
+      'Editable Microsoft Word (.docx) & Print-Ready PDF',
+      'Definitions of Technical, Financial & Operational Confidential Information',
+      'Non-solicitation of employees and clients clause',
+      'Specific exclusions (court subpoena, prior knowledge, independent development)',
+      'Arbitration clause seated in Dhaka under the Arbitration Act, 2001',
+      'Bilingual guidance notes on execution on non-judicial stamp duty'
+    ],
+    samplePreviewSnippet: 'This Mutual Non-Disclosure Agreement is entered into by and between the Disclosing Party and Receiving Party. The Receiving Party agrees to protect Confidential Information with at least the standard of reasonable care...',
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh'
+  },
+  {
+    id: 'income-tax-return-workbook-2026',
+    title: 'Bangladesh Income Tax Return Workbook (AY 2026–2027)',
+    slug: 'income-tax-return-workbook-2026',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 2500,
+    rating: 4.98,
+    reviewsCount: 218,
+    format: 'Excel (.xlsx) • Automated Macros & Formulas',
+    badge: 'Updated for 2026',
+    shortDescription: 'Complete, automated Excel spreadsheet for calculating individual tax across all 10 income heads, Section 78 investment rebates, and Form IT-10B net wealth statement.',
+    fullDescription: 'The ultimate tax filing workbook designed for tax practitioners, corporate executives, and accountants. Fully updated for Finance Act 2026 and Income Tax Act 2023. Contains dynamic formula-driven schedules for salaries, house property, agricultural income (Section 43 60% deemed rate), business income, capital gains, the revised 3-tier investment rebate cap, and net wealth surcharge calculations.',
+    governingLaw: 'Income Tax Act, 2023 & Finance Act 2026',
+    pagesOrFiles: '1 Master Excel File • 8 Integrated Worksheets',
+    features: [
+      'Automated AY 2026–27 progressive slab calculations (up to 30% top bracket)',
+      'Dynamic Section 78 rebate ceiling calculator (lowest of 3% income, 10% investment, Tk. 7.5L)',
+      'Pre-formatted IT-11GA Return of Income printable summary',
+      'Form IT-10B Statement of Assets, Liabilities & Net Wealth Surcharge check',
+      'Early filing 5% incentive rebate deduction calculation',
+      'Built-in validation checks to prevent mathematical and e-Return filing errors'
+    ],
+    samplePreviewSnippet: '=IF(TaxableIncome<=ExemptionLimit, 0, CalculateProgressiveSlabs(TaxableIncome, AY2026_27_SLABS))... RebateLimit = MIN(TaxableIncome*0.03, EligibleInv*0.10, 750000)',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Senior Tax & Audit Practice Division'
+  },
+  {
+    id: 'income-tax-calculator-2026-27',
+    title: 'Income Tax Calculator 2026–27 (Interactive Assessment Tool)',
+    slug: 'income-tax-calculator-2026-27',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 1500,
+    rating: 4.99,
+    reviewsCount: 312,
+    format: 'Interactive Web Application + Instant Calculation Engine',
+    badge: 'Updated for 2026',
+    shortDescription: 'Full verified access to the automated personal & corporate income tax calculation engine for Assessment Year 2026–2027.',
+    fullDescription: 'Instant unlocked access to the official Accounticca & E-Lawyers interactive Income Tax Calculator for Bangladesh Assessment Year 2026–2027 (Finance Act 2026). Computes accurate gross tax across all individual taxpayer slabs, Sixth Schedule Part 3 & Section 78 investment tax rebates, monthly salary TDS withholding deductions, municipal minimum taxes (BDT 5,000 / 4,000 / 3,000), early submission incentives, and side-by-side comparative analysis with the 2025–26 fiscal year.',
+    governingLaw: 'Income Tax Act, 2023 & Finance Act, 2026 (Bangladesh)',
+    pagesOrFiles: 'Live Interactive Assessment Tool • Real-time Calculation Engine',
+    features: [
+      'Statutory Finance Act 2026 progressive individual tax slabs (0% to 30%)',
+      'Dynamic 3-tier investment rebate cap computation (Sec 78, Sixth Schedule Part 3)',
+      'Dedicated taxpayer categories (General, Women/Seniors 65+, Disabled, Freedom Fighters)',
+      'Salary TDS monthly deduction and withholding schedules',
+      'Area-based minimum tax verification (Dhaka & Chattogram City Corp, other cities, rural)',
+      'AY 2025–26 vs AY 2026–27 comparative savings analysis',
+      'Scenario sharing, exportable breakdowns, and printable tax summaries'
+    ],
+    samplePreviewSnippet: 'AY 2026–27 Tax Slabs: 0% up to Tk 4,00,000; 5% on next Tk 1,00,000; 10% on next Tk 4,00,000; 15% on next Tk 5,00,000; 20% on next Tk 5,00,000; 25% on next Tk 20,00,000; 30% on balance.',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate Supreme Court of Bangladesh',
+    brochureUrl: '/tax-calculator',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'personal-income-tax-return-filing-training',
+    title: 'Personal Income Tax Return Filing, Tax Law, Calculation & E-Return Training',
+    slug: 'personal-income-tax-return-filing-tax-law-calculation-e-return-training',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 3500,
+    rating: 4.99,
+    reviewsCount: 245,
+    format: 'Video Masterclass + Excel Workbook + E-Return Guide',
+    badge: 'Bestseller',
+    shortDescription: 'Complete masterclass on personal income tax calculation under Income Tax Act 2023, Finance Act 2026, Section 78 rebates, IT-10B net wealth statement, and NBR e-Return portal filing.',
+    fullDescription: 'The definitive training program and practical toolkit for filing individual income tax returns in Bangladesh. Designed by Supreme Court tax advocates and senior chartered accountants. Covers all 10 heads of income, agricultural deemed 60% expenses, capital gains calculation, tax-free allowances, investment rebate optimization, Form IT-11GA, Form IT-10B net wealth statement, and step-by-step video walkthrough of the NBR online e-Return portal.',
+    governingLaw: 'Income Tax Act, 2023 & Finance Act, 2026 (Bangladesh)',
+    pagesOrFiles: '6 Video Modules • Master Excel Return Workbook • PDF E-Return Guide',
+    features: [
+      'Comprehensive breakdown of all 10 heads of income under Income Tax Act 2023',
+      'AY 2026–27 progressive tax slab calculations & exemption limits',
+      'Section 78 investment tax rebate optimization (lowest of 3%, 10%, Tk. 7.5L)',
+      'Form IT-10B Statement of Assets, Liabilities & Net Wealth Surcharge rules',
+      'Step-by-step video walkthrough for submitting returns on the NBR e-Return portal',
+      'Sample completed tax returns and downloadable Excel calculation templates'
+    ],
+    samplePreviewSnippet: 'Module 1: Overview of Direct Tax Framework under Income Tax Act 2023 and Finance Act 2026. Determining resident vs non-resident status and mandatory return submission triggers...',
+    imageUrl: 'https://ibb.co.com/VYcVtN9y',
+    authorOrVettedBy: 'Adv. Ekram Hossain & Accounticca Tax Practice Division',
+    brochureUrl: '/course/personal-income-tax',
+    requiresPurchaseToAccess: false
+  },
+  {
+    id: 'employment-contract-hr-handbook',
+    title: 'Employment Contract & HR Policy Manual (Labour Act 2006)',
+    slug: 'employment-contract-hr-handbook',
+    category: 'Legal Contracts',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 3000,
+    rating: 4.92,
+    reviewsCount: 96,
+    format: 'DOCX + PDF • Comprehensive HR Package',
+    badge: 'Essential',
+    shortDescription: 'Legally compliant full-time employment agreement, probation clauses, termination notice terms, IP assignment, and workplace conduct policies.',
+    fullDescription: 'Drafted in strict conformity with the Bangladesh Labour Act, 2006 (and latest Labour Rules amendments). Protects employers from unlawful termination claims and employee disputes while clearly delineating working hours, overtime, festival bonuses, provident fund/gratuity, disciplinary procedures, non-compete, and confidentiality obligations.',
+    governingLaw: 'Bangladesh Labour Act, 2006 & Labour Rules',
+    pagesOrFiles: '14 Pages • Editable Word & PDF formats',
+    features: [
+      'Appointment letter template with detailed probation and confirmation terms',
+      'Festival allowance, leave encashment, and provident fund rules',
+      'Statutory notice period and severance compensation clauses (Sections 26 & 27)',
+      'Strict intellectual property assignment & work-for-hire covenants',
+      'Non-disclosure, non-disparagement, and client non-solicitation clauses',
+      'Code of conduct, anti-harassment policy, and grievance redressal process'
+    ],
+    samplePreviewSnippet: 'The Employee acknowledges that all inventions, designs, source code, and works created during employment are the sole and exclusive property of the Employer...',
+    imageUrl: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain & Corporate HR Legal Team'
+  },
+  {
+    id: 'tds-vds-automation-calculator-2026',
+    title: 'TDS & VDS Withholding Tax Master Toolkit 2026',
+    slug: 'tds-vds-automation-calculator-2026',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 2000,
+    rating: 4.96,
+    reviewsCount: 164,
+    format: 'Excel (.xlsx) • Searchable Rate Database',
+    badge: 'Popular',
+    shortDescription: 'Interactive tax deducted at source (TDS) and VAT deducted at source (VDS) calculator with statutory section lookups and challan reconciliation.',
+    fullDescription: 'Never make an incorrect withholding deduction again. This automated spreadsheet features a searchable statutory database covering Sections 89 to 130 of the Income Tax Act 2023, paired with current SRO VAT withholding rules (Mushak 6.3 / 6.6). Just enter invoice value and vendor TIN/BIN status to instantly receive exact TDS & VDS amounts and required Challan codes.',
+    governingLaw: 'Income Tax Act 2023 & VAT and SD Act 2012',
+    pagesOrFiles: '1 Master Excel File • Real-time Tax Rate Engine',
+    features: [
+      'Lookup engine for 40+ statutory withholding categories (rent, goods, services, commission, etc.)',
+      'Automatic 50% TDS markup calculation if supplier lacks 12-digit e-TIN or proof of return submission',
+      'VDS deduction matrix matching SRO 149-Ain/2020/110-Mushak guidelines',
+      'Monthly Withholding Statement (Section 177) data formatting template',
+      'Government treasury deposit Challan bank code directory'
+    ],
+    samplePreviewSnippet: '=VLOOKUP(ServiceCategory, TDS_Tax_Matrix_2026, 4, FALSE) * IF(HasTIN_Proof, 1.0, 1.5) * GrossInvoiceAmount...',
+    imageUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Withholding Tax Advisory Division'
+  },
+  {
+    id: 'handbook-income-tax-act-2023-finance-act-2026',
+    title: 'Handbook on Income Tax Act 2023 & Finance Act 2026 (eBook)',
+    slug: 'handbook-income-tax-act-2023-finance-act-2026',
+    category: 'Books & Manuals',
+    productType: 'Books & Manuals',
+    price: 0,
+    originalPrice: 1600,
+    rating: 4.97,
+    reviewsCount: 189,
+    format: 'Digital eBook (PDF) • Searchable & Bookmarked',
+    badge: 'Bestseller',
+    shortDescription: 'Authoritative practitioner guide dissecting the new direct tax framework, revised slabs, corporate incentives, wealth surcharge, and penalty rules.',
+    fullDescription: 'Written by experienced Supreme Court advocates and chartered accountants, this comprehensive handbook bridges the gap between statutory text and practical e-Return execution. Features side-by-side comparative analyses between the repealed 1984 Ordinance and the 2023 Act, along with all crucial amendments introduced by the Finance Act 2026.',
+    governingLaw: 'National Board of Revenue (NBR) Direct Tax Legislation',
+    pagesOrFiles: '240 Pages • Fully Indexed Digital PDF',
+    features: [
+      'In-depth chapter-by-chapter legal commentary on Sections 1 to 345',
+      'Practical calculation case studies for salaried, business, and corporate assessees',
+      'Detailed breakdown of Section 78 investment rebate limits & ceiling',
+      'Agricultural income assessment rules (Section 40–44) & deemed 60% expenses',
+      'Tax dispute resolution, Commissioner (Appeals), and Appellate Tribunal procedures',
+      'Annotated statutory forms directory (IT-11GA, IT-10B, IT-88)'
+    ],
+    samplePreviewSnippet: 'Chapter 7: Assessment of Total Income. Under Section 32, total income is classified under ten distinct heads. The taxpayer must note that losses under heads cannot be arbitrarily set off...',
+    imageUrl: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain & Accounticca Legal Research Team'
+  },
+  {
+    id: 'company-incorporation-starter-pack-rjsc',
+    title: 'RJSC Company Incorporation & Secretarial Starter Pack',
+    slug: 'company-incorporation-starter-pack-rjsc',
+    category: 'Corporate & RJSC',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 4000,
+    rating: 4.94,
+    reviewsCount: 78,
+    format: 'DOCX + PDF • Complete Legal Documentation Kit',
+    badge: 'Essential',
+    shortDescription: 'Draft Memorandum & Articles of Association (MoA & AoA), Form XII, First Board Meeting Minutes, and Bank Account Opening Resolutions.',
+    fullDescription: 'Everything required to form and register a Private Limited Company with the Registrar of Joint Stock Companies and Firms (RJSC) in Bangladesh. Includes comprehensive main and ancillary business objects clauses for modern tech startups, export-import, consultancies, and commercial trade, drafted to pass RJSC scrutiny without rejection.',
+    governingLaw: 'Companies Act, 1994 (Bangladesh)',
+    pagesOrFiles: '28 Pages • 6 Separate Legal Documents',
+    features: [
+      'Standard Memorandum of Association (MoA) with multi-sector business objects clauses',
+      'Standard Articles of Association (AoA) with share transfer & director qualification provisions',
+      'Form XII (Particulars of Directors) template formatted for RJSC digital upload',
+      'First Board of Directors Meeting Minutes approving seal, banking & registration',
+      'Bank Account Opening Board Resolution customized for Bangladesh commercial banks',
+      'Step-by-step RJSC digital filing process checklist and stamp duty cost guide'
+    ],
+    samplePreviewSnippet: 'THE COMPANIES ACT, 1994. MEMORANDUM OF ASSOCIATION OF [COMPANY NAME] LIMITED. 1. The name of the Company is... 2. The Registered Office of the Company will be situated in Bangladesh...',
+    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Corporate Secretarial Division'
+  },
+  {
+    id: 'shareholders-agreement-startup-kit',
+    title: 'Shareholders\' Agreement (SHA) & Founder Vesting Kit',
+    slug: 'shareholders-agreement-startup-kit',
+    category: 'Legal Contracts',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 5000,
+    rating: 4.93,
+    reviewsCount: 65,
+    format: 'DOCX + PDF • Institutional Investor Standard',
+    badge: 'Popular',
+    shortDescription: 'Institutional-grade Shareholders\' Agreement featuring 4-year reverse vesting, cliff periods, Drag-Along, Tag-Along, ROFR, and Pre-emption rights.',
+    fullDescription: 'Crucial for startup co-founders and early-stage companies raising capital in Bangladesh. Avoid co-founder disputes and deadlocks with institutional-grade provisions governing equity dilution, share transfers, right of first refusal, board representation, quorum, deadlock resolution, and good-leaver / bad-leaver vesting schedules.',
+    governingLaw: 'Companies Act, 1994 & Contract Act, 1872',
+    pagesOrFiles: '18 Pages • Fully Customizable Word Document',
+    features: [
+      '4-Year reverse vesting schedule with 1-year cliff terms for founders',
+      'Right of First Refusal (ROFR) and Pre-emptive Subscription rights',
+      'Tag-Along Rights (protecting minority shareholders) and Drag-Along provisions',
+      'Reserved matters requiring unanimous or super-majority shareholder approval',
+      'Good leaver vs Bad leaver share forfeiture and repurchase mechanisms',
+      'Mediation and expedited arbitration mechanism under Bangladesh law'
+    ],
+    samplePreviewSnippet: 'In the event that any Founder terminates their engagement prior to the expiration of the Vesting Period, the Company shall have the right to repurchase all Unvested Shares at nominal par value...',
+    imageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'E-Lawyers Venture & Corporate Practice Group'
+  },
+  {
+    id: 'vat-mushak-9-1-master-workbook',
+    title: 'VAT Mushak 9.1 Return Prep & Reconciliation Workbook',
+    slug: 'vat-mushak-9-1-master-workbook',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 3200,
+    rating: 4.91,
+    reviewsCount: 88,
+    format: 'Excel (.xlsx) • Automated Sub-Forms',
+    badge: 'Popular',
+    shortDescription: 'Complete preparation sheet for monthly VAT Return Form 9.1 with automated Input Tax Credit (Mushak 6.3/6.6), VDS ledger, and treasury challans.',
+    fullDescription: 'Simplifies monthly online VAT return filing on the NBR IVAS portal. Maps sales, standard rated supplies, exempt supplies, zero-rated exports, input tax credits, VDS withholding by clients, and decreasing adjustments directly into corresponding sub-forms (Sub-form Ka through Gha) of Form Mushak 9.1.',
+    governingLaw: 'Value Added Tax and Supplementary Duty Act, 2012',
+    pagesOrFiles: '1 Master Excel File • 10 Interactive Linked Worksheets',
+    features: [
+      'Sub-Form 9.1 auto-mapping engine for input tax credit eligibility check',
+      'Mushak 6.3 Sales Register & Mushak 6.4 Purchase Register integration',
+      'Decreasing adjustments ledger for VDS deducted by withholding entities',
+      'Auto-calculation of Net VAT Payable, Closing Balance & Treasury Challan',
+      'Reconciliation worksheet between monthly VAT return and audited P&L accounts'
+    ],
+    samplePreviewSnippet: '=SUMIFS(Sales_Register[VAT_Amount], Sales_Register[Rate], "15%") - Input_Tax_Credit_Eligible - Total_VDS_Deducted...',
+    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Indirect Tax (VAT) Practice'
+  },
+  {
+    id: 'commercial-lease-agreement-pro',
+    title: 'Commercial Office & Commercial Space Lease Agreement',
+    slug: 'commercial-lease-agreement-pro',
+    category: 'Legal Contracts',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 2200,
+    rating: 4.89,
+    reviewsCount: 71,
+    format: 'DOCX + PDF • Landlord & Tenant Balanced',
+    badge: 'Essential',
+    shortDescription: 'Standard long-term commercial lease agreement for corporate offices, retail showrooms, and factory spaces in Dhaka and Chittagong.',
+    fullDescription: 'Comprehensive commercial tenancy agreement governing security deposit terms, utility allocations, service charge maintenance, sub-letting restrictions, rent increment schedules, permitted business uses, structural repairs, default remedies, and mutual termination notice periods.',
+    governingLaw: 'Transfer of Property Act, 1882 & Premises Rent Control Act, 1991',
+    pagesOrFiles: '9 Pages • Word & PDF formats',
+    features: [
+      'Clear definition of advance security deposit and rent adjustment mechanisms',
+      'Maintenance, utility surcharge, and commercial service charge responsibility split',
+      'Right of inspection, fire safety compliance, and signage rights',
+      'Force Majeure and destruction of commercial premises clause',
+      'Notice period and peaceful possession handover covenants',
+      'Non-judicial stamp duty guidance notes for registration'
+    ],
+    samplePreviewSnippet: 'The Tenant agrees to pay the agreed monthly rent in advance on or before the 10th day of each calendar month. The Landlord acknowledges receipt of security deposit...',
+    imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'E-Lawyers Property & Real Estate Counsel'
+  },
+  {
+    id: 'rjsc-secretarial-compliance-manual',
+    title: 'Corporate Secretarial & RJSC Compliance Manual (Handbook)',
+    slug: 'rjsc-secretarial-compliance-manual',
+    category: 'Books & Manuals',
+    productType: 'Books & Manuals',
+    price: 0,
+    originalPrice: 1850,
+    rating: 4.93,
+    reviewsCount: 54,
+    format: 'Digital eBook (PDF) • Illustrated Compliance Guide',
+    badge: 'Updated for 2026',
+    shortDescription: 'Step-by-step guidebook to annual general meetings (AGM), Form 23B, Form IX, share transfers (Form 117), and RJSC online portal workflows.',
+    fullDescription: 'A practical, desktop handbook for company secretaries, directors, and corporate lawyers handling routine and statutory filings with the Registrar of Joint Stock Companies and Firms in Bangladesh. Covers timelines, penalties for delayed filings, digital signature requirements, and audited financial statements submission.',
+    governingLaw: 'Companies Act, 1994 (Sections 77–190)',
+    pagesOrFiles: '160 Pages • Digital PDF with Searchable Index',
+    features: [
+      'Annual Statutory Filing schedule (Schedule X, Form 23B, Form IX, Balance Sheet)',
+      'Procedure for increasing Authorized & Paid-up Capital step-by-step',
+      'Director appointment, resignation, and removal legal protocols',
+      'Mortgage and charge creation (Form XVIII) with commercial banks',
+      'Handling show-cause notices and RJSC striking-off / winding-up procedures'
+    ],
+    samplePreviewSnippet: 'Section 107 requires every company to hold an Annual General Meeting once in every calendar year and not more than fifteen months after the holding of the last preceding meeting...',
+    imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Corporate Governance & Advisory Team'
+  },
+  {
+    id: 'advisory-legal-document-vetting-session',
+    title: '1-on-1 Legal Contract Vetting Session (30 Mins)',
+    slug: 'advisory-legal-document-vetting-session',
+    category: 'Expert Advisory',
+    productType: 'Consultation',
+    price: 0,
+    originalPrice: 5000,
+    rating: 5.0,
+    reviewsCount: 42,
+    format: 'Live Video Consultation + Redlined Markups',
+    badge: 'Popular',
+    shortDescription: 'Direct review and clause-by-clause legal risk assessment of your commercial agreement by a Supreme Court of Bangladesh Advocate.',
+    fullDescription: 'Before signing any high-stakes contract, lease, investment agreement, or vendor SLA, have it meticulously reviewed by an experienced advocate. Includes an advance review of up to 10 pages, a 30-minute private video conference call, tailored legal recommendations, and a redlined document highlighting risks, liabilities, and missing protections.',
+    governingLaw: 'Advocate Consultation & Client Privilege',
+    pagesOrFiles: '30-Minute Video Call • Advance Document Review up to 10 Pages',
+    features: [
+      'Direct consultation with Adv. Ekram Hossain or senior corporate counsel',
+      'Redlined draft with risk comments delivered via email',
+      'Identification of hidden liabilities, indemnity traps, and one-sided clauses',
+      'Enforceability review under Bangladesh courts and arbitration rules',
+      'Actionable recommendations for renegotiation'
+    ],
+    samplePreviewSnippet: 'Personalized private consultation booked via secure calendar. Advance document review initiated within 2 business hours of booking...',
+    imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'E-Lawyers Senior Advocates & Barristers'
+  },
+  {
+    id: 'advisory-corporate-tax-filing-strategy',
+    title: 'Corporate Tax Assessment & Filing Strategy Session (45 Mins)',
+    slug: 'advisory-corporate-tax-filing-strategy',
+    category: 'Expert Advisory',
+    productType: 'Consultation',
+    price: 0,
+    originalPrice: 6000,
+    rating: 4.97,
+    reviewsCount: 38,
+    format: 'Private Consultation + Strategy Memo',
+    badge: 'Essential',
+    shortDescription: 'Strategic corporate tax planning session to assess FY 2026–27 rates, banking penalty avoidance, depreciation allowances, and e-Return prep.',
+    fullDescription: 'Tailored for business owners, managing directors, and CFOs. A 45-minute deep-dive consultation analyzing your company’s profit projections, evaluating whether your entity qualifies for the 20% or 25% listed rate or 27.5% private rate, ensuring banking compliance to prevent the 2.5% penalty, and designing statutory deduction roadmaps under the Income Tax Act 2023.',
+    governingLaw: 'Income Tax Act 2023 & NBR Corporate Direct Tax Guidelines',
+    pagesOrFiles: '45-Minute Strategy Call • Written Key Recommendations Memo',
+    features: [
+      'Analysis of applicable corporate tax rate (20%, 25%, 27.5% or 30%)',
+      'Audit risk evaluation for cash transactions & banking compliance',
+      'Capital expenditure (CapEx) depreciation optimization plan',
+      'Disallowed expenses check under Section 55',
+      'Advance Income Tax (AIT) and TDS credit reconciliation roadmap'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Corporate Tax Practice Directors'
+  },
+  // Tool Access Products
+  {
+    id: 'rjsc-fee-calculator-tool',
+    title: 'RJSC Incorporation & Stamp Duty Calculator Pro',
+    slug: 'rjsc-fee-calculator-tool',
+    category: 'Corporate & RJSC',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 1000,
+    rating: 4.98,
+    reviewsCount: 88,
+    format: 'Interactive App Tool Access • Live 2026 Bands',
+    badge: 'Updated for 2026',
+    shortDescription: 'Interactive government fee, non-judicial stamp duty, and cumulative capital band calculator for company incorporation under Companies Act 1994.',
+    fullDescription: 'Unlocks full interactive tool access to compute government filing fees, MoA/AoA non-judicial stamp duties, and bracketed capital registration charges across all 5 official RJSC capital bands.',
+    governingLaw: 'Companies Act, 1994 & Stamp Act, 1899 Schedule 1',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Exact cumulative capital band calculation up to ৳100+ Crore',
+      'Non-judicial stamp duty estimation for MoA and AoA',
+      'Includes Name Clearance Application fee (৳500) and 6 statutory forms',
+      'Supports Private Limited, Public Limited, Partnerships & Societies',
+      'Exportable calculation summary and pre-filled lawyer consultation request'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'ELA & Associates Corporate Practice Group',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'post-registration-checklist-tool',
+    title: 'Mandatory Post-Incorporation Compliance Checklist Pro',
+    slug: 'post-registration-checklist-tool',
+    category: 'Corporate & RJSC',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 1200,
+    rating: 4.96,
+    reviewsCount: 64,
+    format: 'Interactive Tool Access • Persistent Task Tracker',
+    badge: 'Essential',
+    shortDescription: 'Guided post-registration compliance roadmap covering ROC App portal account, Certified True Copies (CTC), e-TIN, BIN, trade license, and banking.',
+    fullDescription: 'Unlocks full access to the interactive post-incorporation statutory roadmap. Track completed milestones, view required supporting documents, and access direct portal links.',
+    governingLaw: 'Companies Act 1994 & NBR Statutory Compliance Rules',
+    pagesOrFiles: 'Interactive Progress Dashboard',
+    features: [
+      'Step-by-step guidance for RJSC entity user portal setup',
+      'Certified True Copy (CTC) request instructions & links',
+      'NBR Corporate e-TIN & 9-Digit VAT BIN (Mushak 2.1) workflow',
+      'City Corporation Trade License & Bank CIB account activation',
+      'Persistent task progress saving & completion tracking'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Corporate Governance Group',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'rjsc-functions-explorer-tool',
+    title: 'RJSC Statutory Functions & Lifecycle Guide',
+    slug: 'rjsc-functions-explorer-tool',
+    category: 'Corporate & RJSC',
+    productType: 'Books & Manuals',
+    price: 0,
+    originalPrice: 1100,
+    rating: 4.94,
+    reviewsCount: 52,
+    format: 'Interactive Guide • Statutory Matrix',
+    badge: 'Popular',
+    shortDescription: 'Interactive workflow guide covering name clearance, statutory returns (Schedule X, Form XII), certified copies, and company winding-up.',
+    fullDescription: 'Unlocks the interactive RJSC lifecycle guide detailing statutory procedures under the Companies Act 1994, Partnership Act 1932, and Societies Act 1860.',
+    governingLaw: 'Companies Act, 1994 (Sections 36–320)',
+    pagesOrFiles: 'Interactive Knowledge Tool',
+    features: [
+      'Name Clearance search rules & 180-day validity guidelines',
+      'Statutory forms matrix (Forms III, IV, VIII, IX, XII, XV, XVIII, 117)',
+      'Certified True Copies (CTC) digital application steps',
+      'Members Voluntary Winding-Up & Section 292 Striking-Off guide',
+      'Filterable by Private Company, Public Company, Partnership & Society'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'E-Lawyers Supreme Court Corporate Barristers',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'rjsc-returns-filing-guide-tool',
+    title: 'RJSC Annual & Event Returns Filing Guide & Deadline Calculator',
+    slug: 'rjsc-returns-filing-guide-tool',
+    category: 'Corporate & RJSC',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 1300,
+    rating: 4.97,
+    reviewsCount: 71,
+    format: 'Interactive Tool • Smart Deadline Calculator',
+    badge: 'Updated for 2026',
+    shortDescription: 'Practical guide to annual returns vs event-based forms with interactive AGM and corporate event deadline calculator.',
+    fullDescription: 'Unlocks the smart statutory returns guide. Calculate exact submission deadlines for Schedule X, Balance Sheet & P&L, Form XII, Form XV, and Form XVIII based on your AGM or corporate event date.',
+    governingLaw: 'Companies Act, 1994 (Sections 36, 92, 115, 151, 159, 185)',
+    pagesOrFiles: 'Smart Deadline Calculator',
+    features: [
+      'Annual Deadline Calculator: Input AGM Date -> Schedule X (21 days) & Balance Sheet (30 days)',
+      'Event Deadline Calculator: Input Event Date -> Form XII (14d), Form IV/VIII (15d), Form XVIII (21d), Form XV (60d)',
+      'Detailed form requirements, ICAB DVC audit rules & government fees',
+      'Direct link to official RJSC Returns Filing portal',
+      'Integrated consultation booking with corporate secretaries'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca & E-Lawyers Joint Advisory Council',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'capital-gains-tax-tool',
+    title: 'Capital Gains Tax Calculator Pro (Finance Act 2026)',
+    slug: 'capital-gains-tax-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 1000,
+    rating: 4.95,
+    reviewsCount: 94,
+    format: 'Interactive App Tool Access',
+    badge: 'Bestseller',
+    shortDescription: 'Calculate capital gains tax on land, real estate, personal valuables, and shares under Finance Act 2026.',
+    fullDescription: 'Unlocks full interactive calculator access for computing capital gains tax across land, residential property, listed shares, and personal valuables under Section 57 of Income Tax Act 2023.',
+    governingLaw: 'Income Tax Act 2023 Section 57 & Finance Act 2026',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Holding period rules (>5 years 15% flat, ≤5 years slab rates)',
+      'Valuables flat 5% capital gains calculation',
+      '3-year installment tax payment facility projection',
+      'Surcharge & municipal deed value reconciliation'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Tax Practice Directors',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'corporate-tax-tool',
+    title: 'Corporate Tax Rate & IPO Savings Calculator (FY 2026–27)',
+    slug: 'corporate-tax-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 1200,
+    rating: 4.96,
+    reviewsCount: 82,
+    format: 'Interactive App Tool Access',
+    badge: 'Updated for 2026',
+    shortDescription: 'Simulate corporate tax rates for listed vs non-listed entities, evaluate 2.5% banking penalties, and project IPO savings.',
+    fullDescription: 'Unlocks the corporate tax calculator to compare non-listed (27.5%), listed >10% IPO (20%), and listed ≤10% IPO (25%) rates under the NBR 5-year roadmap.',
+    governingLaw: 'Income Tax Act 2023 Schedule 2 & Finance Act 2026',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Compare 27.5% non-listed vs 20%/25% listed corporate tax slabs',
+      'Evaluate 2.5% banking transaction compliance penalty',
+      'Project multi-year IPO tax savings roadmap',
+      'Calculate AIT & TDS credit offsets'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Corporate Tax Practice Directors',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'wealth-surcharge-tool',
+    title: 'Net Wealth Surcharge Visualizer Pro',
+    slug: 'wealth-surcharge-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 900,
+    rating: 4.92,
+    reviewsCount: 48,
+    format: 'Interactive Visualizer Tool',
+    badge: 'Popular',
+    shortDescription: 'Explore progressive net wealth surcharge tiers (10% to 35%) and luxury asset triggers under Section 2(86B).',
+    fullDescription: 'Unlocks the net wealth surcharge visualizer to compute wealth surcharge thresholds from ৳4 Crore to ৳50+ Crore.',
+    governingLaw: 'Income Tax Act 2023 Section 2(86B)',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Progressive wealth surcharge tiers (10%, 20%, 30%, 35%)',
+      'Multiple motor vehicle surcharge trigger evaluation',
+      'Real estate & urban residential asset valuation inputs',
+      'Exportable wealth surcharge summary memo'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Wealth Practice Directors',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'investment-rebate-calculator-tool',
+    title: 'Investment-Based Tax Rebate Calculator Pro',
+    slug: 'investment-rebate-calculator-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 800,
+    rating: 4.94,
+    reviewsCount: 62,
+    format: 'Interactive App Tool Access',
+    badge: 'Essential',
+    shortDescription: 'Calculate maximum allowable investment tax rebate under Section 78 of the Income Tax Act 2023.',
+    fullDescription: 'Unlocks the investment rebate calculator comparing 3% total income, 15% eligible investment, or ৳10 Lakh statutory ceiling.',
+    governingLaw: 'Income Tax Act 2023 Section 78 & Schedule 6',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Calculates 3% gross income vs 15% eligible investment limit',
+      'Sanchayapatra, Treasury Bonds, Mutual Funds & DPS optimization',
+      'Life insurance premium & recognized provident fund inputs',
+      'Instant tax liability reduction projection'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Personal Tax Advisors',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'agricultural-tax-tool',
+    title: 'Agricultural Income Tax & Exemption Calculator',
+    slug: 'agricultural-tax-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 800,
+    rating: 4.90,
+    reviewsCount: 36,
+    format: 'Interactive App Tool Access',
+    badge: 'New',
+    shortDescription: 'Compute agricultural income exemptions, production cost deductions (60%), and commercial farming tax SROs.',
+    fullDescription: 'Unlocks the agricultural tax calculator for farming, fisheries, poultry, and crop production under Section 27.',
+    governingLaw: 'Income Tax Act 2023 Section 27',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      '৳2 Lakh statutory exemption threshold for individual farmers',
+      '60% allowable cost of production deduction',
+      'Commercial poultry, fisheries & dairy tax slab rates',
+      'Land revenue tax credit reconciliation'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Agri-Tax Practice Group',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'minimum-turnover-tax-tool',
+    title: 'Minimum Turnover Tax Calculator (Section 163)',
+    slug: 'minimum-turnover-tax-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 900,
+    rating: 4.91,
+    reviewsCount: 42,
+    format: 'Interactive App Tool Access',
+    badge: 'Essential',
+    shortDescription: 'Calculate minimum turnover tax liability (0.6%, 0.1%, 0.25%, 2.0%) based on gross receipts under Section 163.',
+    fullDescription: 'Unlocks the minimum turnover tax calculator comparing regular tax vs gross receipt minimum tax under Section 163.',
+    governingLaw: 'Income Tax Act 2023 Section 163',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Standard 0.6% gross turnover tax rate for corporate entities',
+      'Reduced 0.1% rate for industrial manufacturing & mobile operators (2.0%)',
+      'TDS tax credit offset reconciliation',
+      'Loss-making company minimum tax compliance check'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Corporate Tax Practice Directors',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'dvc-verification-tool',
+    title: 'ICAB DVC Verification Portal Simulation',
+    slug: 'dvc-verification-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 1000,
+    rating: 4.99,
+    reviewsCount: 110,
+    format: 'Interactive App Tool Access',
+    badge: 'Popular',
+    shortDescription: 'Verify audited financial statements and income computation certificates under Section 73 & ICAB standards.',
+    fullDescription: 'Unlocks the ICAB Document Verification Code (DVC) simulation portal to validate audited balance sheets against NBR and RJSC database standards.',
+    governingLaw: 'Income Tax Act 2023 Section 73 & ICAB DVC Directives',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Instant DVC format validation and audit firm verification',
+      'Prevents invalid / unverified audit report submissions',
+      'Integrated with RJSC Schedule X and NBR Corporate e-Return requirements',
+      'Exportable DVC verification certificate copy'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'ICAB Vetted Audit Practice Team',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'resource-library-tool',
+    title: 'Legal & Tax Resource Library Pro',
+    slug: 'resource-library-tool',
+    category: 'Books & Manuals',
+    productType: 'Legal Kits',
+    price: 0,
+    originalPrice: 1500,
+    rating: 4.98,
+    reviewsCount: 156,
+    format: 'PDF Download Vault • Editable Word Workbooks',
+    badge: 'Bestseller',
+    shortDescription: 'Download practitioner-drafted contracts, NDA agreements, AY 2026-27 tax return Excel workbooks, TDS calculators, and RJSC packs.',
+    fullDescription: 'Unlocks the full legal and tax resource library vault with one-click download access to editable Microsoft Word and Excel templates.',
+    governingLaw: 'Contract Act 1872 & Income Tax Act 2023',
+    pagesOrFiles: '25+ Editable Template Files',
+    features: [
+      'Bilingual NDAs, Employment Contracts & Board Resolutions (.docx)',
+      'AY 2026-27 Income Tax Return Excel Workbooks with auto-formulas',
+      'TDS Withholding Tax Rate Sheet & VAT Mushak 9.1 Templates',
+      'RJSC Company Incorporation Pack & Share Transfer Deeds'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca & E-Lawyers Resource Editors',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'early-filing-incentive-tool',
+    title: 'Early Tax Filing 5% Rebate Calculator',
+    slug: 'early-filing-incentive-tool',
+    category: 'Tax & VAT Toolkits',
+    productType: 'Templates',
+    price: 0,
+    originalPrice: 700,
+    rating: 4.93,
+    reviewsCount: 28,
+    format: 'Interactive App Tool Access',
+    badge: 'New',
+    shortDescription: 'Calculate your potential 5% tax rebate for filing returns between July 1 and September 30.',
+    fullDescription: 'Unlocks the early filing incentive calculator to compute statutory 5% tax rebates (up to ৳25,000) for early return submission.',
+    governingLaw: 'Income Tax Act 2023 Section 175',
+    pagesOrFiles: 'Unlimited Web Tool Access',
+    features: [
+      'Calculates 5% early submission tax credit (Max ৳25,000)',
+      'Filing date window validation (July 1 – September 30)',
+      'Personal & Corporate income tax applicability',
+      'Tax refund adjustment roadmap'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Tax Practice Group',
+    requiresPurchaseToAccess: true
+  },
+  {
+    id: 'academy-live-income-tax-cohort',
+    title: 'Live Class: Personal Income Tax & Online e-Return Filing Masterclass',
+    slug: 'academy-live-income-tax-cohort',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 3500,
+    originalPrice: 6000,
+    rating: 4.99,
+    reviewsCount: 420,
+    format: '10 Live Interactive Classes on Zoom / Google Meet',
+    badge: 'Bestseller',
+    shortDescription: 'Interactive live cohorts led by Adv. Ekram Hossain. Real-time Q&A, hands-on e-Return portal simulations, and certificate of completion.',
+    fullDescription: 'Master the Income Tax Act 2023, multi-head tax calculations, investment rebates, wealth statements, and step-by-step live online e-Return filing on the NBR portal. Includes live evening Zoom classes, session recordings, practical casework, and instructor mentorship.',
+    governingLaw: 'Income Tax Act 2023 & NBR e-Return Regulations',
+    pagesOrFiles: '10 Live Classes • 20+ Hours • Live Interactive Q&A',
+    features: [
+      '10 Interactive Live Evening Classes (8:30 PM - 10:30 PM BST)',
+      'Live e-Return Portal Demonstrations & Screen Shares',
+      'Interactive Q&A directly with Adv. Ekram Hossain',
+      'Full Lifetime Access to LMS Class Recordings & Notes',
+      'Exclusive WhatsApp Cohort Support Group',
+      'Verifiable QR-Coded Academy Completion Certificate'
+    ],
+    samplePreviewSnippet: 'Live Cohort 01 curriculum covers taxpayer categories, salary tax calculations, business deductions, house property rules, capital gains, tax rebates, wealth statements, and final NBR e-return submission.',
+    imageUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh',
+    trainingCourseId: 'live-income-tax-2026',
+    coursePath: '/course/personal-income-tax',
+    cohortSchedule: 'Next Cohort: Nov 24, 2026 • 8:30 PM BST'
+  },
+  {
+    id: 'academy-personal-income-tax-filing',
+    title: 'Personal Income Tax Return Filing Masterclass (10 Classes Self-Paced LMS)',
+    slug: 'academy-personal-income-tax-filing',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 3500,
+    originalPrice: 10000,
+    rating: 4.98,
+    reviewsCount: 382,
+    format: '10 Video Classes + Protected Notes + Quizzes + Certificate',
+    badge: 'Bestseller',
+    shortDescription: 'Complete 10-class statutory masterclass covering Income Tax Act 2023, multi-head tax calculations, rebates, wealth statements, and e-Return filing.',
+    fullDescription: 'Structured progressive course from foundational tax laws to live online e-Return submission on the NBR portal. Includes sequential video lectures, downloadable notes, PowerPoint decks, chapter quizzes, final exam, and verifiable digital certificate.',
+    governingLaw: 'Income Tax Act, 2023 & Finance Act, 2026',
+    pagesOrFiles: '10 Modules • 30+ Hours • Verifiable Certificate',
+    features: [
+      '10 Progressive Video Classes & Statutory Modules',
+      'Downloadable Notes, Excel Worksheets & Case Studies',
+      'Step-by-step NBR e-Return Online Submission Demo',
+      'Chapter-wise Quizzes and Final Certification Exam',
+      'Interactive Student LMS Portal Access Included',
+      'Verifiable QR-coded Academy Certificate'
+    ],
+    samplePreviewSnippet: 'Class 01 introduces tax principles and taxpayer residency. Class 04 covers salary, business, and profession. Class 08 addresses investment rebates and TDS. Class 10 completes e-return submission.',
+    imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh',
+    trainingCourseId: '401',
+    coursePath: '/course/personal-income-tax'
+  },
+  {
+    id: 'academy-vat-training-masterclass',
+    title: 'Comprehensive VAT Training & Mushak Compliance Masterclass',
+    slug: 'academy-vat-training-masterclass',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 15000,
+    originalPrice: 50000,
+    rating: 4.95,
+    reviewsCount: 214,
+    format: '72 Sessions • 360 Hours • Advanced Professional',
+    badge: 'Essential',
+    shortDescription: 'Master the Value Added Tax and Supplementary Duty Act 2012, Mushak 2/3/4/5 series, input tax credits, VDS, and audit defenses.',
+    fullDescription: 'In-depth statutory training designed for finance executives, tax managers, and practitioners. Covers VAT principles, registration, Mushak forms preparation, online VAT systems (VMIS/VOP), withholding tax, and appeal procedures.',
+    governingLaw: 'VAT & Supplementary Duty Act, 2012 and VAT Rules 2016',
+    pagesOrFiles: '5 Core Modules • 360 Hours • Case Studies',
+    features: [
+      'VAT & SD Act 2012 Comprehensive Breakdown',
+      'Mushak Form Filing: Mushak-2, 3, 4, and 5 returns',
+      'Input Tax Credit & Withholding VAT (VDS) Rules',
+      'Audit Procedures, Appeals & Penalty Mitigations',
+      'Interactive Case Studies with Manufacturing & Trading Firms',
+      'Academy Certification for Professional Practitioners'
+    ],
+    samplePreviewSnippet: 'Covers economic rationale of VAT, input tax credit mechanisms, Mushak 2.1 registration, Mushak 6.3 tax invoicing, and preparing monthly Mushak 9.1 returns.',
+    imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Senior Indirect Tax Practice Group',
+    trainingCourseId: '400',
+    coursePath: '/article/400'
+  },
+  {
+    id: 'academy-rjsc-incorporation-compliance',
+    title: 'RJSC Company Incorporation & Corporate Secretarial Compliance Workshop',
+    slug: 'academy-rjsc-incorporation-compliance',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 1500,
+    originalPrice: 3000,
+    rating: 4.92,
+    reviewsCount: 168,
+    format: '6 Hours Workshop • Practical Walkthrough',
+    badge: 'Popular',
+    shortDescription: 'Hands-on training on RJSC entity incorporation, Name Clearance, MOA/AOA drafting, Form XII/Schedule X filing, and annual compliance.',
+    fullDescription: 'A practical, step-by-step masterclass covering RJSC entity formation for Private Limited companies, One Person Companies (OPC), and Partnerships. Includes drafting standard Articles and Memorandum of Association, digital submissions, and post-incorporation licensing.',
+    governingLaw: 'Companies Act, 1994 & RJSC Regulations',
+    pagesOrFiles: '6 Intensive Hours • 15+ Document Formats',
+    features: [
+      'Entity Formation: Private Ltd, OPC & Partnership',
+      'Drafting MOA & AOA Tailored to Bangladesh Law',
+      'Online RJSC Portal Submission & Digital Signature',
+      'Post-Incorporation TIN, Trade License & Bank Account',
+      'Annual Return Filing: Form IX, XII, and Schedule X',
+      'Complete Editable Templates Pack Included'
+    ],
+    samplePreviewSnippet: 'Step-by-step walkthrough of Name Clearance application on RJSC portal, creating digital MOA/AOA object clauses, and preparing statutory register entries.',
+    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh',
+    trainingCourseId: '402',
+    coursePath: '/article/402'
+  },
+  {
+    id: 'academy-bar-council-advocacy-prep',
+    title: 'Bangladesh Bar Council Advocacy & MCQ/Written Practical Prep',
+    slug: 'academy-bar-council-advocacy-prep',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 12000,
+    originalPrice: 20000,
+    rating: 4.97,
+    reviewsCount: 295,
+    format: '60 Hours • Bar Examination Master Prep',
+    badge: 'Bestseller',
+    shortDescription: 'Rigorous coaching for Law Graduates preparing for the Bangladesh Bar Council Enrollment MCQ, Written, and Viva examinations.',
+    fullDescription: 'A proven preparatory program for aspiring advocates covering Code of Civil Procedure (CPC), Code of Criminal Procedure (CrPC), Penal Code, Evidence Act, Limitation Act, Specific Relief Act, and Legal Ethics. Includes mock tests and question paper analysis.',
+    governingLaw: 'Legal Practitioners and Bar Council Order 1972',
+    pagesOrFiles: '60 Hours • 7 Statutory Acts • Mock Exams',
+    features: [
+      'Comprehensive Coverage of 7 Major Statutory Acts',
+      'CPC, CrPC, Penal Code, Evidence Act & Limitation Act',
+      'Specific Relief Act & Bar Council Canons of Etiquette',
+      'High-Yield Mock Tests & Previous Years Question Solving',
+      'Drafting Pleading & Conveyancing Practice Papers',
+      'Experienced Supreme Court Advocate Mentorship'
+    ],
+    samplePreviewSnippet: 'In-depth breakdown of high-frequency sections, leading case precedents, criminal complaints, bail applications, civil plaints, and written statements.',
+    imageUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh',
+    trainingCourseId: '403',
+    coursePath: '/article/403'
+  },
+  {
+    id: 'academy-high-court-enrollment-prep',
+    title: 'Supreme Court High Court Division Enrollment & Written Examination Guidance',
+    slug: 'academy-high-court-enrollment-prep',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 6000,
+    originalPrice: 10000,
+    rating: 4.94,
+    reviewsCount: 112,
+    format: '40 Hours • Senior Advocate Coaching',
+    badge: 'Essential',
+    shortDescription: 'Specialized masterclass for Advocates with 2+ years practice preparing for High Court Division permission examination and writ drafting.',
+    fullDescription: 'Advanced clinical guidance on Supreme Court practice, writ petitions under Article 102 of the Constitution, civil and criminal revisions, First/Second Appeals, and oral examination strategies before the Enrollment Committee.',
+    governingLaw: 'Constitution of Bangladesh & Supreme Court (High Court Division) Rules',
+    pagesOrFiles: '40 Hours • Advanced Pleadings • Model Petitions',
+    features: [
+      'Writ Petitions under Article 102 of the Constitution',
+      'Civil & Criminal Revision Drafting in High Court',
+      'First Appeal & Second Appeal Memorandum Preparation',
+      'High Court Rules & Supreme Court Practice Directives',
+      'Interview & Viva Voce Guidance by Senior Advocates',
+      'Model Pleadings and Case Law Compendium Included'
+    ],
+    samplePreviewSnippet: 'Practical templates for Mandamus, Certiorari, Habeas Corpus, Prohibition, and Quo Warranto petitions with supporting affidavits and grounds.',
+    imageUrl: 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh',
+    trainingCourseId: '404',
+    coursePath: '/article/404'
+  },
+  {
+    id: 'academy-practical-business-accounting',
+    title: 'Practical Business Accounting, Payroll & Tax Audit Bookkeeping',
+    slug: 'academy-practical-business-accounting',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 2500,
+    originalPrice: 5000,
+    rating: 4.91,
+    reviewsCount: 184,
+    format: '20 Hours • Hands-on Practical Sessions',
+    badge: 'Updated for 2026',
+    shortDescription: 'Learn double-entry bookkeeping, payroll computation, salary TDS deductions, and maintaining books of accounts required for NBR tax audits.',
+    fullDescription: 'Practical training focusing on statutory accounting compliance for Bangladeshi enterprises. Learn general ledger maintenance, bank reconciliation, withholding tax registers, payroll computation, and financial statement generation for corporate filing.',
+    governingLaw: 'Income Tax Act 2023 & Financial Reporting Standards',
+    pagesOrFiles: '20 Practical Hours • Excel Workbooks • Certificate',
+    features: [
+      'General Ledger, Cash Book & Bank Reconciliation',
+      'Salary Sheet Formulation with Tax & Provident Fund',
+      'Withholding Tax (TDS) & VAT Deduction Registers',
+      'Trial Balance, P&L Statement & Balance Sheet Drafting',
+      'Statutory Documentation under Section 72 of ITA 2023',
+      'Ready-to-Use Excel Accounting Sheets Included'
+    ],
+    samplePreviewSnippet: 'Formulating monthly payroll with TDS deduction schedules, provident fund accounting, cash voucher controls, and reconciling audited trial balances.',
+    imageUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Accounticca Audit & Corporate Accounts Group',
+    trainingCourseId: '405',
+    coursePath: '/article/405'
+  },
+  {
+    id: 'academy-ms-office-statutory-portals',
+    title: 'Computer Skills & Statutory Portal Filings for Legal Professionals',
+    slug: 'academy-ms-office-statutory-portals',
+    category: 'Academy Courses',
+    productType: 'Academy Courses',
+    price: 1500,
+    originalPrice: 5000,
+    rating: 4.88,
+    reviewsCount: 147,
+    format: '48 Hours • Foundation to Advanced',
+    badge: 'Popular',
+    shortDescription: 'Essential computer literacy for law offices: Word legal formatting, Excel tax computation tables, PowerPoint case pitches, and NBR/RJSC portals.',
+    fullDescription: 'A custom-designed digital skills program tailored for lawyers, tax consultants, and law students. Covers professional legal formatting in MS Word, tax formulas in Excel, digital filings on NBR/RJSC portals, and digital signature setups.',
+    governingLaw: 'Digital Bangladesh Statutory Filing Procedures',
+    pagesOrFiles: '48 Hours • Project-Based Learning • Certificate',
+    features: [
+      'Legal Drafting & Pleadings in Microsoft Word',
+      'Financial & Tax Formulas in Microsoft Excel',
+      'Digital Filing on NBR e-Return & RJSC Portals',
+      'PDF Merging, Watermarking, and Digital Signing',
+      'Email Etiquette & Case File Management in Outlook',
+      'Practical Exercises with Real Law Firm Datasets'
+    ],
+    samplePreviewSnippet: 'Formatting high-density legal documents, setting page margins for stamp paper, building automated Excel tax computation sheets, and mastering portal uploads.',
+    imageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800',
+    authorOrVettedBy: 'Adv. Ekram Hossain, Advocate, Supreme Court of Bangladesh',
+    trainingCourseId: '406',
+    coursePath: '/article/406'
+  }
+];
+
+export interface CartItem {
+  product: ShopProduct;
+  quantity: number;
+}

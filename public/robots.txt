@@ -1,0 +1,31 @@
+# Robots.txt for Compliance Hub (Accounticca & E-Lawyers)
+# Optimized for Googlebot, Google-Extended, GPTBot, Meta-ExternalAgent, ClaudeBot, PerplexityBot
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /workspace/
+Disallow: /checkout/
+Disallow: /auth/
+
+User-agent: Googlebot
+Allow: /
+Allow: /shop/
+Allow: /community/
+Allow: /training/
+Allow: /tools/
+Allow: /resources/
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://blog.accounticca.com/sitemap.xml
