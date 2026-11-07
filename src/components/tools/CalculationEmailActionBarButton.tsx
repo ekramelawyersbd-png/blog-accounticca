@@ -1,31 +1,14 @@
 import React from 'react';
-import { Mail, Sparkles } from 'lucide-react';
+import { Mail, Sparkles, MessageCircle } from 'lucide-react';
 import { useEmailPreview, OpenEmailPreviewOptions } from '../../contexts/EmailPreviewContext';
+import { extractCalculationSnapshotFromContainer } from '../../utils/calculationEmailTemplate';
 
 export interface CalculationEmailActionBarButtonProps {
-  /**
-   * Optional custom options to pass to openEmailPreview (toolId, containerRef, customSnapshot, etc.)
-   */
   options?: OpenEmailPreviewOptions;
-  /**
-   * Button label (defaults to 'Send Calculation Report')
-   */
   label?: string;
-  /**
-   * Visual presentation variant: 'primary' (blue), 'dark' (slate-900), 'outline' (slate border), or 'compact'
-   */
   variant?: 'primary' | 'dark' | 'outline' | 'compact';
-  /**
-   * Optional custom tooltip
-   */
   title?: string;
-  /**
-   * Optional className extension
-   */
   className?: string;
-  /**
-   * Optional callback when clicked before/after modal open
-   */
   onClick?: () => void;
 }
 
@@ -39,12 +22,64 @@ export const CalculationEmailActionBarButton: React.FC<CalculationEmailActionBar
 }) => {
   const { openEmailPreview } = useEmailPreview();
 
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleEmailClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (onClick) {
       onClick();
     }
     openEmailPreview(options);
+  };
+
+  const handleWhatsAppShare = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (onClick) {
+      onClick();
+    }
+
+    try {
+      const toolId = options?.toolId || 'tax-calculator';
+      const toolName = options?.toolName || 'Bangladesh Statutory Compliance Calculator';
+      const toolCategory = options?.toolCategory || 'Taxation & Statutory Compliance';
+      const toolPath = options?.toolPath || window.location.pathname;
+      const statutoryBasis = options?.statutoryBasis || 'Income Tax Act 2023 · Statutory Standards';
+
+      let snapshot = options?.customSnapshot;
+      if (!snapshot && options?.containerRef?.current) {
+        snapshot = extractCalculationSnapshotFromContainer(options.containerRef.current, {
+          toolId,
+          toolName,
+          toolCategory,
+          toolPath,
+          statutoryBasis,
+        });
+      }
+
+      const refId = snapshot?.referenceId || `CALC-${Date.now().toString().slice(-6)}`;
+      const metricsText = snapshot?.summaryMetrics
+        ?.map((m) => `• *${m.label}*: ${m.value}`)
+        .join('\n') || '';
+
+      const inputsText = snapshot?.inputs
+        ?.slice(0, 6)
+        ?.map((i) => `  - ${i.label}: ${i.value}`)
+        .join('\n') || '';
+
+      const message =
+        `⚖️ *ACCOUNTICCA × E-LAWYERS STATUTORY REPORT*\n` +
+        `Ref ID: *${refId}*\n` +
+        `Tool: *${toolName}*\n` +
+        (metricsText ? `\n📊 *Key Summary:*\n${metricsText}\n` : '') +
+        (inputsText ? `\n📝 *Verified Inputs:*\n${inputsText}\n` : '') +
+        `\n🏛️ *Statutory Basis:* ${statutoryBasis}\n` +
+        `🔗 Generated via Accounticca Chambers Portal (Dhaka)`;
+
+      const encoded = encodeURIComponent(message);
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encoded}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.warn('WhatsApp share fallback:', err);
+      window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent('Accounticca x E-Lawyers Statutory Calculation Report'), '_blank', 'noopener,noreferrer');
+    }
   };
 
   let variantStyles = 'bg-blue-700 hover:bg-blue-800 text-white shadow-xs';
@@ -57,17 +92,30 @@ export const CalculationEmailActionBarButton: React.FC<CalculationEmailActionBar
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      title={title}
-      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${variantStyles} ${className}`}
-      data-testid="email-calculation-action-btn"
-    >
-      <Mail className="w-3.5 h-3.5 text-cyan-200 shrink-0" />
-      <span>{label}</span>
-      <Sparkles className="w-3 h-3 text-emerald-300 shrink-0 opacity-80" />
-    </button>
+    <div className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleEmailClick}
+        title={title}
+        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${variantStyles} ${className}`}
+        data-testid="email-calculation-action-btn"
+      >
+        <Mail className="w-3.5 h-3.5 text-cyan-200 shrink-0" />
+        <span>{label}</span>
+        <Sparkles className="w-3 h-3 text-emerald-300 shrink-0 opacity-80" />
+      </button>
+
+      <button
+        type="button"
+        onClick={handleWhatsAppShare}
+        title="Share calculation results instantly via WhatsApp"
+        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+        data-testid="whatsapp-share-action-btn"
+      >
+        <MessageCircle className="w-3.5 h-3.5 text-white shrink-0 fill-current" />
+        <span>Share via WhatsApp</span>
+      </button>
+    </div>
   );
 };
 

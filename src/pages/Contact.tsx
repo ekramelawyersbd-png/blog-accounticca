@@ -602,7 +602,36 @@ export function Contact() {
   const [activeTab, setActiveTab] = useState<ContactTab>(() =>
     getRequestedTab(location.search, location.hash),
   );
-  const [inquiryState, setInquiryState] = useState<InquiryFormState>(INITIAL_INQUIRY_STATE);
+  const [inquiryState, setInquiryState] = useState<InquiryFormState>(() => {
+    try {
+      const saved = localStorage.getItem('accounticca_contact_inquiry_draft_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && parsed.data) {
+          return {
+            ...INITIAL_INQUIRY_STATE,
+            data: { ...INITIAL_FORM, ...parsed.data },
+            currentStep: typeof parsed.currentStep === 'number' ? parsed.currentStep : 1,
+          };
+        }
+      }
+    } catch {}
+    return INITIAL_INQUIRY_STATE;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'accounticca_contact_inquiry_draft_v1',
+        JSON.stringify({
+          data: inquiryState.data,
+          currentStep: inquiryState.currentStep,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+    } catch {}
+  }, [inquiryState.data, inquiryState.currentStep]);
+
   const [urgency, setUrgency] = useState<UrgencyLevel>('Standard Advisory (24–48h)');
   const [emailDraftUrl, setEmailDraftUrl] = useState<string | null>(null);
   const [isSubmittingInquiry, setIsSubmittingInquiry] = useState(false);
@@ -1367,8 +1396,8 @@ export function Contact() {
                 className="group inline-flex min-h-12 flex-1 items-center justify-center gap-2.5 rounded-xl bg-[#0b5e48] px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-900/10 transition hover:bg-[#084b3a] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-600/20 disabled:opacity-60 cursor-pointer"
               >
                 {isSubmittingInquiry
-                  ? 'Submitting inquiry & syncing...'
-                  : 'Submit inquiry & prepare email'}
+                  ? 'Booking consultation...'
+                  : 'Book Now'}
                 <ArrowRight
                   className="h-4 w-4 transition-transform group-hover:translate-x-1"
                   aria-hidden="true"
