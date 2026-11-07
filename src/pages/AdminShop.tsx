@@ -37,7 +37,8 @@ import {
   Mail,
   History,
   Globe,
-  Calculator
+  Calculator,
+  GraduationCap
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
@@ -54,6 +55,7 @@ import { CalculationEmailHistoryTab } from '../components/admin/CalculationEmail
 import { AdminSeoManager } from '../components/admin/AdminSeoManager';
 import { AdminSearchAnalyticsTab } from '../components/admin/AdminSearchAnalyticsTab';
 import { FirebaseAnalyticsDashboard } from '../components/admin/FirebaseAnalyticsDashboard';
+import { TrainingAdmissionsAdminTab } from '../components/admin/TrainingAdmissionsAdminTab';
 import { 
   ShopProduct, 
   SHOP_CATEGORIES, 
@@ -132,7 +134,7 @@ const RECENT_TRANSACTIONS = [
 export function AdminShop({
   initialTab = 'catalog'
 }: {
-  initialTab?: 'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics';
+  initialTab?: 'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics' | 'training-admissions';
 } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -152,7 +154,7 @@ export function AdminShop({
     }
   };
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics'>(() => {
+  const [activeAdminTab, setActiveAdminTab] = useState<'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics' | 'training-admissions'>(() => {
     if (location.pathname.includes('/seo') || location.search.includes('tab=seo')) {
       return 'seo';
     }
@@ -164,6 +166,9 @@ export function AdminShop({
     }
     if (location.pathname.includes('/email-templates') || location.search.includes('tab=email-templates')) {
       return 'email-templates';
+    }
+    if (location.pathname.includes('/training-admissions') || location.search.includes('tab=training-admissions')) {
+      return 'training-admissions';
     }
     return initialTab;
   });
@@ -177,6 +182,8 @@ export function AdminShop({
       setActiveAdminTab('email-history');
     } else if (location.pathname.includes('/email-templates') || location.search.includes('tab=email-templates')) {
       setActiveAdminTab('email-templates');
+    } else if (location.pathname.includes('/training-admissions') || location.search.includes('tab=training-admissions')) {
+      setActiveAdminTab('training-admissions');
     }
   }, [location.pathname, location.search]);
 
@@ -610,6 +617,18 @@ export function AdminShop({
             </button>
             <button
               type="button"
+              onClick={() => setActiveAdminTab('training-admissions')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all inline-flex items-center gap-2 cursor-pointer ${
+                activeAdminTab === 'training-admissions'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 text-emerald-400" />
+              <span>Training Admissions</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveAdminTab('seo')}
               className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all inline-flex items-center gap-2 cursor-pointer ${
                 activeAdminTab === 'seo'
@@ -720,6 +739,10 @@ export function AdminShop({
             ) : (
               <TransactionalEmailHistoryTab />
             )}
+          </div>
+        ) : activeAdminTab === 'training-admissions' ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <TrainingAdmissionsAdminTab />
           </div>
         ) : activeAdminTab === 'email-templates' ? (
           <div className="space-y-8 animate-in fade-in duration-300">

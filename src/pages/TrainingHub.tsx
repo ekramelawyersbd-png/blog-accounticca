@@ -24,6 +24,9 @@ import { CareerPathways } from '../components/training/CareerPathways';
 import { SEO } from '../components/SEO';
 import { getAcademyCourseDashboardPath } from '../utils/lmsPortalStore';
 import { usePurchases } from '../contexts/PurchaseContext';
+import { TrainingAdmissionModal } from '../components/training/TrainingAdmissionModal';
+import { useAuth } from '../contexts/AuthContext';
+import { useShopAuth } from '../contexts/ShopAuthContext';
 
 interface LiveClassProgram {
   id: string;
@@ -42,6 +45,8 @@ interface LiveClassProgram {
 }
 
 export function TrainingHub() {
+  const { user } = useAuth();
+  const { adminUser } = useShopAuth();
   const { isPurchased, isPendingPurchase } = usePurchases();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<{
@@ -50,6 +55,11 @@ export function TrainingHub() {
     description: string;
     price: string;
   } | null>(null);
+
+  // Admission modal state
+  const [isAdmissionOpen, setIsAdmissionOpen] = useState(false);
+  const [admissionCourse, setAdmissionCourse] = useState<{ id: string; name: string } | null>(null);
+
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [certCourse] = useState<{ title: string; id: string } | null>(null);
 
@@ -276,6 +286,17 @@ export function TrainingHub() {
                           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
                         >
                           <span>Buy Now</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdmissionCourse({ id: program.id, name: program.title });
+                            setIsAdmissionOpen(true);
+                          }}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-sm"
+                        >
+                          <GraduationCap className="w-4 h-4" />
+                          <span>Apply for Admission</span>
                         </button>
                       </>
                     )}
@@ -540,6 +561,20 @@ export function TrainingHub() {
           title={selectedCourse.title}
           description={selectedCourse.description}
           price={selectedCourse.price}
+        />
+      )}
+
+      {isAdmissionOpen && admissionCourse && (
+        <TrainingAdmissionModal
+          isOpen={isAdmissionOpen}
+          onClose={() => {
+            setIsAdmissionOpen(false);
+            setAdmissionCourse(null);
+          }}
+          courseId={admissionCourse.id}
+          courseName={admissionCourse.name}
+          userEmail={user?.email || adminUser?.email}
+          userName={user?.displayName || adminUser?.name}
         />
       )}
 
