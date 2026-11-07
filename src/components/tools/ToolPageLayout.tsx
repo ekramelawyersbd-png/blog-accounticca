@@ -26,6 +26,7 @@ import { buildAppointmentUrl } from '../../utils/appointmentRedirect';
 import { ToolSEO } from '../SEO';
 import { Breadcrumbs } from '../Breadcrumbs';
 import { CalculationEmailModal } from './CalculationEmailModal';
+import { CalculationEmailActionBarButton } from './CalculationEmailActionBarButton';
 
 interface ToolPageLayoutProps {
   toolId: string;
@@ -144,15 +145,17 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
 
             {/* Quick Switch Dropdown & Email Calculation Action */}
             <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsEmailModalOpen(true)}
-                className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Preview and send calculation report to your email"
-              >
-                <Mail className="w-4 h-4 text-cyan-200" />
-                <span>Email Calculation Report</span>
-              </button>
+              <CalculationEmailActionBarButton
+                options={{
+                  toolId,
+                  toolName: title,
+                  toolCategory: category,
+                  toolPath: currentToolRoute,
+                  containerRef: toolContentRef,
+                }}
+                label="Send Calculation Report"
+                variant="primary"
+              />
 
               <div className="relative">
                 <button

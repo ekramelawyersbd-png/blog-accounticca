@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Briefcase, RefreshCw } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 
 export const GratuityCalculator: React.FC = () => {
   const [basicSalary, setBasicSalary] = useState<number>(50000); // Last drawn basic salary
@@ -28,6 +29,45 @@ export const GratuityCalculator: React.FC = () => {
   else if (separationType === 'resignation') noticeDays = 30;
   const noticePay = (basicSalary / 30) * noticeDays;
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `GRAT-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'gratuity-calculator',
+    toolName: 'Gratuity & Severance Pay Calculator',
+    toolCategory: 'Labour Law & Employment',
+    toolPath: '/tools/gratuity',
+    statutoryBasis: 'Bangladesh Labour Act 2006 · Sections 2(10), 26 & 27',
+    summaryMetrics: [
+      { label: 'Basic Monthly Wages', value: `৳${basicSalary.toLocaleString()}` },
+      { label: 'Completed Service', value: `${serviceYears} Years` },
+      { label: 'Gratuity Accrued', value: `৳${Math.round(totalGratuity).toLocaleString()}` },
+      { label: 'Statutory Notice Pay', value: `৳${Math.round(noticePay).toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Monthly Basic Wage', value: `৳${basicSalary.toLocaleString()}` },
+      { label: 'Length of Service', value: `${serviceYears} Completed Years` },
+      { label: 'Mode of Separation', value: separationType === 'resignation' ? 'Voluntary Resignation' : separationType === 'retirement' ? 'Normal Superannuation / Retirement' : separationType === 'termination' ? 'Employer Termination (Sec 26)' : 'Death while in Service (Sec 19)' },
+      { label: 'Eligibility Status', value: isEligible ? 'Eligible for Statutory Gratuity' : 'Ineligible (<5 Years Service on Resignation)' },
+    ],
+    tables: [
+      {
+        title: 'Statutory End-of-Service Settlement Breakdown',
+        headers: ['Benefit / Entitlement', 'Statutory Formula / Basis', 'Payable Amount (BDT)'],
+        rows: [
+          { cells: ['Statutory Gratuity Benefit', `${gratuityDaysPerYear} days basic/yr x ${serviceYears} yrs (BLA Sec 27)`, `৳${Math.round(totalGratuity).toLocaleString()}`] },
+          { cells: ['Notice Pay in Lieu', `${noticeDays} days basic wage (BLA Sec 26)`, `৳${Math.round(noticePay).toLocaleString()}`] },
+          { cells: ['Total Final Settlement', 'Gratuity + Notice Pay', `৳${Math.round(totalGratuity + noticePay).toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Bangladesh Labour Act 2006 (Act No. XLII of 2006) as amended in 2013 & 2018.',
+      'Section 2(10) defines "gratuity" as wages of at least 30 days for service of 5 to 10 years, and 45 days for service exceeding 10 years.',
+      'Section 26 provides notice or wages in lieu of notice for termination of employment.',
+      'Section 27 outlines terminal benefits payable on employee resignation and retirement.',
+    ],
+  }), [basicSalary, serviceYears, separationType, gratuityDaysPerYear, isEligible, totalGratuity, noticeDays, noticePay]);
+
   return (
     <ToolAccessGuard
       toolId="gratuity-calculator"
@@ -48,13 +88,27 @@ export const GratuityCalculator: React.FC = () => {
               Section 2(10) and Section 27 calculation rules: 30 days basic (5-10 yrs) and 45 days basic (&gt;10 yrs).
             </p>
           </div>
-          <button
-            onClick={() => { setBasicSalary(50000); setServiceYears(7); }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Reset
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { setBasicSalary(50000); setServiceYears(7); }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reset
+            </button>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'gratuity-calculator',
+                toolName: 'Gratuity & Severance Pay Calculator',
+                toolCategory: 'Labour Law & Employment',
+                toolPath: '/tools/gratuity',
+                statutoryBasis: 'Bangladesh Labour Act 2006 · Sections 2(10), 26 & 27',
+                customSnapshot: calculationSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="primary"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

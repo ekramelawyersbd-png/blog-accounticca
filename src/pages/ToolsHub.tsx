@@ -533,7 +533,7 @@ export const ToolsHub: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer"
             >
               <Mail className="w-4 h-4 text-cyan-200" />
-              <span>Preview &amp; Send Calculation Email Template</span>
+              <span>Send Calculation Report</span>
             </button>
             <span className="text-xs text-slate-300 font-medium">
               Includes Inputs, Full Statutory Breakdown Table, Legal Notes &amp; Optional CC Recipient
@@ -629,7 +629,7 @@ export const ToolsHub: React.FC = () => {
                   title={`Preview calculation email template for ${tool.name}`}
                 >
                   <Mail className="w-3.5 h-3.5 text-blue-700" />
-                  <span>Email Template</span>
+                  <span>Send Calculation Report</span>
                 </button>
 
                 <Link

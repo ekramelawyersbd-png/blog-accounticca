@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Mail,
   X,
@@ -18,9 +18,10 @@ import {
 import {
   CalculationEmailPayload,
   SentCalculationEmailRecord,
-  buildCalculationEmailTemplate,
-  extractCalculationSnapshotFromContainer,
 } from '../../utils/calculationEmailTemplate';
+import { CalculationEmailReportView } from './CalculationEmailReportView';
+import { useCalculationEmail } from '../../hooks/useCalculationEmail';
+import { EmailDispatchToast, EmailDispatchStatus } from './EmailDispatchToast';
 
 export interface CalculationEmailModalProps {
   isOpen: boolean;
@@ -39,8 +40,6 @@ export interface CalculationEmailModalProps {
   > | null;
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
   isOpen,
   onClose,
@@ -54,90 +53,53 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
   containerRef,
   customSnapshot,
 }) => {
-  const defaultEmail = userEmail || 'ekram.elawyersbd@gmail.com';
-  const [primaryEmail, setPrimaryEmail] = useState<string>(defaultEmail);
-  const [ccInput, setCcInput] = useState<string>('');
-  const [customNote, setCustomNote] = useState<string>('');
   const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
   const [activeTab, setActiveTab] = useState<'preview' | 'history'>('preview');
-  const [snapshotTick, setSnapshotTick] = useState<number>(0);
-
-  const [sending, setSending] = useState<boolean>(false);
-  const [testingBrevo, setTestingBrevo] = useState<boolean>(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [sentConfirmation, setSentConfirmation] = useState<{
-    referenceId: string;
-    messageId: string;
-    sentAt: string;
-    recipients: string[];
-    relayMode?: string;
-    fromHeader?: string;
-    previewUrl?: string | null;
-  } | null>(null);
-  const [brevoRelay, setBrevoRelay] = useState<{
-    host: string;
-    port: number;
-    login: string;
-    senderName: string;
-    senderEmail: string;
-    formattedFrom: string;
-    mode: string;
-    status: string;
-  }>({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    login: '9dabe5001@smtp-brevo.com',
-    senderName: 'ACCOUNTICCA x E-Lawyers',
-    senderEmail: 'ekram@elawyersbd.com',
-    formattedFrom: '"ACCOUNTICCA x E-Lawyers" <ekram@elawyersbd.com>',
-    mode: 'brevo_smtp_relay (smtp-relay.brevo.com:587 • 9dabe5001@smtp-brevo.com)',
-    status: 'ready',
-  });
   const [copiedHtml, setCopiedHtml] = useState<boolean>(false);
   const [historyLogs, setHistoryLogs] = useState<SentCalculationEmailRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+  const [toastNotification, setToastNotification] = useState<{
+    status: EmailDispatchStatus;
+    title: string;
+    message?: string;
+    referenceId?: string;
+    recipients?: string[];
+    relayMode?: string;
+    previewUrl?: string | null;
+  } | null>(null);
 
-  useEffect(() => {
-    if (userEmail) {
-      setPrimaryEmail(userEmail);
-    }
-  }, [userEmail]);
-
-  const fetchBrevoStatus = async () => {
-    try {
-      const res = await fetch('/api/email/brevo-status');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.host) {
-          setBrevoRelay({
-            host: data.host || 'smtp-relay.brevo.com',
-            port: Number(data.port || 587),
-            login: data.login || '9dabe5001@smtp-brevo.com',
-            senderName: data.senderName || 'ACCOUNTICCA x E-Lawyers',
-            senderEmail: data.senderEmail || 'ekram@elawyersbd.com',
-            formattedFrom:
-              data.formattedFrom ||
-              data.fromHeader ||
-              '"ACCOUNTICCA x E-Lawyers" <ekram@elawyersbd.com>',
-            mode: data.mode || 'brevo_smtp_relay',
-            status: data.status || 'ready',
-          });
-        }
-      }
-    } catch {
-      // Fallback to default Brevo config
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      setSentConfirmation(null);
-      setErrorMsg(null);
-      setSnapshotTick((t) => t + 1);
-      void fetchBrevoStatus();
-    }
-  }, [isOpen]);
+  // Hook handles snapshot extraction, formatting, Brevo relay state, validation & API calls
+  const {
+    payload: fullPayload,
+    compiledEmail,
+    primaryEmail,
+    setPrimaryEmail,
+    ccInput,
+    setCcInput,
+    ccRecipients,
+    customNote,
+    setCustomNote,
+    invalidCcEmails,
+    isSending: sending,
+    isTestingRelay: testingBrevo,
+    error: errorMsg,
+    lastConfirmation: sentConfirmation,
+    brevoRelay,
+    sendEmail,
+    testBrevoRelay,
+    refreshSnapshot,
+  } = useCalculationEmail({
+    toolId,
+    toolName,
+    toolCategory,
+    toolPath,
+    statutoryBasis,
+    userEmail,
+    userName,
+    containerRef,
+    customSnapshot,
+  });
 
   const fetchHistoryLogs = async () => {
     setLoadingHistory(true);
@@ -146,9 +108,6 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
       const data = await res.json();
       if (data?.success && Array.isArray(data.logs)) {
         setHistoryLogs(data.logs);
-      }
-      if (data?.brevoRelay?.host) {
-        setBrevoRelay((prev) => ({ ...prev, ...data.brevoRelay }));
       }
     } catch {
       // Ignore network fallback
@@ -163,138 +122,57 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
     }
   }, [isOpen, activeTab]);
 
-  // Parse and validate CC recipients
-  const parsedCcList = useMemo(() => {
-    return ccInput
-      .split(/[,;\s]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }, [ccInput]);
-
-  const invalidCcEmails = useMemo(() => {
-    return parsedCcList.filter((email) => !EMAIL_REGEX.test(email));
-  }, [parsedCcList]);
-
-  // Extract or use provided calculation snapshot
-  const baseSnapshot = useMemo(() => {
-    if (customSnapshot) {
-      return customSnapshot;
+  useEffect(() => {
+    if (isOpen) {
+      setToastNotification(null);
     }
-    return extractCalculationSnapshotFromContainer(containerRef?.current || null, {
-      toolId,
-      toolName,
-      toolCategory,
-      toolPath,
-      statutoryBasis,
-    });
-  }, [customSnapshot, containerRef, toolId, toolName, toolCategory, toolPath, statutoryBasis, snapshotTick]);
-
-  const fullPayload: CalculationEmailPayload = useMemo(
-    () => ({
-      ...baseSnapshot,
-      primaryRecipient: primaryEmail.trim() || defaultEmail,
-      recipientName: userName || 'Verified Member',
-      ccRecipients: parsedCcList.filter((e) => EMAIL_REGEX.test(e)),
-      customNote,
-    }),
-    [baseSnapshot, primaryEmail, defaultEmail, userName, parsedCcList, customNote]
-  );
-
-  const compiledEmail = useMemo(() => buildCalculationEmailTemplate(fullPayload), [fullPayload]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-
-    const targetPrimary = primaryEmail.trim();
-    if (!EMAIL_REGEX.test(targetPrimary)) {
-      setErrorMsg('Please enter a valid primary recipient email address.');
-      return;
-    }
-
-    if (invalidCcEmails.length > 0) {
-      setErrorMsg(`Invalid CC email format: ${invalidCcEmails.join(', ')}`);
-      return;
-    }
-
-    setSending(true);
     try {
-      const response = await fetch('/api/email/send-calculation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          referenceId: fullPayload.referenceId,
-          toolId: fullPayload.toolId,
-          toolName: fullPayload.toolName,
-          toolCategory: fullPayload.toolCategory,
-          toolPath: fullPayload.toolPath,
-          primaryRecipient: targetPrimary,
-          recipientName: fullPayload.recipientName,
-          ccRecipients: fullPayload.ccRecipients,
-          customNote: fullPayload.customNote,
-          subject: compiledEmail.subject,
-          html: compiledEmail.html,
-          text: compiledEmail.text,
-          summaryHighlight:
-            fullPayload.summaryMetrics[fullPayload.summaryMetrics.length - 1]?.value ||
-            `${fullPayload.inputs.length} inputs · ${fullPayload.tables.length} table(s)`,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to dispatch calculation email.');
-      }
-
-      setSentConfirmation({
-        referenceId: fullPayload.referenceId,
-        messageId: data.messageId || `calc-mail-${Date.now()}`,
-        sentAt: new Date().toLocaleTimeString(),
-        recipients: [targetPrimary, ...fullPayload.ccRecipients],
-        relayMode: data.relayMode || brevoRelay.mode,
-        fromHeader: data.fromHeader || brevoRelay.formattedFrom,
-        previewUrl: data.previewUrl || null,
+      const confirmation = await sendEmail();
+      setToastNotification({
+        status: 'success',
+        title: 'Email Sent Successfully',
+        message: `Calculation statement dispatched to ${confirmation.recipients.join(', ')} via Brevo SMTP relay.`,
+        referenceId: confirmation.referenceId,
+        recipients: confirmation.recipients,
+        relayMode: confirmation.relayMode,
+        previewUrl: confirmation.previewUrl,
       });
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Unable to send calculation email right now.');
-    } finally {
-      setSending(false);
+      setToastNotification({
+        status: 'error',
+        title: 'Failed to send',
+        message: err?.message || errorMsg || 'Unable to dispatch calculation email via Brevo SMTP relay. Please check the recipient address.',
+        referenceId: fullPayload.referenceId,
+        recipients: [primaryEmail.trim()],
+      });
     }
   };
 
   const handleTestBrevoRelay = async () => {
-    setErrorMsg(null);
-    const targetPrimary = primaryEmail.trim() || defaultEmail;
-    if (!EMAIL_REGEX.test(targetPrimary)) {
-      setErrorMsg('Please enter a valid recipient email to test Brevo relay.');
-      return;
-    }
-    setTestingBrevo(true);
     try {
-      const res = await fetch('/api/email/brevo-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientEmail: targetPrimary }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Brevo diagnostic test failed.');
-      }
-      setSentConfirmation({
-        referenceId: data.referenceId || 'DIAG-BREVO',
-        messageId: data.messageId || 'OK',
-        sentAt: new Date().toLocaleTimeString(),
-        recipients: [targetPrimary],
-        relayMode: data.transport || `${brevoRelay.host}:${brevoRelay.port}`,
-        fromHeader: data.fromHeader || brevoRelay.formattedFrom,
-        previewUrl: data.previewUrl || null,
+      const result = await testBrevoRelay();
+      setToastNotification({
+        status: 'success',
+        title: 'Email Sent Successfully',
+        message: result.message || 'Diagnostic ping email sent to Brevo SMTP relay.',
+        referenceId: 'DIAG-BREVO',
+        recipients: [primaryEmail.trim()],
+        relayMode: `${brevoRelay.host}:${brevoRelay.port}`,
       });
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Could not reach Brevo diagnostic endpoint.');
-    } finally {
-      setTestingBrevo(false);
+      setToastNotification({
+        status: 'error',
+        title: 'Failed to send',
+        message: err?.message || 'Could not reach or authenticate with Brevo SMTP relay.',
+        referenceId: 'DIAG-ERR',
+        recipients: [primaryEmail.trim()],
+      });
     }
   };
 
@@ -306,11 +184,26 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipientEmail: log.primaryRecipient }),
       });
-      if (res.ok) {
-        await fetchHistoryLogs();
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to resend calculation email.');
       }
-    } catch {
-      // Ignore error
+      await fetchHistoryLogs();
+      setToastNotification({
+        status: 'success',
+        title: 'Email Sent Successfully',
+        message: `Calculation report (${log.referenceId}) resent to ${log.primaryRecipient} via Brevo relay.`,
+        referenceId: log.referenceId,
+        recipients: [log.primaryRecipient],
+        relayMode: brevoRelay.mode,
+      });
+    } catch (err: any) {
+      setToastNotification({
+        status: 'error',
+        title: 'Failed to send',
+        message: err?.message || `Unable to resend statement for ${log.referenceId}.`,
+        referenceId: log.referenceId,
+      });
     } finally {
       setResendingId(null);
     }
@@ -497,9 +390,9 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
                     <p className="text-[11px] font-bold text-rose-700 mt-1">
                       Check email format: {invalidCcEmails.join(', ')}
                     </p>
-                  ) : parsedCcList.length > 0 ? (
+                  ) : ccRecipients.length > 0 ? (
                     <p className="text-[11px] font-bold text-emerald-800 mt-1">
-                      CC ready: {parsedCcList.join(', ')}
+                      CC ready: {ccRecipients.join(', ')}
                     </p>
                   ) : (
                     <p className="text-[11px] font-medium text-slate-700 mt-1">
@@ -592,7 +485,7 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
-                    onClick={() => setSnapshotTick((t) => t + 1)}
+                    onClick={refreshSnapshot}
                     className="px-2.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                     title="Re-capture latest inputs and breakdown from the active calculator"
                   >
@@ -662,9 +555,10 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
                     viewportMode === 'mobile' ? 'max-w-[385px]' : 'max-w-[660px]'
                   }`}
                 >
-                  <div
-                    className="rounded-2xl overflow-hidden shadow-md border border-slate-300 bg-white"
-                    dangerouslySetInnerHTML={{ __html: compiledEmail.html }}
+                  <CalculationEmailReportView
+                    payload={fullPayload}
+                    customNote={customNote}
+                    isCard={true}
                   />
                 </div>
               </div>
@@ -760,6 +654,27 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
               </div>
             )}
           </div>
+        )}
+
+        {/* Email Dispatch Notification Toast */}
+        {toastNotification && (
+          <EmailDispatchToast
+            status={toastNotification.status}
+            title={toastNotification.title}
+            message={toastNotification.message}
+            referenceId={toastNotification.referenceId}
+            recipients={toastNotification.recipients}
+            relayMode={toastNotification.relayMode}
+            previewUrl={toastNotification.previewUrl}
+            onClose={() => setToastNotification(null)}
+            onRetry={
+              toastNotification.status === 'error'
+                ? () => {
+                    void handleSendEmail(new Event('submit') as unknown as React.FormEvent);
+                  }
+                : undefined
+            }
+          />
         )}
       </div>
     </div>

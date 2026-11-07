@@ -34,17 +34,7 @@ function resolvePort(): number {
 
 const PORT = resolvePort();
 
-const isDevCommand =
-  process.env.NODE_ENV === 'development' ||
-  process.env.npm_lifecycle_event === 'dev' ||
-  process.execArgv.some(arg => arg.includes('tsx')) ||
-  Boolean(process.env._ && process.env._.includes('tsx'));
-
-const IS_PROD =
-  process.env.NODE_ENV === 'production' ||
-  process.env.npm_lifecycle_event === 'start' ||
-  process.env.npm_lifecycle_event === 'start:prod' ||
-  (!isDevCommand && fs.existsSync(path.join(__dirname, 'dist', 'index.html')));
+const IS_PROD = process.env.NODE_ENV === 'production' && process.env.npm_lifecycle_event !== 'dev';
 
 // Body parsers
 app.use(express.json({ limit: '15mb' }));

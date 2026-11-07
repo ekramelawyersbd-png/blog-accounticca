@@ -14,6 +14,7 @@ import {
   TrendingDown,
   HelpCircle
 } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../tools/CalculationEmailActionBarButton';
 
 export interface TdsCategoryItem {
   id: string;
@@ -176,6 +177,43 @@ export function QuickTdsCalculator({
       };
     }
   }, [numericAmount, activeRate, calculationMode]);
+
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `TDS-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'quick-tds-calculator',
+    toolName: 'Withholding Tax (TDS) & Gross-Up Calculator',
+    toolCategory: 'Taxation & Deduction at Source',
+    toolPath: '/tds-guide',
+    statutoryBasis: activeCategoryObj?.section ? `Income Tax Act 2023 · ${activeCategoryObj.section}` : 'Income Tax Act 2023 · Chapter VII',
+    summaryMetrics: [
+      { label: 'Gross Invoice Value', value: `৳${Math.round(grossAmount).toLocaleString()}` },
+      { label: `TDS Rate (${effectivePercent}%)`, value: `৳${Math.round(deductedAmount).toLocaleString()}` },
+      { label: 'Net Supplier Payable', value: `৳${Math.round(netAmount).toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Calculation Mode', value: calculationMode === 'standard' ? 'Standard Invoice (Deduct at Source)' : 'Gross-Up Formulation (Net Agreed)' },
+      { label: 'Base Input Amount', value: `৳${numericAmount.toLocaleString()}` },
+      { label: 'Applicable TDS Rate', value: `${effectivePercent}%` },
+      ...(activeCategoryObj ? [{ label: 'Statutory Section', value: `${activeCategoryObj.section} (${activeCategoryObj.category})` }] : []),
+    ],
+    tables: [
+      {
+        title: 'Withholding Tax (TDS) Assessment Statement',
+        headers: ['Component', 'Statutory Basis', 'Amount (BDT)'],
+        rows: [
+          { cells: ['Gross Assessable Invoice Value', 'Base Value', `৳${Math.round(grossAmount).toLocaleString()}`] },
+          { cells: ['Tax Deducted at Source (TDS)', `${effectivePercent}% under Chapter VII`, `৳${Math.round(deductedAmount).toLocaleString()}`] },
+          { cells: ['Net Payment Disbursed to Payee', 'Gross - TDS', `৳${Math.round(netAmount).toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Income Tax Act 2023 (Act No. XII of 2023), Chapter VII Deduction at Source.',
+      'Section 143 requires deduction certificates (Form 52) to be provided within 14 days of payment.',
+      'Withholding entities must deposit deducted amounts to Bangladesh Bank / Sonali Bank within statutory deadlines.',
+    ],
+  }), [grossAmount, effectivePercent, deductedAmount, netAmount, calculationMode, numericAmount, activeCategoryObj]);
 
   // When a statutory category is chosen from dropdown
   const handleCategorySelect = (catId: string) => {
@@ -346,7 +384,19 @@ Generated via LegalTax BD TDS Reference Guide`;
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'quick-tds-calculator',
+                toolName: 'Withholding Tax (TDS) & Gross-Up Calculator',
+                toolCategory: 'Taxation & Deduction at Source',
+                toolPath: '/tds-guide',
+                statutoryBasis: activeCategoryObj?.section ? `Income Tax Act 2023 · ${activeCategoryObj.section}` : 'Income Tax Act 2023 · Chapter VII',
+                customSnapshot: calculationSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="compact"
+            />
             <button
               type="button"
               onClick={handleReset}

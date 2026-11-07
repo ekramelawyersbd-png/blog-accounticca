@@ -35,6 +35,7 @@ import {
 } from 'recharts';
 import { generateCorporateTaxPDF } from '../../utils/taxPdfExport';
 import { CorporateComplianceMasteryQuiz } from './CorporateComplianceMasteryQuiz';
+import { CalculationEmailActionBarButton } from '../tools/CalculationEmailActionBarButton';
 
 export type CompanyTypeCategory = 'non_listed' | 'listed_over_10' | 'listed_under_10';
 
@@ -212,6 +213,44 @@ export function CorporateTaxRateCalculator({
     });
   };
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `CORP-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'corporate-tax-tool',
+    toolName: 'Corporate Income Tax & Slabs Comparison Calculator',
+    toolCategory: 'Corporate Tax & Compliance',
+    toolPath: '/tools/corporate-tax',
+    statutoryBasis: 'Income Tax Act 2023 · Corporate Tax Slabs & Banking Compliance Rules',
+    summaryMetrics: [
+      { label: 'Taxable Net Profit', value: `৳${taxableProfit.toLocaleString()}` },
+      { label: 'Effective Corporate Rate', value: `${(calculation.effectiveRate * 100).toFixed(1)}%` },
+      { label: 'Corporate Tax Liability', value: `৳${Math.round(calculation.finalTax).toLocaleString()}` },
+      { label: 'Post-Tax Retained Profit', value: `৳${Math.round(calculation.retainedEarnings).toLocaleString()}` },
+    ],
+    inputs: [
+      ...(companyName ? [{ label: 'Entity Name', value: companyName }] : []),
+      { label: 'Annual Taxable Net Profit', value: `৳${taxableProfit.toLocaleString()}` },
+      { label: 'Company Classification', value: currentCategoryInfo.name },
+      { label: 'Formal Banking Compliance', value: isBankingCompliant ? 'Yes (Enjoys reduced rate, 0% penalty)' : 'No (+2.5% non-compliance penalty applied)' },
+    ],
+    tables: [
+      {
+        title: 'Corporate Slabs & Capital Market Comparison',
+        headers: ['Entity Category', 'Statutory Rate', 'Corporate Tax Payable', 'IPO Savings vs Non-Listed'],
+        rows: [
+          { cells: ['Non-Listed (Pvt Ltd / OPC)', isBankingCompliant ? '27.5%' : '30.0%', `৳${Math.round(calculation.nonListedTax).toLocaleString()}`, 'Benchmark Base'] },
+          { cells: ['Publicly Listed (>10% IPO)', isBankingCompliant ? '20.0%' : '22.5%', `৳${Math.round(calculation.listedOver10Tax).toLocaleString()}`, `৳${Math.round(calculation.savingsOver10).toLocaleString()} Saved`] },
+          { cells: ['Publicly Listed (≤10% IPO)', isBankingCompliant ? '25.0%' : '27.5%', `৳${Math.round(calculation.listedUnder10Tax).toLocaleString()}`, `৳${Math.round(calculation.savingsUnder10).toLocaleString()} Saved`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Assessment Year 2026–2027 pursuant to Income Tax Act 2023 and Finance Act 2026.',
+      'A 2.5% penalty applies to companies failing to conduct transactions through formal banking channels.',
+      'Public listing on Dhaka Stock Exchange (DSE) / Chittagong Stock Exchange (CSE) qualifies entities for preferential corporate rates.',
+    ],
+  }), [taxableProfit, calculation, companyName, currentCategoryInfo, isBankingCompliant]);
+
   const handleShareResult = () => {
     const text = `
 === Bangladesh Corporate Tax Assessment (FY 2026-27 / AY 2027-28) ===
@@ -347,6 +386,18 @@ Accounticca × E-Lawyers Corporate Taxation & Capital Markets Advisory
               <FileDown className="w-3.5 h-3.5" />
               <span>Download as PDF</span>
             </button>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'corporate-tax-tool',
+                toolName: 'Corporate Income Tax & Slabs Comparison Calculator',
+                toolCategory: 'Corporate Tax & Compliance',
+                toolPath: '/tools/corporate-tax',
+                statutoryBasis: 'Income Tax Act 2023 · Corporate Tax Slabs & Banking Compliance Rules',
+                customSnapshot: calculationSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="primary"
+            />
             <button
               type="button"
               onClick={handleSaveSnapshot}

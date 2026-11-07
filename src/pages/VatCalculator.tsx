@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Receipt, Coins, RefreshCw, FileText } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 
 export const VatCalculator: React.FC = () => {
   const [basePrice, setBasePrice] = useState<number>(100000);
@@ -28,6 +29,47 @@ export const VatCalculator: React.FC = () => {
   const vdsAmount = vdsApplicable ? vatAmount : 0;
   const netSupplierReceivable = totalPayable - (vdsApplicable ? vdsAmount : 0);
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `VAT-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'vat-calculator',
+    toolName: 'Bangladesh VAT & Mushak 6.3 Tax Engine',
+    toolCategory: 'VAT & Customs',
+    toolPath: '/tools/vat',
+    statutoryBasis: 'Value Added Tax & Supplementary Duty Act 2012',
+    summaryMetrics: [
+      { label: 'Assessable Net Value', value: `৳${Math.round(netPrice).toLocaleString()}` },
+      { label: `VAT Amount (${vatRate}%)`, value: `৳${Math.round(vatAmount).toLocaleString()}` },
+      { label: 'Gross Invoice Total', value: `৳${Math.round(totalPayable).toLocaleString()}` },
+      { label: 'Net Supplier Receivable', value: `৳${Math.round(netSupplierReceivable).toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Transaction Value', value: `৳${basePrice.toLocaleString()}` },
+      { label: 'Assessment Mode', value: isPriceInclusive ? 'Inclusive of VAT' : 'Exclusive of VAT' },
+      { label: 'Applicable VAT Rate', value: `${vatRate}%` },
+      { label: 'VAT Deducted at Source (VDS)', value: vdsApplicable ? 'Yes (Buyer Withholding)' : 'No' },
+    ],
+    tables: [
+      {
+        title: 'Mushak 6.3 Invoice Statement Breakdown',
+        headers: ['Item / Particular', 'Statutory Rate / Rule', 'Amount (BDT)'],
+        rows: [
+          { cells: ['Assessable Net Base Value', isPriceInclusive ? 'Back-calculated' : 'Base Input', `৳${Math.round(netPrice).toLocaleString()}`] },
+          { cells: ['Value Added Tax (VAT)', `${vatRate}% under VAT Act 2012`, `৳${Math.round(vatAmount).toLocaleString()}`] },
+          { cells: ['Total Invoice Price (Buyer Gross)', 'Net Base + VAT', `৳${Math.round(totalPayable).toLocaleString()}`] },
+          { cells: ['VDS Deducted by Buyer', vdsApplicable ? 'Withheld at Source' : 'N/A', `৳${Math.round(vdsAmount).toLocaleString()}`] },
+          { cells: ['Net Payment to Supplier Account', 'Gross Payable - VDS', `৳${Math.round(netSupplierReceivable).toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Value Added Tax and Supplementary Duty Act 2012 (Act No. 47 of 2012).',
+      'Value Added Tax and Supplementary Duty Rules 2016.',
+      'SRO 186-AIN/2019/43-Mushak regarding VAT Deduction at Source (VDS) withholding entity obligations.',
+      'Mushak 6.3 tax invoice must be issued at or before the time of supply pursuant to Rule 40.',
+    ],
+  }), [basePrice, vatRate, isPriceInclusive, vdsApplicable, netPrice, vatAmount, totalPayable, vdsAmount, netSupplierReceivable]);
+
   return (
     <ToolAccessGuard
       toolId="vat-calculator"
@@ -48,13 +90,27 @@ export const VatCalculator: React.FC = () => {
               Supports standard (15%), reduced (10%, 7.5%, 5%), and specific tariff rates with VDS withholding schedules.
             </p>
           </div>
-          <button
-            onClick={() => setBasePrice(100000)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Reset
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setBasePrice(100000)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reset
+            </button>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'vat-calculator',
+                toolName: 'Bangladesh VAT & Mushak 6.3 Tax Engine',
+                toolCategory: 'VAT & Customs',
+                toolPath: '/tools/vat',
+                statutoryBasis: 'Value Added Tax & Supplementary Duty Act 2012',
+                customSnapshot: calculationSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="primary"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

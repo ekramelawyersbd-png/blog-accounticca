@@ -28,6 +28,7 @@ import { TaxCategory, TaxLocation, TaxScenario, TaxScenarioInputs } from '../typ
 import { buildAppointmentUrl } from '../utils/appointmentRedirect';
 import { parseTaxScenarioFromUrl } from '../utils/taxShareUtils';
 import { ToolSEO } from '../components/SEO';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 
 type Category = TaxCategory;
 type Location = TaxLocation;
@@ -215,6 +216,51 @@ export function TaxPlanner() {
     isFirstTimeFiler
   }), [income, investment, tds, category, disabledDependents, location, isFirstTimeFiler]);
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `PLAN-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'tax-planner',
+    toolName: 'Individual Income Tax Planner & Strategy Engine (AY 2026–27)',
+    toolCategory: 'Tax Planning & Simulation',
+    toolPath: '/tax-planner',
+    statutoryBasis: 'Income Tax Act 2023 · Finance Act 2026',
+    summaryMetrics: [
+      { label: 'Total Annual Income', value: `৳${(parseInt(income || '0', 10)).toLocaleString()}` },
+      { label: 'Taxable Income', value: `৳${results.taxableIncome.toLocaleString()}` },
+      { label: 'Investment Rebate', value: `৳${results.rebate.toLocaleString()}` },
+      { label: results.netPayable < 0 ? 'Estimated Tax Refund' : 'Net Tax Payable', value: `৳${Math.abs(results.netPayable).toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Annual Gross Income', value: `৳${(parseInt(income || '0', 10)).toLocaleString()}` },
+      { label: 'Eligible Investment', value: `৳${(parseInt(investment || '0', 10)).toLocaleString()}` },
+      { label: 'Advance Tax / TDS', value: `৳${(parseInt(tds || '0', 10)).toLocaleString()}` },
+      { label: 'Taxpayer Category', value: category },
+      { label: 'Location Jurisdiction', value: location },
+      { label: 'First-time Filer', value: isFirstTimeFiler ? 'Yes (Tk. 1,000 min tax)' : 'No' },
+    ],
+    tables: [
+      {
+        title: 'Tax Assessment & Liability Breakdown',
+        headers: ['Assessment Metric', 'Formula / Rule', 'Amount (BDT)'],
+        rows: [
+          { cells: ['Total Gross Income', 'Self-Declared Assessment', `৳${(parseInt(income || '0', 10)).toLocaleString()}`] },
+          { cells: ['Personal Tax-Free Exemption', 'Statutory Threshold', `৳${results.totalLimit.toLocaleString()}`] },
+          { cells: ['Taxable Income', 'Gross - Exemption', `৳${results.taxableIncome.toLocaleString()}`] },
+          { cells: ['Gross Income Tax', 'Slab Calculation', `৳${results.grossTax.toLocaleString()}`] },
+          { cells: ['Allowable Investment Rebate', '15% eligible rebate', `৳${results.rebate.toLocaleString()}`] },
+          { cells: ['Minimum Tax Enforcement', 'Zone Statutory Floor', `৳${results.minimumTax.toLocaleString()}`] },
+          { cells: ['Advance Tax / TDS Paid', 'Credit Adjustment', `৳${(parseInt(tds || '0', 10)).toLocaleString()}`] },
+          { cells: [results.netPayable < 0 ? 'Refund Due from NBR' : 'Final Net Tax Payable', 'Statutory Balance', `৳${Math.abs(results.netPayable).toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Assessment Year 2026–27 pursuant to Income Tax Act 2023.',
+      'Schedule 6 Part 3 investment rebate caps and ceilings.',
+      'Minimum tax thresholds based on taxpayer residential area.',
+    ],
+  }), [income, results, investment, tds, category, location, isFirstTimeFiler]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <ToolSEO
@@ -362,7 +408,20 @@ export function TaxPlanner() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CalculationEmailActionBarButton
+                options={{
+                  toolId: 'tax-planner',
+                  toolName: 'Individual Income Tax Planner & Strategy Engine',
+                  toolCategory: 'Tax Planning & Simulation',
+                  toolPath: '/tax-planner',
+                  statutoryBasis: 'Income Tax Act 2023 · Finance Act 2026',
+                  customSnapshot: calculationSnapshot,
+                }}
+                label="Send Calculation Report"
+                variant="primary"
+              />
+
               <button
                 type="button"
                 id="share-active-plan-top-btn"

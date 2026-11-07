@@ -4,6 +4,7 @@ import { recordToolSigning } from '../../services/toolSigningService';
 import { ShieldCheck, LogIn, Sparkles, CheckCircle2, Lock, ArrowRight, BookOpen, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CalculationEmailModal } from '../tools/CalculationEmailModal';
+import { CalculationEmailActionBarButton } from '../tools/CalculationEmailActionBarButton';
 
 import { ShopProduct } from '../../data/shopProducts';
 
@@ -93,14 +94,17 @@ export const ToolAccessGuard: React.FC<ToolAccessGuardProps> = ({
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEmailModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs transition-colors cursor-pointer"
-                >
-                  <Mail className="w-3.5 h-3.5 text-cyan-200" />
-                  <span>Email Calculation Report</span>
-                </button>
+                <CalculationEmailActionBarButton
+                  options={{
+                    toolId: resolvedId,
+                    toolName: resolvedName,
+                    toolCategory: resolvedCategory,
+                    toolPath: resolvedPath,
+                    containerRef: guardContentRef,
+                  }}
+                  label="Send Calculation Report"
+                  variant="primary"
+                />
               </div>
             </div>
           </div>

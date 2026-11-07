@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Building2, RefreshCw } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 
 export const CompanyRegistrationFee: React.FC = () => {
   const [authorizedCapital, setAuthorizedCapital] = useState<number>(1000000); // 10 Lakh
@@ -39,6 +40,49 @@ export const CompanyRegistrationFee: React.FC = () => {
 
   const totalGovernmentFee = registrationFee + nameClearanceFee + filingFees + certifiedCopiesFee + moaStamp + aoaStamp;
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `RJSC-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'company-registration',
+    toolName: 'RJSC Private Limited Incorporation Fee Estimator',
+    toolCategory: 'Corporate Law & RJSC',
+    toolPath: '/tools/company-registration',
+    statutoryBasis: 'Companies Act 1994 (Schedule II) & Stamp Act 1899',
+    summaryMetrics: [
+      { label: 'Authorized Capital', value: `৳${authorizedCapital.toLocaleString()}` },
+      { label: 'RJSC Registration Fee', value: `৳${Math.round(registrationFee).toLocaleString()}` },
+      { label: 'Stamp Duty (MoA + AoA)', value: `৳${(moaStamp + aoaStamp).toLocaleString()}` },
+      { label: 'Total Statutory Fees', value: `৳${Math.round(totalGovernmentFee).toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Authorized Capital', value: `৳${authorizedCapital.toLocaleString()}` },
+      { label: 'Company Structure', value: 'Private Limited Company (by Shares)' },
+      { label: 'Name Clearance Fee', value: '৳200' },
+      { label: 'Digital Filing (5 Forms)', value: '৳1,000' },
+      { label: 'Certified Copies (Digitized)', value: '৳850' },
+    ],
+    tables: [
+      {
+        title: 'RJSC Statutory Fee & Stamp Duty Schedule',
+        headers: ['Head of Account / Service', 'Statutory Basis / Slab', 'Government Fee (BDT)'],
+        rows: [
+          { cells: ['Name Clearance Processing', 'RJSC Online System', '৳200'] },
+          { cells: ['Capital Registration Fee', 'Companies Act 1994, Sched II', `৳${Math.round(registrationFee).toLocaleString()}`] },
+          { cells: ['Statutory Forms Filing (5 forms)', 'Form I, VI, IX, X, XII', '৳1,000'] },
+          { cells: ['MoA Stamp Duty', 'The Stamp Act 1899', `৳${moaStamp.toLocaleString()}`] },
+          { cells: ['AoA Stamp Duty', `Capital bracket (≤ ৳${(authorizedCapital > 30000000 ? '3 Cr+' : authorizedCapital > 1000000 ? '3 Cr' : '10 Lakh')})`, `৳${aoaStamp.toLocaleString()}`] },
+          { cells: ['Digital Certified Incorporation Copies', 'Certificate + MoA/AoA', '৳850'] },
+          { cells: ['Total Government Fee Payable', 'Excluding professional legal fees', `৳${Math.round(totalGovernmentFee).toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Companies Act 1994 (Act No. XVIII of 1994), Schedule II Table of Registration Fees.',
+      'The Stamp Act 1899 (Act II of 1899) Article 10 (Articles of Association) & Article 39 (Memorandum of Association).',
+      'RJSC digital portal processing charges are subject to official government gazettes.',
+    ],
+  }), [authorizedCapital, registrationFee, nameClearanceFee, filingFees, certifiedCopiesFee, moaStamp, aoaStamp, totalGovernmentFee]);
+
   return (
     <ToolAccessGuard
       toolId="company-registration"
@@ -59,13 +103,27 @@ export const CompanyRegistrationFee: React.FC = () => {
               Computes official Registrar of Joint Stock Companies and Firms (RJSC) statutory fees and non-judicial stamp duty.
             </p>
           </div>
-          <button
-            onClick={() => setAuthorizedCapital(1000000)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Reset
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setAuthorizedCapital(1000000)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reset
+            </button>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'company-registration',
+                toolName: 'RJSC Company Registration Fee Estimator',
+                toolCategory: 'Corporate Law & RJSC',
+                toolPath: '/tools/company-registration',
+                statutoryBasis: 'Companies Act 1994 & Stamp Act 1899',
+                customSnapshot: calculationSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="primary"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

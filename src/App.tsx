@@ -78,6 +78,7 @@ import { CartProvider } from './contexts/CartContext';
 import { PurchaseProvider } from './contexts/PurchaseContext';
 import { LmsProvider } from './contexts/LmsContext';
 import { FocusModeProvider } from './contexts/FocusModeContext';
+import { EmailPreviewProvider } from './contexts/EmailPreviewContext';
 import { BookmarkNotificationToast } from './components/BookmarkNotificationToast';
 import { FormSubmissionToast } from './components/ui/FormSubmissionToast';
 import { ScrollManager } from './components/layout/ScrollManager';
@@ -104,7 +105,8 @@ export default function App() {
               <PurchaseProvider>
                 <LmsProvider>
                   <FocusModeProvider>
-                    <BrowserRouter>
+                    <EmailPreviewProvider>
+                      <BrowserRouter>
                 <ScrollManager />
                 <Routes>
                   <Route path="/" element={<Layout />}>
@@ -430,6 +432,7 @@ export default function App() {
             <BookmarkNotificationToast />
             <FormSubmissionToast />
           </BrowserRouter>
+          </EmailPreviewProvider>
           </FocusModeProvider>
           </LmsProvider>
           </PurchaseProvider>

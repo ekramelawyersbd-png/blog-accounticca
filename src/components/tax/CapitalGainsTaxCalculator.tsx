@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   Download
 } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../tools/CalculationEmailActionBarButton';
 
 export type AssetType = 'real_estate' | 'personal_valuables' | 'listed_securities' | 'other';
 export type TaxpayerGenderCategory = 'general' | 'female_senior' | 'disabled' | 'freedom_fighter';
@@ -374,6 +375,49 @@ Computed via Accounticca Tax Advisory Desk`;
       setTimeout(() => setCopied(false), 2500);
     });
   };
+
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `CGT-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'capital-gains-tax-tool',
+    toolName: 'Capital Gains Tax Calculator (মূলধনী আয় কর)',
+    toolCategory: 'Capital Gains & Property',
+    toolPath: '/tools/capital-gains-tax',
+    statutoryBasis: calculationResult.legalBasis || 'Income Tax Act 2023 · Seventh Schedule & Section 57',
+    summaryMetrics: [
+      { label: 'Sale Consideration', value: `৳${salePrice.toLocaleString()}` },
+      { label: 'Net Capital Gain', value: `৳${netGain.toLocaleString()}` },
+      { label: 'Applicable Rate', value: calculationResult.rateLabel },
+      { label: 'Capital Gains Tax Payable', value: `৳${calculationResult.taxPayable.toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Asset Classification', value: assetType.replace('_', ' ').toUpperCase() },
+      { label: 'Acquisition / Purchase Price', value: `৳${purchasePrice.toLocaleString()} (${purchaseYear})` },
+      { label: 'Disposal / Selling Price', value: `৳${salePrice.toLocaleString()} (${saleYear})` },
+      { label: 'Allowable Improvement Costs', value: `৳${improvementCosts.toLocaleString()}` },
+      { label: 'Holding Period', value: `${holdingPeriodYears} Year(s) (${isLongTerm ? 'Long-Term > 5 Yrs' : 'Short-Term ≤ 5 Yrs'})` },
+    ],
+    tables: [
+      {
+        title: 'Capital Gains Tax Computation Breakdown',
+        headers: ['Component / Metric', 'Statutory Formula / Slab', 'Amount (BDT)'],
+        rows: [
+          { cells: ['Gross Sale Consideration', 'Transfer Price', `৳${salePrice.toLocaleString()}`] },
+          { cells: ['Less: Cost of Acquisition', 'Historical Deed / Purchase Cost', `৳${purchasePrice.toLocaleString()}`] },
+          { cells: ['Less: Allowable Capital Improvements', 'Documented Construction / Renovation', `৳${improvementCosts.toLocaleString()}`] },
+          { cells: ['Net Taxable Capital Gain', 'Sale - Acquisition - Improvements', `৳${netGain.toLocaleString()}`] },
+          { cells: ['Statutory Tax Rate Applicable', calculationResult.rateLabel, calculationResult.rateLabel] },
+          { cells: ['Capital Gains Tax Liability', 'Statutory Computation', `৳${calculationResult.taxPayable.toLocaleString()}`] },
+          ...(calculationResult.installmentEligible ? [{ cells: ['3-Year Annual Installment Option', 'AY 2026-27, 2027-28, 2028-29', `৳${calculationResult.annualInstallment.toLocaleString()} / year`] }] : []),
+        ],
+      },
+    ],
+    legalNotes: [
+      calculationResult.legalBasis || 'Income Tax Act 2023, Seventh Schedule & Section 57.',
+      'Long-term capital gains on immovable property held over 5 years are taxed at 15% flat rate.',
+      'Short-term capital gains (held 5 years or less) are aggregated with regular income and taxed at progressive slabs.',
+    ],
+  }), [salePrice, netGain, calculationResult, assetType, purchasePrice, purchaseYear, saleYear, improvementCosts, holdingPeriodYears, isLongTerm]);
 
   return (
     <div className={`bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden ${className}`} id="capital-gains-tax-tool">
@@ -872,7 +916,19 @@ Computed via Accounticca Tax Advisory Desk`;
                   Reset Inputs
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CalculationEmailActionBarButton
+                    options={{
+                      toolId: 'capital-gains-tax-tool',
+                      toolName: 'Capital Gains Tax Calculator (মূলধনী আয় কর)',
+                      toolCategory: 'Capital Gains & Property',
+                      toolPath: '/tools/capital-gains-tax',
+                      statutoryBasis: calculationResult.legalBasis || 'Income Tax Act 2023 · Seventh Schedule & Section 57',
+                      customSnapshot: calculationSnapshot,
+                    }}
+                    label="Send Calculation Report"
+                    variant="primary"
+                  />
                   <button
                     type="button"
                     onClick={handleCopySummary}

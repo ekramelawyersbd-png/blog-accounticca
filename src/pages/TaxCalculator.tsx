@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { recordToolSigning } from '../services/toolSigningService';
 import { Link } from 'react-router-dom';
 import { CalculationEmailModal } from '../components/tools/CalculationEmailModal';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 import {
   generateCalculationReferenceId,
   getDefaultLegalNotesForTool,
@@ -396,6 +397,122 @@ export const TaxCalculator: React.FC = () => {
     setUpsZakatBenevolent(0);
   };
 
+  const calculationEmailSnapshot = useMemo(() => {
+    return {
+      referenceId: generateCalculationReferenceId('ITAX'),
+      generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+      toolId: 'tax-calculator',
+      toolName: 'Bangladesh Individual Income Tax & Rebate Calculator (AY 2026–27)',
+      toolCategory: 'Taxation & Compliance',
+      toolPath: '/tax-calculator',
+      statutoryBasis: 'Income Tax Act 2023 · Part 3, 6th Schedule & Section 86 (AY 2026–2027)',
+      summaryMetrics: [
+        { label: 'Total Taxable Income', value: `৳ ${Math.round(totalTaxableIncome).toLocaleString()}`, tone: 'blue' as const },
+        { label: 'Gross Tax Liability', value: `৳ ${Math.round(grossTaxPayable).toLocaleString()}`, tone: 'slate' as const },
+        { label: 'Allowable Tax Rebate', value: `- ৳ ${Math.round(taxRebate).toLocaleString()}`, tone: 'emerald' as const },
+        { label: 'Final Net Tax Payable', value: `৳ ${Math.round(finalTaxPayable).toLocaleString()}`, sublabel: `Monthly TDS: ৳ ${monthlySalaryTds.toFixed(2)}`, tone: 'amber' as const },
+      ],
+      inputs: [
+        { label: 'Taxpayer Category (0% Threshold)', value: categoryLabel, note: `0% up to ৳ ${exemptionThreshold.toLocaleString()}` },
+        { label: 'Disabled Child / Dependants', value: `${disabledDependents}`, note: `+৳ ${dependentAddition.toLocaleString()}` },
+        { label: 'Minimum Tax Floor Jurisdiction', value: `Min Tax ৳ ${minimumTax.toLocaleString()}` },
+        { label: 'Gross Annual Salary Income', value: `৳ ${grossSalaryIncome.toLocaleString()}`, note: `1/3 Exempt: ৳ ${Math.round(allowableSalaryExemption).toLocaleString()}` },
+        { label: 'Business / Rental / Other Income', value: `৳ ${(businessIncome + rentalIncome + otherIncome).toLocaleString()}` },
+        { label: 'DPS Contribution', value: `৳ ${dpsInvestment.toLocaleString()}`, note: `Allowable: ৳ ${allowableDps.toLocaleString()}` },
+        { label: 'Sanchayapatra / Govt Securities', value: `৳ ${govtSecurities.toLocaleString()}`, note: `Allowable: ৳ ${allowableGovtSecurities.toLocaleString()}` },
+        { label: 'Recognized Provident Fund (RPF/GPF)', value: `৳ ${providentFund.toLocaleString()}`, note: `Allowable: ৳ ${allowableProvidentFund.toLocaleString()}` },
+        { label: 'Mutual Funds / ETFs / Other Sectors', value: `৳ ${(mutualFundsEtf + lifeInsurance + listedStocks + upsZakatBenevolent).toLocaleString()}`, note: `Total Allowable Inv: ৳ ${totalAllowableInvestment.toLocaleString()}` },
+      ],
+      tables: [
+        {
+          title: 'Statutory Tax Slab & Rebate Calculation Statement (AY 2026–2027)',
+          headers: ['Slab / Statutory Step', 'Rate', 'Taxable Tier (৳)', 'Tax Payable (৳)'],
+          rows: [
+            ...slabCalculations.map((s) => ({
+              cells: [
+                `${s.slabName} (${s.bracketRange})`,
+                s.rate,
+                Math.round(s.taxableAmount).toLocaleString(),
+                Math.round(s.taxPayable).toLocaleString(),
+              ],
+              tone: 'default' as const,
+            })),
+            {
+              cells: ['Gross Tax Liability (Calculated on Progressive Slabs):', '', '', `৳ ${Math.round(grossTaxPayable).toLocaleString()}`],
+              tone: 'subtotal' as const,
+            },
+            {
+              cells: [`Limit A — 3% of Eligible Total Income (3% of ৳ ${Math.round(eligibleTotalIncomeForRebate).toLocaleString()}):`, '', '', `৳ ${Math.round(limitA).toLocaleString()}`],
+              tone: 'limit' as const,
+            },
+            {
+              cells: [`Limit B — 10% of Total Allowable Investment (10% of ৳ ${Math.round(totalAllowableInvestment).toLocaleString()}):`, '', '', `৳ ${Math.round(limitB).toLocaleString()}`],
+              tone: 'limit' as const,
+            },
+            {
+              cells: ['Limit C — Maximum Statutory Cap:', '', '', `৳ ${limitC.toLocaleString()}`],
+              tone: 'limit' as const,
+            },
+            {
+              cells: ['Less: Allowable Tax Rebate (Lower of Limit A, Limit B, or Limit C):', '', '', `- ৳ ${Math.round(taxRebate).toLocaleString()}`],
+              tone: 'rebate' as const,
+            },
+            {
+              cells: ['Net Payable Tax after Rebate Adjustment:', '', '', `৳ ${Math.round(netTaxBeforeMinimum).toLocaleString()}`],
+              tone: 'subtotal' as const,
+            },
+            {
+              cells: ['Minimum Tax Floor (Applicable Baseline Threshold):', '', '', `৳ ${minimumTax.toLocaleString()}`],
+              tone: 'subtotal' as const,
+            },
+            {
+              cells: ['FINAL ANNUAL NET TAX PAYABLE:', '', '', `৳ ${Math.round(finalTaxPayable).toLocaleString()}`],
+              tone: 'highlight' as const,
+            },
+            {
+              cells: ['MONTHLY SALARY TDS WITHHOLDING (Sec 86 · Annual Net Tax ÷ 12):', '', '', `৳ ${monthlySalaryTds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo`],
+              tone: 'tds' as const,
+            },
+          ],
+        },
+      ],
+      legalNotes: getDefaultLegalNotesForTool('tax-calculator', 'Taxation'),
+    };
+  }, [
+    totalTaxableIncome,
+    grossTaxPayable,
+    taxRebate,
+    finalTaxPayable,
+    monthlySalaryTds,
+    categoryLabel,
+    exemptionThreshold,
+    disabledDependents,
+    dependentAddition,
+    minimumTax,
+    grossSalaryIncome,
+    allowableSalaryExemption,
+    businessIncome,
+    rentalIncome,
+    otherIncome,
+    dpsInvestment,
+    allowableDps,
+    govtSecurities,
+    allowableGovtSecurities,
+    providentFund,
+    allowableProvidentFund,
+    mutualFundsEtf,
+    lifeInsurance,
+    listedStocks,
+    upsZakatBenevolent,
+    totalAllowableInvestment,
+    slabCalculations,
+    eligibleTotalIncomeForRebate,
+    limitA,
+    limitB,
+    limitC,
+    netTaxBeforeMinimum,
+  ]);
+
   return (
     <ToolAccessGuard
       toolId="tax-calculator"
@@ -455,14 +572,18 @@ export const TaxCalculator: React.FC = () => {
               <RefreshCw className="w-3.5 h-3.5 text-slate-800" />
               <span>Reset</span>
             </button>
-            <button
-              onClick={() => setIsEmailModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold shadow-xs transition-all cursor-pointer"
-              title="Preview and send this tax calculation report to your email"
-            >
-              <Mail className="w-3.5 h-3.5 text-cyan-200" />
-              <span>Email Report</span>
-            </button>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'tax-calculator',
+                toolName: 'Bangladesh Individual Income Tax & Rebate Calculator (AY 2026–27)',
+                toolCategory: 'Taxation & Statutory Compliance',
+                toolPath: '/tax-calculator',
+                statutoryBasis: 'Income Tax Act 2023 · Section 78 & Schedule 6 Part 3',
+                customSnapshot: calculationEmailSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="primary"
+            />
             <button
               onClick={() => window.print()}
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"

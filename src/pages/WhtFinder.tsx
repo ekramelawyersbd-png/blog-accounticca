@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
-import { Coins, Search, ExternalLink } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 
 interface WhtRule {
   section: string;
@@ -91,13 +91,56 @@ export const WhtFinder: React.FC = () => {
               Authoritative deduction at source rates for withholding entities in Bangladesh.
             </p>
           </div>
-          <div className="w-full sm:w-72">
-            <input
-              type="text"
-              placeholder="Search section or payment type..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold"
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Search section or payment type..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold"
+              />
+            </div>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'wht-finder',
+                toolName: 'Statutory Withholding Tax (TDS / WHT) Schedule',
+                toolCategory: 'Taxation & Deduction at Source',
+                toolPath: '/tools/wht',
+                statutoryBasis: 'Income Tax Act 2023 · Chapter VII (Deduction at Source)',
+                customSnapshot: {
+                  referenceId: `WHT-${Date.now().toString().slice(-6)}`,
+                  generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+                  toolId: 'wht-finder',
+                  toolName: 'Statutory Withholding Tax (TDS / WHT) Schedule',
+                  toolCategory: 'Taxation & Deduction at Source',
+                  toolPath: '/tools/wht',
+                  statutoryBasis: 'Income Tax Act 2023 · Chapter VII (Deduction at Source)',
+                  inputs: [
+                    { label: 'Total Statutory TDS Sections', value: `${WHT_RULES.length} Key Categories` },
+                    { label: 'Active Filter Query', value: search ? `"${search}"` : 'All Categories' },
+                    { label: 'Non-TIN Higher Rate Rule', value: '50% higher deduction under Section 86' },
+                  ],
+                  summaryMetrics: [
+                    { label: 'Matching TDS Rules', value: `${filtered.length} Sections` },
+                    { label: 'Default Advisory Scope', value: 'National Board of Revenue (NBR)' },
+                  ],
+                  tables: [
+                    {
+                      title: 'Statutory Withholding Tax Schedule',
+                      headers: ['Statutory Section', 'Payment Category', 'Base TDS Rate', 'Without TIN Rate'],
+                      rows: filtered.slice(0, 10).map(r => ({ cells: [r.section, r.category, r.baseRate, r.nonTinRate] })),
+                    },
+                  ],
+                  legalNotes: [
+                    'Income Tax Act 2023 (Act No. XII of 2023), Chapter VII: Deduction at Source.',
+                    'Section 86 specifies penalties and 50% surcharge for failure to provide 12-digit e-TIN.',
+                    'Section 143 mandates issuance of withholding certificate (Form 52) to payees.',
+                  ],
+                },
+              }}
+              label="Send Calculation Report"
+              variant="primary"
             />
           </div>
         </div>

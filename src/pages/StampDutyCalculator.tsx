@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Scale, RefreshCw } from 'lucide-react';
+import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 
 export const StampDutyCalculator: React.FC = () => {
   const [deedValue, setDeedValue] = useState<number>(5000000); // 50 Lakh
@@ -22,6 +23,47 @@ export const StampDutyCalculator: React.FC = () => {
   const ait = deedValue * aitRate;
   const totalGovtCost = stampDuty + registrationFee + lgt + ait;
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `DEED-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'stamp-duty',
+    toolName: 'Land & Property Deed Stamp Duty & Registration Cost Calculator',
+    toolCategory: 'Property & Deed Registration',
+    toolPath: '/tools/stamp-duty',
+    statutoryBasis: 'The Stamp Act 1899 & The Registration Act 1908 · AIT Sec 125 ITA 2023',
+    summaryMetrics: [
+      { label: 'Deed / Mouza Value', value: `৳${deedValue.toLocaleString()}` },
+      { label: 'Stamp Duty (1.5%)', value: `৳${Math.round(stampDuty).toLocaleString()}` },
+      { label: 'Sub-Registry Fee (1%)', value: `৳${Math.round(registrationFee).toLocaleString()}` },
+      { label: 'Total Statutory Cost', value: `৳${Math.round(totalGovtCost).toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Deed Property Value', value: `৳${deedValue.toLocaleString()}` },
+      { label: 'Property Location', value: propertyLocation === 'dhaka_ctg_city' ? 'Dhaka / Chattogram City Corp' : propertyLocation === 'other_city' ? 'Other City Corporation' : propertyLocation === 'cantonment' ? 'Cantonment Board' : 'Upazila / Rural Municipality' },
+      { label: 'Statutory Stamp Duty Rate', value: '1.5% of deed value' },
+      { label: 'Sub-Registry Fee Rate', value: '1% of deed value (Min Tk 100)' },
+    ],
+    tables: [
+      {
+        title: 'Statutory Land / Flat Registration Cost Breakdown',
+        headers: ['Head of Account / Tax', 'Statutory Rate / Legal Provision', 'Government Fee (BDT)'],
+        rows: [
+          { cells: ['Non-Judicial Stamp Duty', '1.5% (The Stamp Act 1899)', `৳${Math.round(stampDuty).toLocaleString()}`] },
+          { cells: ['Registration Fee', '1% (The Registration Act 1908)', `৳${Math.round(registrationFee).toLocaleString()}`] },
+          { cells: ['Local Government Tax (LGT)', `${(lgtRate * 100).toFixed(1)}% (City Corp / Upazila Ordinance)`, `৳${Math.round(lgt).toLocaleString()}`] },
+          { cells: ['Advance Income Tax (AIT)', `${(aitRate * 100).toFixed(1)}% (Income Tax Act 2023 Sec 125)`, `৳${Math.round(ait).toLocaleString()}`] },
+          { cells: ['Total Government Fee Payable', 'Sum of all statutory charges', `৳${Math.round(totalGovtCost).toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'The Stamp Act 1899 (Act II of 1899) as amended by Finance Acts.',
+      'The Registration Act 1908 (Act XVI of 1908) Schedule of Fees.',
+      'Income Tax Act 2023, Section 125 (Tax on Transfer of Property / AIT).',
+      'Local Government (City Corporation / Pourashava / Union Parishad) Tax on transfer of immovable property.',
+    ],
+  }), [deedValue, propertyLocation, stampDuty, registrationFee, lgt, ait, totalGovtCost, lgtRate, aitRate]);
+
   return (
     <ToolAccessGuard
       toolId="stamp-duty"
@@ -42,13 +84,27 @@ export const StampDutyCalculator: React.FC = () => {
               Computes statutory Stamp Duty (1.5%), Sub-Registry Fee (1%), Local Govt Tax, and Advance Income Tax (AIT Sec 125).
             </p>
           </div>
-          <button
-            onClick={() => setDeedValue(5000000)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Reset
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setDeedValue(5000000)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reset
+            </button>
+            <CalculationEmailActionBarButton
+              options={{
+                toolId: 'stamp-duty',
+                toolName: 'Land & Property Deed Registration Calculator',
+                toolCategory: 'Property & Deed Registration',
+                toolPath: '/tools/stamp-duty',
+                statutoryBasis: 'Registration Act 1908 & Stamp Act 1899',
+                customSnapshot: calculationSnapshot,
+              }}
+              label="Send Calculation Report"
+              variant="primary"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

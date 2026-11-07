@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { buildAppointmentUrl } from '../../utils/appointmentRedirect';
+import { CalculationEmailActionBarButton } from './CalculationEmailActionBarButton';
 
 export interface RJscFeeBreakdown {
   nameClearance: number;
@@ -145,6 +146,47 @@ export function RJscFeeCalculator() {
     };
   }, [entityType, authorisedCapital, includeNameClearance]);
 
+  const calculationSnapshot = useMemo(() => ({
+    referenceId: `RJSC-${Date.now().toString().slice(-6)}`,
+    generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+    toolId: 'rjsc-fee-estimator',
+    toolName: 'RJSC Business Registration Fee Calculator',
+    toolCategory: 'Corporate Law & RJSC',
+    toolPath: '/tools/rjsc-fee-calculator',
+    statutoryBasis: 'Companies Act 1994 (Schedule II) & Stamp Act 1899',
+    summaryMetrics: [
+      { label: 'Authorized Capital', value: `৳${authorisedCapital.toLocaleString()}` },
+      { label: 'Capital Registration Fee', value: `৳${feeCalculation.capitalFee.toLocaleString()}` },
+      { label: 'Non-Judicial Stamp Duty', value: `৳${(feeCalculation.moaStamp + feeCalculation.aoaStamp).toLocaleString()}` },
+      { label: 'Total Statutory Fees (inc. VAT)', value: `৳${feeCalculation.total.toLocaleString()}` },
+    ],
+    inputs: [
+      { label: 'Entity Type', value: entityType === 'pvt' ? 'Private Limited Company (by Shares)' : entityType === 'plc' ? 'Public Limited Company (PLC)' : entityType === 'opc' ? 'One Person Company (OPC)' : 'Partnership Firm' },
+      { label: 'Authorised Capital', value: `৳${authorisedCapital.toLocaleString()}` },
+      { label: 'Name Clearance Processing', value: includeNameClearance ? 'Included (Tk 500)' : 'Already Obtained' },
+    ],
+    tables: [
+      {
+        title: 'RJSC Statutory Fee & Stamp Duty Schedule',
+        headers: ['Head of Account / Service', 'Statutory Basis / Slab', 'Fee (BDT)'],
+        rows: [
+          { cells: ['Name Clearance Processing', 'RJSC Online System', `৳${feeCalculation.nameClearance.toLocaleString()}`] },
+          { cells: ['Document Filing Fee', 'Statutory Incorporation Forms', `৳${feeCalculation.documentFiling.toLocaleString()}`] },
+          { cells: ['MoA Stamp Duty', 'The Stamp Act 1899', `৳${feeCalculation.moaStamp.toLocaleString()}`] },
+          { cells: ['AoA Stamp Duty', 'Capital Slabs (Schedule I)', `৳${feeCalculation.aoaStamp.toLocaleString()}`] },
+          { cells: ['Capital Registration Fee', 'Companies Act 1994, Sched II', `৳${feeCalculation.capitalFee.toLocaleString()}`] },
+          { cells: ['VAT (15%)', 'Government Processing VAT', `৳${feeCalculation.vat.toLocaleString()}`] },
+          { cells: ['Total Government Fee Payable', 'Statutory Amount', `৳${feeCalculation.total.toLocaleString()}`] },
+        ],
+      },
+    ],
+    legalNotes: [
+      'Companies Act 1994 (Act No. XVIII of 1994), Schedule II Table of Registration Fees.',
+      'The Stamp Act 1899 (Act II of 1899) Article 10 (Articles of Association) & Article 39 (Memorandum of Association).',
+      'RJSC digital portal processing charges are subject to official government gazettes.',
+    ],
+  }), [authorisedCapital, entityType, includeNameClearance, feeCalculation]);
+
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
       {/* Component Header */}
@@ -168,14 +210,28 @@ export function RJscFeeCalculator() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowGuide(!showGuide)}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
-        >
-          <HelpCircle className="w-4 h-4 text-indigo-600" />
-          <span>{showGuide ? 'Hide Rules' : 'How Fees Are Calculated'}</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <CalculationEmailActionBarButton
+            options={{
+              toolId: 'rjsc-fee-estimator',
+              toolName: 'RJSC Business Registration Fee Calculator',
+              toolCategory: 'Corporate Law & RJSC',
+              toolPath: '/tools/rjsc-fee-calculator',
+              statutoryBasis: 'Companies Act 1994 & Stamp Act 1899',
+              customSnapshot: calculationSnapshot,
+            }}
+            label="Send Calculation Report"
+            variant="primary"
+          />
+          <button
+            type="button"
+            onClick={() => setShowGuide(!showGuide)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4 text-indigo-600" />
+            <span>{showGuide ? 'Hide Rules' : 'How Fees Are Calculated'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Guide Card */}
