@@ -36,7 +36,8 @@ import {
   RefreshCw,
   Mail,
   History,
-  Globe
+  Globe,
+  Calculator
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
@@ -49,6 +50,7 @@ import { usePurchases } from '../contexts/PurchaseContext';
 import { PaymentStatusWidget } from '../components/dashboard/PaymentStatusWidget';
 import { TransactionalEmailTemplateManager } from '../components/admin/TransactionalEmailTemplateManager';
 import { TransactionalEmailHistoryTab } from '../components/admin/TransactionalEmailHistoryTab';
+import { CalculationEmailHistoryTab } from '../components/admin/CalculationEmailHistoryTab';
 import { AdminSeoManager } from '../components/admin/AdminSeoManager';
 import { AdminSearchAnalyticsTab } from '../components/admin/AdminSearchAnalyticsTab';
 import { FirebaseAnalyticsDashboard } from '../components/admin/FirebaseAnalyticsDashboard';
@@ -177,6 +179,9 @@ export function AdminShop({
       setActiveAdminTab('email-templates');
     }
   }, [location.pathname, location.search]);
+
+  // Email history subview toggle ('calculations' for Firestore calculation reports, 'transactional' for Brevo relay logs)
+  const [emailHistoryView, setEmailHistoryView] = useState<'calculations' | 'transactional'>('calculations');
 
   // Filter & Search in Admin list
   const [searchTerm, setSearchTerm] = useState('');
@@ -675,8 +680,46 @@ export function AdminShop({
             <AdminSeoManager />
           </div>
         ) : activeAdminTab === 'email-history' ? (
-          <div className="space-y-8 animate-in fade-in duration-300">
-            <TransactionalEmailHistoryTab />
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* View Switcher between Calculation Reports & Brevo Transactional Logs */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEmailHistoryView('calculations')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black inline-flex items-center gap-2 transition-all cursor-pointer ${
+                    emailHistoryView === 'calculations'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Calculation Reports (Firestore &amp; Sheets)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmailHistoryView('transactional')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black inline-flex items-center gap-2 transition-all cursor-pointer ${
+                    emailHistoryView === 'transactional'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>System Transactional Logs (Brevo Relay)</span>
+                </button>
+              </div>
+              <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Firestore live sync: <code className="text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded font-mono text-[11px]">calculation_email_reports</code></span>
+              </div>
+            </div>
+
+            {emailHistoryView === 'calculations' ? (
+              <CalculationEmailHistoryTab />
+            ) : (
+              <TransactionalEmailHistoryTab />
+            )}
           </div>
         ) : activeAdminTab === 'email-templates' ? (
           <div className="space-y-8 animate-in fade-in duration-300">

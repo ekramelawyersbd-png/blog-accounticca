@@ -145,6 +145,12 @@ service cloud.firestore {
       allow create, update, delete: if isValidId(logId);
     }
 
+    match /calculation_email_reports/{reportId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(reportId) && incoming().referenceId is string && incoming().toolId is string;
+      allow delete: if isValidId(reportId);
+    }
+
     match /test/{docId} {
       allow get, list: if true;
     }

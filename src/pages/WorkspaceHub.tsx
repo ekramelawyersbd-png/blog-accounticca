@@ -16,11 +16,13 @@ import {
   X,
   Sparkles,
   LogOut,
-  GitBranch
+  GitBranch,
+  Mail
 } from 'lucide-react';
 import { ToolSigningsWorkspaceView } from '../components/workspace/ToolSigningsWorkspaceView';
 import { GoogleWorkspaceIntegrationsPanel } from '../components/workspace/GoogleWorkspaceIntegrationsPanel';
 import { GitHubSyncPanel } from '../components/workspace/GitHubSyncPanel';
+import { CalculationEmailHistoryTab } from '../components/admin/CalculationEmailHistoryTab';
 import { useShopAuth } from '../contexts/ShopAuthContext';
 
 interface WorkspaceDraft {
@@ -303,12 +305,34 @@ export const WorkspaceHub: React.FC = () => {
               Synced
             </span>
           </button>
+
+          <button
+            onClick={() => handleTabChange('email-history')}
+            className={`py-3 px-3 sm:px-1 inline-flex items-center gap-2 border-b-2 font-bold text-sm whitespace-nowrap transition-all cursor-pointer ${
+              currentTab === 'email-history'
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <Mail className="w-4 h-4 text-emerald-600" />
+            Calculation Reports &amp; Google Sheet
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+              Firestore
+            </span>
+          </button>
         </nav>
       </div>
 
       {/* Tab 0: Google Workspace Integrations (8 Enabled) */}
       {currentTab === 'integrations' && (
         <GoogleWorkspaceIntegrationsPanel />
+      )}
+
+      {/* Tab: Calculation Email Reports & Google Sheets Sync */}
+      {currentTab === 'email-history' && (
+        <div className="space-y-6 pt-2">
+          <CalculationEmailHistoryTab />
+        </div>
       )}
 
       {/* Tab: GitHub Sync Console */}

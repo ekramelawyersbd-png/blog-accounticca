@@ -10,6 +10,7 @@ import {
   getDefaultLegalNotesForTool,
   SentCalculationEmailRecord,
 } from '../utils/calculationEmailTemplate';
+import { saveCalculationReportToFirestore } from '../services/calculationReportFirestoreService';
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -343,6 +344,33 @@ export function useCalculationEmail(options: UseCalculationEmailOptions) {
           previewUrl: data.previewUrl || null,
           record: data.record,
         };
+
+        // Automatically persist to Firestore 'calculation_email_reports' collection
+        try {
+          await saveCalculationReportToFirestore({
+            id: data.messageId || finalPayload.referenceId,
+            referenceId: finalPayload.referenceId,
+            toolId: finalPayload.toolId,
+            toolName: finalPayload.toolName,
+            calculatorType: finalPayload.toolName,
+            toolCategory: finalPayload.toolCategory,
+            toolPath: finalPayload.toolPath,
+            primaryRecipient: targetPrimary,
+            recipientName: targetName,
+            ccRecipients: targetCc,
+            subject: finalCompiled.subject,
+            html: finalCompiled.html,
+            text: finalCompiled.text,
+            sentAt: new Date().toISOString(),
+            status: 'Delivered',
+            relayMode: data.relayMode || brevoRelay.mode,
+            fromHeader: data.fromHeader || brevoRelay.formattedFrom,
+            previewUrl: data.previewUrl || null,
+            summaryHighlight,
+          });
+        } catch (firestoreErr) {
+          console.warn('[useCalculationEmail] Firestore save non-blocking warning:', firestoreErr);
+        }
 
         setLastConfirmation(confirmation);
         return confirmation;

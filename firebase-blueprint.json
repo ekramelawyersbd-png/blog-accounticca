@@ -130,6 +130,27 @@
         "rating": { "type": "number" }
       },
       "required": ["clientName", "story"]
+    },
+    "CalculationEmailReport": {
+      "title": "CalculationEmailReport",
+      "description": "Sent statutory calculation report email record for compliance tracking and admin auditing",
+      "type": "object",
+      "properties": {
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "toolId": { "type": "string", "maxLength": 128 },
+        "toolName": { "type": "string", "maxLength": 256 },
+        "toolCategory": { "type": "string", "maxLength": 128 },
+        "calculatorType": { "type": "string", "maxLength": 256 },
+        "toolPath": { "type": "string", "maxLength": 256 },
+        "primaryRecipient": { "type": "string", "maxLength": 256 },
+        "recipientName": { "type": "string", "maxLength": 256 },
+        "sentAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 64 },
+        "relayMode": { "type": "string", "maxLength": 256 },
+        "summaryHighlight": { "type": "string", "maxLength": 512 },
+        "subject": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["referenceId", "toolId", "toolName", "primaryRecipient", "sentAt"]
     }
   },
   "firestore": {
@@ -168,6 +189,10 @@
     "/testimonials/{testimonialId}": {
       "schema": { "$ref": "#/entities/Testimonial" },
       "description": "Verified client testimonials"
+    },
+    "/calculation_email_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/CalculationEmailReport" },
+      "description": "Sent statutory calculation email reports and dispatch ledger"
     }
   }
 }
