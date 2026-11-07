@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { recordToolSigning } from '../../services/toolSigningService';
-import { ShieldCheck, LogIn, Sparkles, CheckCircle2, Lock, ArrowRight, BookOpen } from 'lucide-react';
+import { ShieldCheck, LogIn, Sparkles, CheckCircle2, Lock, ArrowRight, BookOpen, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { CalculationEmailModal } from '../tools/CalculationEmailModal';
 
 import { ShopProduct } from '../../data/shopProducts';
 
@@ -29,6 +30,8 @@ export const ToolAccessGuard: React.FC<ToolAccessGuardProps> = ({
   const { user, loading, signInWithGoogle, signInDemoUser } = useAuth();
   const [loggingIn, setLoggingIn] = useState(false);
   const [signedRecordId, setSignedRecordId] = useState<string | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const guardContentRef = useRef<HTMLDivElement | null>(null);
 
   const resolvedId = toolId || product?.id || product?.slug || 'tool';
   const resolvedName = toolName || toolTitle || product?.title || 'Compliance Tool';
@@ -76,29 +79,49 @@ export const ToolAccessGuard: React.FC<ToolAccessGuardProps> = ({
   // If user is authenticated: 100% FREE UNRESTRICTED ACCESS
   if (user) {
     return (
-      <div className="space-y-4">
-        {/* Verification banner showing signing session recorded to /workspace */}
-        <div className="hidden bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-emerald-900 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>
-              <strong className="font-semibold text-emerald-950">Free Member Access Active:</strong> Signed in as{' '}
-              <span className="font-mono bg-emerald-100/70 px-1.5 py-0.5 rounded text-emerald-800">{user.email}</span>. No shop purchase required.
-            </span>
+      <div className="space-y-3">
+        {/* Universal Email Calculation Report Bar for standalone tools */}
+        {!product && (
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 pt-3">
+            <div className="bg-slate-900 text-white rounded-2xl px-4 py-2.5 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  <strong className="font-bold text-white">Calculation Email Report Ready:</strong> Send this{' '}
+                  <strong className="text-cyan-300">{resolvedName}</strong> statement to{' '}
+                  <span className="font-mono text-emerald-300">{user.email}</span> (+ optional CC).
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs transition-colors cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5 text-cyan-200" />
+                  <span>Email Calculation Report</span>
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Session logged to{' '}
-              <Link to="/workspace?tab=tool-signings" className="underline font-semibold hover:text-emerald-900">
-                /workspace
-              </Link>
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Render the full tool */}
-        {children}
+        <div ref={guardContentRef}>
+          {children}
+        </div>
+
+        <CalculationEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          toolId={resolvedId}
+          toolName={resolvedName}
+          toolCategory={resolvedCategory}
+          toolPath={resolvedPath}
+          userEmail={user.email}
+          userName={user.displayName}
+          containerRef={guardContentRef}
+        />
       </div>
     );
   }

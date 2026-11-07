@@ -17,13 +17,15 @@ import {
   FolderDown, 
   Coins, 
   Wheat, 
-  Share2
+  Share2,
+  Mail
 } from 'lucide-react';
 import { searchableTaxTools, SearchableTool } from '../../data/searchableTools';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildAppointmentUrl } from '../../utils/appointmentRedirect';
 import { ToolSEO } from '../SEO';
 import { Breadcrumbs } from '../Breadcrumbs';
+import { CalculationEmailModal } from './CalculationEmailModal';
 
 interface ToolPageLayoutProps {
   toolId: string;
@@ -43,6 +45,8 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const toolContentRef = React.useRef<HTMLDivElement | null>(null);
 
   // Map tool IDs to routes
   const getToolRoute = (id: string): string => {
@@ -138,8 +142,18 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
               </div>
             </div>
 
-            {/* Quick Switch Dropdown */}
-            <div className="flex items-center gap-3 shrink-0">
+            {/* Quick Switch Dropdown & Email Calculation Action */}
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(true)}
+                className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Preview and send calculation report to your email"
+              >
+                <Mail className="w-4 h-4 text-cyan-200" />
+                <span>Email Calculation Report</span>
+              </button>
+
               <div className="relative">
                 <button
                   type="button"
@@ -200,9 +214,21 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
         <div className="flex flex-col gap-10 items-center w-full">
           
           {/* Main Tool Content Container - 60% of full display on desktop */}
-          <div className="app-form-60 w-full lg:w-[60vw] mx-auto space-y-6">
+          <div ref={toolContentRef} className="app-form-60 w-full lg:w-[60vw] mx-auto space-y-6">
             {children}
           </div>
+
+          <CalculationEmailModal
+            isOpen={isEmailModalOpen}
+            onClose={() => setIsEmailModalOpen(false)}
+            toolId={toolId}
+            toolName={title}
+            toolCategory={category}
+            toolPath={currentToolRoute}
+            userEmail={user?.email}
+            userName={user?.displayName}
+            containerRef={toolContentRef}
+          />
 
           {/* Bottom Related Tools & Consultation - 60% of full display on desktop */}
           <div className="app-form-60 w-full lg:w-[60vw] mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
