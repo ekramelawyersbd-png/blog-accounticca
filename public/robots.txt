@@ -28,4 +28,4 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
-Sitemap: https://blog.accounticca.com/sitemap.xml
+Sitemap: https://accounticca.ai.studio/sitemap.xml

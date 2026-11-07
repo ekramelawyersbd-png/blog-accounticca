@@ -280,7 +280,7 @@ export function getClientOrigin(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
-  return 'https://blog.accounticca.com';
+  return 'https://accounticca.ai.studio';
 }
 
 /**

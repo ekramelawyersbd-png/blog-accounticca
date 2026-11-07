@@ -237,7 +237,7 @@ export function crawlAllRoutesForSitemap(options?: {
     imageUrl?: string;
   }>;
 }): SitemapGenerationReport {
-  const cleanOrigin = (options?.origin || 'https://blog.accounticca.com').replace(/\/$/, '');
+  const cleanOrigin = (options?.origin || 'https://accounticca.ai.studio').replace(/\/$/, '');
   const seoConfig = options?.seoConfig || DEFAULT_SEO_CONFIG;
   const todayIso = new Date().toISOString().split('T')[0];
 

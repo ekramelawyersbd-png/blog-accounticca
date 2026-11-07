@@ -85,18 +85,24 @@ if (typeof window !== 'undefined') {
 
 // Initialize Auth & Cloud Functions
 // customDomainAuth serves https://accounticca.com/__/auth/handler ("to continue to accounticca.com")
-// fallbackAuth serves gen-lang-client-0396222608.firebaseapp.com (matches Firestore DB project)
+// fallbackAuth serves gen-lang-client-0396222608.firebaseapp.com (matches Firestore DB project & *.ai.studio / *.run.app)
 export const customDomainAuth = getAuth(customDomainApp);
 export const fallbackAuth = getAuth(app);
-export const auth = customDomainAuth;
+
+const isAccounticcaCustomRoot =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'accounticca.com' ||
+    window.location.hostname.endsWith('.accounticca.com'));
+
+export const auth = isAccounticcaCustomRoot ? customDomainAuth : fallbackAuth;
 export const functions = getFunctions(app);
 
 /**
- * Returns the active popup Auth instance configured with authDomain: "accounticca.com"
- * so the Google Sign-In account chooser displays "to continue to accounticca.com".
+ * Returns the active popup Auth instance matching the current deployment domain
+ * (`customDomainAuth` on accounticca.com, `fallbackAuth` on accounticca.ai.studio / Cloud Run).
  */
 export function getActivePopupAuth() {
-  return customDomainAuth;
+  return auth;
 }
 
 // Authentication Providers
