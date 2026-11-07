@@ -142,7 +142,7 @@ export async function saveCalculationReportToFirestore(
     previewUrl: record.previewUrl || null,
     summaryHighlight: record.summaryHighlight || 'Completed Statutory Statement',
     sheetSynced: Boolean(record.sheetSynced),
-    sheetSyncedAt: record.sheetSyncedAt,
+    sheetSyncedAt: record.sheetSyncedAt || null,
   };
 
   // 1. Cache to local storage

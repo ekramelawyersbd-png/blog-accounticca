@@ -61,7 +61,9 @@ export const EmailDispatchToast: React.FC<EmailDispatchToastProps> = ({
       setProgress((prev) => {
         if (prev <= 0) {
           clearInterval(timer);
-          onClose();
+          setTimeout(() => {
+            onClose();
+          }, 0);
           return 0;
         }
         return Math.max(0, prev - step);
