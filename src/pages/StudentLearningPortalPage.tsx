@@ -26,7 +26,8 @@ import {
   PanelLeftOpen,
   ArrowRight,
   X,
-  AlertCircle
+  AlertCircle,
+  Award
 } from 'lucide-react';
 import {
   LmsContentTabType,
@@ -117,6 +118,7 @@ export const StudentLearningPortalPage: React.FC<{
     setActiveCourseId,
     studentProfile,
     allCertificates,
+    getCertificateEligibility,
     isLessonCompleted,
     toggleLessonCompletion,
     recordCourseAccess,
@@ -1375,6 +1377,119 @@ export const StudentLearningPortalPage: React.FC<{
                     : 'p-4 sm:p-6 lg:p-8'
                 } overflow-y-auto select-none bg-gradient-to-b from-[#f8fafc] to-[#f1f5f9] flex flex-col gap-3 transition-all duration-300`}
               >
+                {/* Certificate Expiry & Renewal Notification Banner */}
+                {(() => {
+                  const certEligibility = getCertificateEligibility(selectedPortalCourseId);
+                  const activeCert =
+                    certEligibility.certificate ||
+                    allCertificates.find((c) => c.courseId === selectedPortalCourseId && c.status === 'Valid');
+                  if (!activeCert) return null;
+
+                  const issueDateStr = activeCert.issueDate;
+                  const expiryDateStr =
+                    activeCert.expiryDate ||
+                    (() => {
+                      const d = new Date(issueDateStr);
+                      d.setFullYear(d.getFullYear() + 1);
+                      return d.toISOString().split('T')[0];
+                    })();
+                  const today = new Date();
+                  const expiryDateObj = new Date(expiryDateStr);
+                  const diffTime = expiryDateObj.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const isExpiringSoon = diffDays <= 30 && diffDays >= 0;
+                  const isExpired = diffDays < 0;
+
+                  return (
+                    <div
+                      className={`rounded-xl border p-4 sm:p-5 shadow-sm transition-all ${
+                        isExpired
+                          ? 'bg-rose-50 border-rose-300 text-rose-900'
+                          : isExpiringSoon
+                            ? 'bg-amber-50 border-amber-300 text-amber-900'
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              isExpired || isExpiringSoon
+                                ? 'bg-amber-500/20 text-amber-700'
+                                : 'bg-emerald-500/20 text-emerald-700'
+                            }`}
+                          >
+                            <Award className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-sm sm:text-base font-bold">
+                                Verified Course Completion Certificate ({activeCert.certificateId})
+                              </h3>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
+                                  isExpired
+                                    ? 'bg-rose-600 text-white'
+                                    : isExpiringSoon
+                                      ? 'bg-amber-600 text-white'
+                                      : 'bg-emerald-600 text-white'
+                                }`}
+                              >
+                                {isExpired
+                                  ? 'Expired'
+                                  : isExpiringSoon
+                                    ? `Expiring in ${diffDays} Days`
+                                    : 'Active & Valid'}
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm mt-1 opacity-90 leading-relaxed">
+                              Issued on <strong className="font-mono">{activeCert.issueDate}</strong> · Certificate Expiry Date:{' '}
+                              <strong className="font-mono underline">{expiryDateStr}</strong>
+                              {isExpiringSoon && (
+                                <span className="block mt-1 font-semibold text-amber-800">
+                                  Warning: Your professional certificate needs renewal within {diffDays} days to maintain active standing on Accounticca & E-Lawyers professional registry.
+                                </span>
+                              )}
+                              {isExpired && (
+                                <span className="block mt-1 font-semibold text-rose-800">
+                                  Notice: This certificate has expired. Please submit a renewal application to recertify.
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setActiveCertificateModal(activeCert)}
+                            className="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 text-[#1e4e75] border border-slate-300 font-bold text-xs shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <FileCheck2 className="w-4 h-4" />
+                            <span>View Certificate</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              showToast(
+                                `Renewal application submitted for ${activeCert.certificateId}. Our compliance team will review within 24 hours.`
+                              )
+                            }
+                            className={`px-3.5 py-2 rounded-lg text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+                              isExpiringSoon || isExpired
+                                ? 'bg-amber-600 hover:bg-amber-700'
+                                : 'bg-[#1e4e75] hover:bg-[#153a58]'
+                            }`}
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            <span>{isExpiringSoon || isExpired ? 'Request Renewal' : 'Renew / Recertify'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Contextual Module & Resource Header Bar */}
                 <div className="bg-white rounded-xl border border-slate-200/90 px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
                   <div className="flex items-center gap-3 min-w-0">

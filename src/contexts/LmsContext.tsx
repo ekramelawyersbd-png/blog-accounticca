@@ -145,6 +145,7 @@ export interface LmsCertificateRecord {
   courseId: string;
   courseTitle: string;
   issueDate: string;
+  expiryDate: string; // Certificate Expiry Date (1 year validity)
   issuerOrganization: string;
   authorizedSignatory: string;
   signatoryDesignation: string;
@@ -304,13 +305,14 @@ const DEFAULT_SAMPLE_CERTIFICATES: LmsCertificateRecord[] = [
     studentName: 'Tanvir Ahmed Chowdhury',
     courseId: 'personal-income-tax',
     courseTitle: 'Personal Income Tax & Online e-Return Filing Masterclass (AY 2026–27)',
-    issueDate: '2026-10-18',
+    issueDate: '2025-11-20',
+    expiryDate: '2026-11-20', // Expiring in < 30 days (triggers renewal notification UI)
     issuerOrganization: 'E-Lawyers Academy & Accounticca Professional Institute',
     authorizedSignatory: 'Adv. Ekram Hossain',
     signatoryDesignation: 'Advocate, Supreme Court of Bangladesh & Lead Tax Counsel',
     status: 'Valid',
     verificationUrl: '/verify-certificate?id=CERT-2026-ELAW-00101',
-    createdAt: '2026-10-18T14:30:00Z'
+    createdAt: '2025-11-20T14:30:00Z'
   },
   {
     certificateId: 'CERT-2026-ELAW-00102',
@@ -320,6 +322,7 @@ const DEFAULT_SAMPLE_CERTIFICATES: LmsCertificateRecord[] = [
     courseId: 'rjsc-corporate-compliance',
     courseTitle: 'Corporate Law, RJSC Company Registration & Annual Compliance Program',
     issueDate: '2026-10-15',
+    expiryDate: '2027-10-15', // Valid for 1 year
     issuerOrganization: 'E-Lawyers Academy & Accounticca Professional Institute',
     authorizedSignatory: 'Adv. Ekram Hossain',
     signatoryDesignation: 'Advocate, Supreme Court of Bangladesh & Lead Corporate Counsel',
@@ -335,6 +338,7 @@ const DEFAULT_SAMPLE_CERTIFICATES: LmsCertificateRecord[] = [
     courseId: 'personal-income-tax',
     courseTitle: 'Personal Income Tax & Online e-Return Filing Masterclass (AY 2026–27)',
     issueDate: '2026-09-20',
+    expiryDate: '2027-09-20',
     issuerOrganization: 'E-Lawyers Academy & Accounticca Professional Institute',
     authorizedSignatory: 'Adv. Ekram Hossain',
     signatoryDesignation: 'Advocate, Supreme Court of Bangladesh & Lead Tax Counsel',
@@ -1835,6 +1839,10 @@ export const LmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const deterministicSuffix = String(1000 + certificates.length + 1);
       const certId = `CERT-2026-ELAW-${deterministicSuffix}`;
       const issueDate = new Date().toISOString().split('T')[0];
+      const issueDateObj = new Date(issueDate);
+      const expiryDateObj = new Date(issueDateObj);
+      expiryDateObj.setFullYear(expiryDateObj.getFullYear() + 1);
+      const expiryDate = expiryDateObj.toISOString().split('T')[0];
 
       const newCert: LmsCertificateRecord = {
         certificateId: certId,
@@ -1844,6 +1852,7 @@ export const LmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         courseId: course.courseId,
         courseTitle: course.title,
         issueDate,
+        expiryDate,
         issuerOrganization: course.issuerOrganization,
         authorizedSignatory: course.authorizedSignatory,
         signatoryDesignation: course.signatoryDesignation,

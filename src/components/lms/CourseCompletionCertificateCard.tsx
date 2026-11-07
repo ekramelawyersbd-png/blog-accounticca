@@ -81,6 +81,7 @@ export const CourseCompletionCertificateCard: React.FC<
       courseId: course.courseId,
       courseTitle: course.title,
       issueDate: new Date().toISOString().split('T')[0],
+      expiryDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split('T')[0],
       issuerOrganization: course.issuerOrganization,
       authorizedSignatory: course.authorizedSignatory,
       signatoryDesignation: course.signatoryDesignation,

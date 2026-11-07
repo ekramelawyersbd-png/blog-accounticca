@@ -33,6 +33,7 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [courseFilter, setCourseFilter] = useState('ALL');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Google Sheets sync state
@@ -104,6 +105,16 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
     };
   }, []);
 
+  const courseOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    admissions.forEach((item) => {
+      if (item.courseId && item.courseName) {
+        map.set(item.courseId, item.courseName);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [admissions]);
+
   const filteredAdmissions = useMemo(() => {
     return admissions.filter((item) => {
       const matchesSearch =
@@ -114,10 +125,11 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
         item.id.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
+      const matchesCourse = courseFilter === 'ALL' || item.courseId === courseFilter;
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesCourse;
     });
-  }, [admissions, searchQuery, statusFilter]);
+  }, [admissions, searchQuery, statusFilter, courseFilter]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard?.writeText(text);
@@ -283,6 +295,23 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+            <select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              aria-label="Filter by specific course"
+              className="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 max-w-[220px] truncate"
+            >
+              <option value="ALL">All Courses ({admissions.length})</option>
+              {courseOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
