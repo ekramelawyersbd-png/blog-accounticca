@@ -288,29 +288,49 @@ export function useCalculationEmail(options: UseCalculationEmailOptions) {
       setIsSending(true);
 
       try {
-        const response = await fetch('/api/email/send-calculation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            referenceId: finalPayload.referenceId,
-            toolId: finalPayload.toolId,
-            toolName: finalPayload.toolName,
-            toolCategory: finalPayload.toolCategory,
-            toolPath: finalPayload.toolPath,
-            primaryRecipient: targetPrimary,
-            recipientName: targetName,
-            ccRecipients: targetCc,
-            customNote: targetNote,
-            subject: finalCompiled.subject,
-            html: finalCompiled.html,
-            text: finalCompiled.text,
-            summaryHighlight,
-          }),
-        });
+        let response: Response;
+        try {
+          response = await fetch('/api/email/send-calculation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              referenceId: finalPayload.referenceId,
+              toolId: finalPayload.toolId,
+              toolName: finalPayload.toolName,
+              toolCategory: finalPayload.toolCategory,
+              toolPath: finalPayload.toolPath,
+              primaryRecipient: targetPrimary,
+              recipientName: targetName,
+              ccRecipients: targetCc,
+              customNote: targetNote,
+              subject: finalCompiled.subject,
+              html: finalCompiled.html,
+              text: finalCompiled.text,
+              summaryHighlight,
+            }),
+          });
+        } catch (fetchErr: any) {
+          throw new Error(`Network connection error: ${fetchErr?.message || 'Server unreachable'}`);
+        }
 
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Failed to dispatch calculation email via Brevo relay.');
+        const rawText = await response.text();
+        let data: any = null;
+        try {
+          data = rawText ? JSON.parse(rawText) : null;
+        } catch {
+          // Response body was not valid JSON
+        }
+
+        if (!response.ok) {
+          const errMsg =
+            data?.error ||
+            data?.message ||
+            (rawText && rawText.length < 160 ? rawText : `Server responded with status ${response.status}`);
+          throw new Error(errMsg);
+        }
+
+        if (!data || !data.success) {
+          throw new Error(data?.error || data?.message || 'Failed to dispatch calculation email via Brevo relay.');
         }
 
         const confirmation: DispatchedEmailConfirmation = {
@@ -354,15 +374,32 @@ export function useCalculationEmail(options: UseCalculationEmailOptions) {
       setIsTestingRelay(true);
 
       try {
-        const res = await fetch('/api/email/brevo-test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recipientEmail: testEmail }),
-        });
+        let res: Response;
+        try {
+          res = await fetch('/api/email/brevo-test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipientEmail: testEmail }),
+          });
+        } catch (fetchErr: any) {
+          throw new Error(`Network connection error: ${fetchErr?.message || 'Server unreachable'}`);
+        }
 
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Brevo diagnostic test failed.');
+        const rawText = await res.text();
+        let data: any = null;
+        try {
+          data = rawText ? JSON.parse(rawText) : null;
+        } catch {
+          // Non-JSON response
+        }
+
+        if (!res.ok) {
+          const errMsg = data?.error || data?.message || `Relay test returned status ${res.status}`;
+          throw new Error(errMsg);
+        }
+
+        if (!data || !data.success) {
+          throw new Error(data?.error || 'Brevo diagnostic test failed.');
         }
 
         setLastConfirmation({

@@ -105,7 +105,13 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
     setLoadingHistory(true);
     try {
       const res = await fetch('/api/email/calculation-logs');
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        // Non-JSON response
+      }
       if (data?.success && Array.isArray(data.logs)) {
         setHistoryLogs(data.logs);
       }
@@ -184,9 +190,15 @@ export const CalculationEmailModal: React.FC<CalculationEmailModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipientEmail: log.primaryRecipient }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to resend calculation email.');
+      const rawText = await res.text();
+      let data: any = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        // Non-JSON response
+      }
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || `Failed to resend calculation email (${res.status}).`);
       }
       await fetchHistoryLogs();
       setToastNotification({

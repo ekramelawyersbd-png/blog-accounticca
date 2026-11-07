@@ -140,7 +140,7 @@ async function getFallbackNodemailerTransporter(): Promise<{
   try {
     const testAccount = await Promise.race([
       nodemailer.createTestAccount(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1200)),
     ]);
     cachedTestTransporter = nodemailer.createTransport({
       host: testAccount.smtp.host,
@@ -153,12 +153,14 @@ async function getFallbackNodemailerTransporter(): Promise<{
     });
     return { transporter: cachedTestTransporter, isEthereal: true };
   } catch {
+    const streamTransporter = nodemailer.createTransport({
+      streamTransport: true,
+      newline: 'unix',
+      buffer: true,
+    });
+    cachedTestTransporter = streamTransporter;
     return {
-      transporter: nodemailer.createTransport({
-        streamTransport: true,
-        newline: 'unix',
-        buffer: true,
-      }),
+      transporter: streamTransporter,
       isEthereal: false,
     };
   }
@@ -1060,122 +1062,138 @@ app.patch('/api/email/history/:id/status', (req, res) => {
 // Calculation Email Report Dispatcher (/api/email/send-calculation)
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/email/send-calculation', async (req, res) => {
-  const body = req.body || {};
-  const primaryRecipient = String(body.primaryRecipient || '').trim();
-  const recipientName = String(body.recipientName || 'Verified Member').trim();
-  const ccRecipients: string[] = Array.isArray(body.ccRecipients)
-    ? body.ccRecipients.map((e: any) => String(e || '').trim()).filter(Boolean)
-    : [];
-  const referenceId = String(body.referenceId || `CALC-2026-${Date.now().toString().slice(-5)}`).trim();
-  const toolId = String(body.toolId || 'tax-calculator').trim();
-  const toolName = String(body.toolName || 'Statutory Compliance Calculator').trim();
-  const toolCategory = String(body.toolCategory || 'Taxation & Compliance').trim();
-  const toolPath = String(body.toolPath || '/tools').trim();
-  const subject = String(body.subject || `[${referenceId}] ${toolName} — Calculation Report`).trim();
-  const html = String(body.html || '').trim();
-  const text = String(body.text || '').trim();
-  const summaryHighlight = String(body.summaryHighlight || 'Complete Report').trim();
+  try {
+    const body = req.body || {};
+    const primaryRecipient = String(body.primaryRecipient || '').trim();
+    const recipientName = String(body.recipientName || 'Verified Member').trim();
+    const ccRecipients: string[] = Array.isArray(body.ccRecipients)
+      ? body.ccRecipients.map((e: any) => String(e || '').trim()).filter(Boolean)
+      : [];
+    const referenceId = String(body.referenceId || `CALC-2026-${Date.now().toString().slice(-5)}`).trim();
+    const toolId = String(body.toolId || 'tax-calculator').trim();
+    const toolName = String(body.toolName || 'Statutory Compliance Calculator').trim();
+    const toolCategory = String(body.toolCategory || 'Taxation & Compliance').trim();
+    const toolPath = String(body.toolPath || '/tools').trim();
+    const subject = String(body.subject || `[${referenceId}] ${toolName} — Calculation Report`).trim();
+    const html = String(body.html || '').trim();
+    const text = String(body.text || '').trim();
+    const summaryHighlight = String(body.summaryHighlight || 'Complete Report').trim();
 
-  if (!primaryRecipient || !primaryRecipient.includes('@')) {
-    res.status(400).json({
-      success: false,
-      error: 'A valid primary recipient email address is required.',
+    if (!primaryRecipient || !primaryRecipient.includes('@')) {
+      res.status(400).json({
+        success: false,
+        error: 'A valid primary recipient email address is required.',
+      });
+      return;
+    }
+
+    const sent = await dispatchBrevoEmail({
+      recipientEmail: primaryRecipient,
+      recipientName,
+      subject,
+      html: html || `<p>${subject}</p>`,
+      text: text || subject,
+      ccEmails: ccRecipients,
     });
-    return;
+
+    const sentAt = new Date().toISOString();
+    const logs = readJsonArray(CALCULATION_EMAILS_FILE);
+    const record = {
+      id: sent.messageId,
+      referenceId,
+      toolId,
+      toolName,
+      toolCategory,
+      toolPath,
+      primaryRecipient,
+      recipientName,
+      ccRecipients,
+      subject,
+      html,
+      text,
+      sentAt,
+      status: 'Delivered',
+      relayMode: sent.transport,
+      fromHeader: sent.fromHeader,
+      previewUrl: sent.previewUrl,
+      summaryHighlight,
+    };
+    logs.unshift(record);
+    if (logs.length > 300) logs.length = 300;
+    writeJsonArray(CALCULATION_EMAILS_FILE, logs);
+
+    // Record in unified Brevo transactional email history ledger
+    try {
+      appendEmailHistory({
+        id: `calc-${Date.now()}`,
+        messageId: sent.messageId,
+        referenceId,
+        clientName: recipientName,
+        recipientEmail: primaryRecipient,
+        ccEmails: ccRecipients,
+        practiceArea: toolName,
+        mode: toolCategory,
+        date: sentAt.slice(0, 10),
+        timeSlot: new Date(sentAt).toLocaleTimeString(),
+        status: 'Delivered',
+        subject,
+        html: html || `<p>${subject}</p>`,
+        text: text || subject,
+        sentAt,
+        delivered: true,
+        deliveryStatus: 'delivered',
+        category: 'system',
+        transport: sent.transport,
+        fromHeader: sent.fromHeader,
+        previewUrl: sent.previewUrl,
+        smtpNotice: sent.smtpNotice,
+      });
+    } catch (histErr) {
+      console.warn('[Server] appendEmailHistory notice:', histErr);
+    }
+
+    // Also log to workspace tool signings for audit traceability
+    try {
+      const signings = loadSignings();
+      signings.unshift({
+        id: `mail-sig-${Date.now()}`,
+        userId: primaryRecipient,
+        userEmail: primaryRecipient,
+        userName: recipientName,
+        toolId,
+        toolName: `${toolName} (Email Dispatched: ${referenceId})`,
+        toolCategory,
+        toolPath,
+        authProvider: 'brevo-email-report',
+        signedAt: sentAt,
+        formattedDate: new Date(sentAt).toLocaleString(),
+        sessionStatus: 'completed',
+      });
+      if (signings.length > 1000) signings.length = 1000;
+      saveSignings(signings);
+    } catch (sigErr) {
+      console.warn('[Server] saveSignings notice:', sigErr);
+    }
+
+    res.json({
+      success: true,
+      messageId: sent.messageId,
+      referenceId,
+      primaryRecipient,
+      ccRecipients,
+      sentAt,
+      relayMode: sent.transport,
+      fromHeader: sent.fromHeader,
+      previewUrl: sent.previewUrl,
+      record,
+    });
+  } catch (err: any) {
+    console.error('[Server] Calculation email error:', err);
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to dispatch calculation report via email relay.',
+    });
   }
-
-  const sent = await dispatchBrevoEmail({
-    recipientEmail: primaryRecipient,
-    recipientName,
-    subject,
-    html: html || `<p>${subject}</p>`,
-    text: text || subject,
-    ccEmails: ccRecipients,
-  });
-
-  const sentAt = new Date().toISOString();
-  const logs = readJsonArray(CALCULATION_EMAILS_FILE);
-  const record = {
-    id: sent.messageId,
-    referenceId,
-    toolId,
-    toolName,
-    toolCategory,
-    toolPath,
-    primaryRecipient,
-    recipientName,
-    ccRecipients,
-    subject,
-    html,
-    text,
-    sentAt,
-    status: 'Delivered',
-    relayMode: sent.transport,
-    fromHeader: sent.fromHeader,
-    previewUrl: sent.previewUrl,
-    summaryHighlight,
-  };
-  logs.unshift(record);
-  if (logs.length > 300) logs.length = 300;
-  writeJsonArray(CALCULATION_EMAILS_FILE, logs);
-
-  // Record in unified Brevo transactional email history ledger
-  appendEmailHistory({
-    id: `calc-${Date.now()}`,
-    messageId: sent.messageId,
-    referenceId,
-    clientName: recipientName,
-    recipientEmail: primaryRecipient,
-    ccEmails: ccRecipients,
-    practiceArea: toolName,
-    mode: toolCategory,
-    date: sentAt.slice(0, 10),
-    timeSlot: new Date(sentAt).toLocaleTimeString(),
-    status: 'Delivered',
-    subject,
-    html: html || `<p>${subject}</p>`,
-    text: text || subject,
-    sentAt,
-    delivered: true,
-    deliveryStatus: 'delivered',
-    category: 'system',
-    transport: sent.transport,
-    fromHeader: sent.fromHeader,
-    previewUrl: sent.previewUrl,
-    smtpNotice: sent.smtpNotice,
-  });
-
-  // Also log to workspace tool signings for audit traceability
-  const signings = loadSignings();
-  signings.unshift({
-    id: `mail-sig-${Date.now()}`,
-    userId: primaryRecipient,
-    userEmail: primaryRecipient,
-    userName: recipientName,
-    toolId,
-    toolName: `${toolName} (Email Dispatched: ${referenceId})`,
-    toolCategory,
-    toolPath,
-    authProvider: 'brevo-email-report',
-    signedAt: sentAt,
-    formattedDate: new Date(sentAt).toLocaleString(),
-    sessionStatus: 'completed',
-  });
-  if (signings.length > 1000) signings.length = 1000;
-  saveSignings(signings);
-
-  res.json({
-    success: true,
-    messageId: sent.messageId,
-    referenceId,
-    primaryRecipient,
-    ccRecipients,
-    sentAt,
-    relayMode: sent.transport,
-    fromHeader: sent.fromHeader,
-    previewUrl: sent.previewUrl,
-    record,
-  });
 });
 
 app.get('/api/email/calculation-logs', (_req, res) => {
