@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserCircle } from 'lucide-react';
+import { GraduationCap, UserCircle } from 'lucide-react';
 
 const pathways = [
   {
@@ -67,7 +67,11 @@ const pathways = [
   }
 ];
 
-export function CareerPathways() {
+interface CareerPathwaysProps {
+  onApplyCourse?: (courseName: string) => void;
+}
+
+export function CareerPathways({ onApplyCourse }: CareerPathwaysProps) {
   const [activeRole, setActiveRole] = useState(pathways[0].role);
 
   const activePathway = pathways.find(p => p.role === activeRole) || pathways[0];
@@ -114,14 +118,26 @@ export function CareerPathways() {
                 <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-lg mb-4 border-4 border-white shadow-sm">
                   {index + 1}
                 </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm w-full h-full relative group hover:border-emerald-200 transition-colors">
-                  {step.isCore && (
-                    <span className="absolute -top-3 right-4 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider py-1 px-2 rounded-full">
-                      Core
-                    </span>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm w-full h-full relative group hover:border-emerald-200 transition-colors flex flex-col justify-between space-y-3">
+                  <div>
+                    {step.isCore && (
+                      <span className="absolute -top-3 right-4 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider py-1 px-2 rounded-full">
+                        Core
+                      </span>
+                    )}
+                    <h4 className="font-bold text-slate-900 mb-2 mt-2">{step.title}</h4>
+                    <p className="text-slate-500 text-sm">{step.description}</p>
+                  </div>
+                  {onApplyCourse && (
+                    <button
+                      type="button"
+                      onClick={() => onApplyCourse(step.title)}
+                      className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <span>Apply Now</span>
+                    </button>
                   )}
-                  <h4 className="font-bold text-slate-900 mb-2 mt-2">{step.title}</h4>
-                  <p className="text-slate-500 text-sm">{step.description}</p>
                 </div>
               </div>
             ))}

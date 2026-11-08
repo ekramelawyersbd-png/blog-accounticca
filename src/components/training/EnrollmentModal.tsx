@@ -4,6 +4,8 @@ import { X, CheckCircle2, ExternalLink, Calendar } from 'lucide-react';
 import { redirectToAppointment, buildAppointmentUrl, APPOINTMENT_BASE_URL } from '../../utils/appointmentRedirect';
 import { getAcademyCourseDashboardPath } from '../../utils/lmsPortalStore';
 
+import { saveTrainingAdmissionToFirestore } from '../../services/trainingAdmissionFirestoreService';
+
 interface EnrollmentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -49,6 +51,20 @@ export function EnrollmentModal({ isOpen, onClose, title, description, price }: 
     } catch (err) {
       console.error('Failed to save enrollment', err);
     }
+
+    // Persist to Firestore for Admin Admissions & Student Access Desk
+    saveTrainingAdmissionToFirestore({
+      applicantName: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      courseId: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      courseName: title,
+      qualification: 'Student / Professional Registrant',
+      experience: 'Standard',
+      motivation: `Applied via Enrollment Modal for ${title} (${price || 'Standard'})`,
+      status: 'pending',
+      appliedAt: new Date().toISOString(),
+    }).catch((err) => console.warn('Failed to save training admission record:', err));
 
     // Automatically redirect to centralized appointment portal in a new tab
     redirectToAppointment({

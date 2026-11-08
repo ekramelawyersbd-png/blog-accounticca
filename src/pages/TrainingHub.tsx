@@ -468,17 +468,13 @@ export function TrainingHub() {
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedCourse({
-                            id: article.id,
-                            title: article.title,
-                            description: article.excerpt,
-                            price
-                          });
-                          setIsModalOpen(true);
+                          setAdmissionCourse({ id: article.id, name: article.title });
+                          setIsAdmissionOpen(true);
                         }}
-                        className="py-2.5 px-3 bg-slate-900 text-white hover:bg-emerald-700 rounded-xl font-bold transition-colors text-xs cursor-pointer whitespace-nowrap shrink-0"
+                        className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black transition-colors text-xs cursor-pointer whitespace-nowrap shrink-0 shadow-xs flex items-center justify-center gap-1"
                       >
-                        Apply Now
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        <span>Apply Now</span>
                       </button>
                     </div>
                   )}
@@ -563,7 +559,15 @@ export function TrainingHub() {
         </div>
       </section>
 
-      <CareerPathways />
+      <CareerPathways
+        onApplyCourse={(courseTitle) => {
+          setAdmissionCourse({
+            id: courseTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            name: courseTitle
+          });
+          setIsAdmissionOpen(true);
+        }}
+      />
 
       <TrainingVisualChart12 />
 
