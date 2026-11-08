@@ -21,6 +21,7 @@ import { EnrollmentModal } from '../components/training/EnrollmentModal';
 import { CertificateModal } from '../components/training/CertificateModal';
 import { TrainingFAQ } from '../components/training/TrainingFAQ';
 import { CareerPathways } from '../components/training/CareerPathways';
+import { TrainingVisualChart12 } from '../components/training/TrainingVisualChart12';
 import { SEO } from '../components/SEO';
 import { getAcademyCourseDashboardPath } from '../utils/lmsPortalStore';
 import { usePurchases } from '../contexts/PurchaseContext';
@@ -272,21 +273,6 @@ export function TrainingHub() {
                           <MonitorPlay className="w-4 h-4 text-emerald-600" />
                           <span>Student Dashboard</span>
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedCourse({
-                              id: program.id,
-                              title: program.title,
-                              description: program.excerpt,
-                              price: program.price
-                            });
-                            setIsModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                        >
-                          <span>Apply Now</span>
-                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -551,6 +537,8 @@ export function TrainingHub() {
       </section>
 
       <CareerPathways />
+
+      <TrainingVisualChart12 />
 
       <TrainingFAQ />
 

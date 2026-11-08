@@ -15,7 +15,10 @@ import {
   ShieldCheck,
   Filter,
   CheckCheck,
-  UserCheck
+  UserCheck,
+  Users,
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -220,19 +223,61 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards (Enhanced with icon badges, subtle gradients, micro-badges & hover scale) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Applications</div>
-          <div className="text-2xl font-black text-slate-900">{admissions.length}</div>
+        {/* Card 1: Total Applications */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 space-y-3 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-slate-500/5 rounded-full blur-xl group-hover:bg-slate-500/10 transition-colors pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Applications</span>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-700 shadow-2xs group-hover:scale-105 transition-transform">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between pt-1">
+            <div className="text-3xl font-black text-slate-900 tracking-tight font-mono">{admissions.length}</div>
+            <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md font-sans">
+              All Requests
+            </span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Approved Students</div>
-          <div className="text-2xl font-black text-emerald-900">{admissions.filter((a) => a.status === 'approved').length}</div>
+
+        {/* Card 2: Approved Students */}
+        <div className="bg-white p-5 rounded-2xl border border-emerald-200/90 shadow-2xs hover:shadow-md transition-all duration-200 space-y-3 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Approved Students</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-100/80 border border-emerald-200 flex items-center justify-center text-emerald-700 shadow-2xs group-hover:scale-105 transition-transform">
+              <UserCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between pt-1">
+            <div className="text-3xl font-black text-emerald-950 tracking-tight font-mono">
+              {admissions.filter((a) => a.status === 'approved').length}
+            </div>
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-sans">
+              Portal Access
+            </span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <div className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending Review</div>
-          <div className="text-2xl font-black text-amber-900">{admissions.filter((a) => a.status === 'pending').length}</div>
+
+        {/* Card 3: Pending Review */}
+        <div className="bg-white p-5 rounded-2xl border border-amber-200/90 shadow-2xs hover:shadow-md transition-all duration-200 space-y-3 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:bg-amber-500/10 transition-colors pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Pending Review</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-100/80 border border-amber-200 flex items-center justify-center text-amber-700 shadow-2xs group-hover:scale-105 transition-transform">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between pt-1">
+            <div className="text-3xl font-black text-amber-950 tracking-tight font-mono">
+              {admissions.filter((a) => a.status === 'pending').length}
+            </div>
+            <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-sans">
+              Action Needed
+            </span>
+          </div>
         </div>
       </div>
 
