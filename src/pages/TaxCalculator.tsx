@@ -521,55 +521,58 @@ export const TaxCalculator: React.FC = () => {
       toolPath="/tax-calculator"
     >
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6 space-y-6">
-        {/* Title and Statutory Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-300 shadow-xs">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-950 border border-blue-300 mb-2">
-              <Calculator className="w-3.5 h-3.5 text-blue-800" />
-              Income Tax Act 2023 · Part 3, 6th Schedule · AY 2026–2027
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-              Bangladesh Individual Income Tax &amp; Rebate Calculator
-            </h1>
-            <p className="text-xs sm:text-sm font-medium text-slate-800 mt-1">
-              Updated Initial Tax-Free Thresholds (Tk. 4,00,000+), 3-Limit Rebate Comparison (3% Income / 10% Allowable Investment / Tk. 7,50,000 Cap) &amp; Sector Capping Rules.
-            </p>
+        {/* Title and Statutory Header (Full Width Layout matching Image 1) */}
+        <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5 w-full">
+          {/* Top Line Statutory Citation */}
+          <div className="text-xs sm:text-sm font-semibold text-slate-700 tracking-tight">
+            Income Tax Act 2023 · Part 3, 6th Schedule · AY 2026–2027
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Main Title */}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 tracking-tight leading-tight w-full">
+            Bangladesh Individual Income Tax &amp; Rebate Calculator
+          </h1>
+
+          {/* Blue Subtitle Paragraph */}
+          <p className="text-xs sm:text-sm md:text-base font-bold text-sky-600 leading-relaxed max-w-6xl w-full">
+            Updated Initial Tax-Free Thresholds (Tk. 4,00,000+), 3-Limit Rebate Comparison (3% Income / 10% Allowable Investment / Tk. 7,50,000 Cap) &amp; Sector Capping Rules.
+          </p>
+
+          {/* Bottom Action Buttons Row */}
+          <div className="pt-2 flex flex-wrap items-center gap-2 sm:gap-2.5 w-full">
             <button
               onClick={() => loadSalaryTdsExample('no_rebate')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-100/80 border border-blue-300 hover:bg-blue-200/80 rounded-xl text-xs font-extrabold text-blue-950 transition-all cursor-pointer tabular-nums"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-full text-xs font-extrabold transition-all cursor-pointer tabular-nums shadow-2xs"
               title="মাসিক বেতন ১,০০,০০০ টাকা (রেয়াত ছাড়া) — মাসিক TDS ৩,৭৫০ টাকা"
             >
               <span>TDS Ex 1 (৳3,750/mo)</span>
             </button>
             <button
               onClick={() => loadSalaryTdsExample('with_rebate')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-100/80 border border-indigo-300 hover:bg-indigo-200/80 rounded-xl text-xs font-extrabold text-indigo-950 transition-all cursor-pointer tabular-nums"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-full text-xs font-extrabold transition-all cursor-pointer tabular-nums shadow-2xs"
               title="মাসিক বেতন ১,০০,০০০ টাকা + ২,০০,০০০ টাকা বিনিয়োগ রেয়াত — মাসিক TDS ২,০৮৩.৩৩ টাকা"
             >
               <span>TDS Ex 2 (৳2,083/mo)</span>
             </button>
             <button
               onClick={() => loadSalaryTdsExample('with_bonus')}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-purple-100/80 border border-purple-300 hover:bg-purple-200/80 rounded-xl text-xs font-extrabold text-purple-950 transition-all cursor-pointer tabular-nums"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-200 rounded-full text-xs font-extrabold transition-all cursor-pointer tabular-nums shadow-2xs"
               title="মাসিক বেতন ১,০০,০০০ টাকা + ২টি উৎসব বোনাস — মাসিক TDS ৪,৫৮৩.৩৩ টাকা"
             >
               <span>TDS + Bonus (৳4,583/mo)</span>
             </button>
             <button
               onClick={loadPracticalExample}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-100/80 border border-emerald-300 hover:bg-emerald-200/80 rounded-xl text-xs font-extrabold text-emerald-950 transition-all cursor-pointer tabular-nums"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full text-xs font-extrabold transition-all cursor-pointer tabular-nums shadow-2xs"
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-800" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
               <span>Tk. 10.88L Inv.</span>
             </button>
             <button
               onClick={resetDefaults}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-900 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-slate-800" />
+              <RefreshCw className="w-3.5 h-3.5 text-slate-700" />
               <span>Reset</span>
             </button>
             <CalculationEmailActionBarButton
@@ -586,7 +589,7 @@ export const TaxCalculator: React.FC = () => {
             />
             <button
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>

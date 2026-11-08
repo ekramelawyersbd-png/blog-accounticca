@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Video,
   Calendar,
-  Users
+  Users,
+  Sparkles
 } from 'lucide-react';
 import { mockArticles } from '../data/mockData';
 import { EnrollmentModal } from '../components/training/EnrollmentModal';
@@ -145,43 +146,69 @@ export function TrainingHub() {
       />
 
       {/* Page Hero Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-10 shadow-2xs">
-        <div className="max-w-3xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <GraduationCap className="w-4 h-4 text-emerald-600" />
+      <div className="bg-gradient-to-b from-white via-slate-50/60 to-emerald-50/20 rounded-3xl border border-slate-200/90 p-6 sm:p-10 lg:p-12 shadow-sm relative overflow-hidden">
+        {/* Subtle decorative glow accents */}
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
+
+        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 text-emerald-950 border border-emerald-300/80 shadow-2xs backdrop-blur-md">
+            <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
             <span>E-Lawyers &amp; Accounticca Academy • Learn Today, Lead Tomorrow</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Professional Training &amp; Live Class Academy
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
+            Professional Training &amp;{' '}
+            <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 bg-clip-text text-transparent drop-shadow-2xs">
+              Live Class Academy
+            </span>
           </h1>
 
-          <p className="text-slate-600 text-sm sm:text-base lg:text-lg leading-relaxed">
-            Practical legal, income tax, VAT, accounting, and RJSC compliance live classes and courses designed to build real-world statutory expertise for practitioners, students, and corporate leaders.
+          <p className="text-slate-600 text-sm sm:text-base lg:text-lg leading-relaxed max-w-2xl mx-auto">
+            Practical legal, income tax, VAT, accounting, and RJSC compliance live classes designed to build real-world statutory expertise for practitioners, students, and corporate leaders.
           </p>
 
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="#live-classes-section"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-2xs whitespace-nowrap shrink-0"
-            >
-              <Video className="w-4 h-4 text-emerald-100" />
-              <span>Live Classes</span>
-            </a>
-            <Link
-              to="/student/dashboard?tab=live"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-2xs whitespace-nowrap shrink-0"
-            >
-              <MonitorPlay className="w-4 h-4 text-emerald-400" />
-              <span>Open Student Learning Portal (LMS)</span>
-            </Link>
-            <Link
-              to="/verify-certificate"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0"
-            >
-              <Award className="w-4 h-4 text-emerald-600" />
-              <span>Public Certificate Verification</span>
-            </Link>
+          {/* Micro Feature Highlights Chips */}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold text-slate-700 pt-1">
+            <span className="px-3 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Verifiable QR Certificates</span>
+            </span>
+            <span className="px-3 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-blue-600" />
+              <span>Live Interactive Q&amp;A Cohorts</span>
+            </span>
+            <span className="px-3 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs flex items-center gap-1.5">
+              <MonitorPlay className="w-3.5 h-3.5 text-purple-600" />
+              <span>24/7 LMS Portal Access</span>
+            </span>
+          </div>
+
+          {/* Action Buttons Wrapper with Glass Container */}
+          <div className="pt-2">
+            <div className="p-2 sm:p-2.5 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs inline-flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="#live-classes-section"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap shrink-0"
+              >
+                <Video className="w-4 h-4 text-emerald-100" />
+                <span>Live Classes</span>
+              </a>
+              <Link
+                to="/student/dashboard?tab=live"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-950 hover:bg-slate-800 text-white shadow-md shadow-slate-950/20 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap shrink-0"
+              >
+                <MonitorPlay className="w-4 h-4 text-emerald-400" />
+                <span>Open Student Learning Portal (LMS)</span>
+              </Link>
+              <Link
+                to="/verify-certificate"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-emerald-300 shadow-2xs hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap shrink-0"
+              >
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span>Public Certificate Verification</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
