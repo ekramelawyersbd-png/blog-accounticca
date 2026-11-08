@@ -1,66 +1,192 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FileText, 
   Download, 
   Search, 
-  Eye, 
-  Copy, 
   Check, 
   ShieldCheck, 
-  Scale, 
-  FileCheck2, 
-  Briefcase, 
-  Users, 
-  Sparkles, 
-  ArrowRight,
-  BookOpen,
-  FolderDown,
-  Building2,
-  CheckCircle2,
-  ExternalLink,
-  ChevronRight,
+  Calendar, 
+  ChevronDown, 
+  ChevronUp, 
+  X, 
+  Info, 
   Filter,
-  Info,
-  Calendar
+  Settings,
+  Plus,
+  RefreshCw
 } from 'lucide-react';
 import { ServiceSEO } from '../components/SEO';
-import { RESOURCE_TEMPLATES, ResourceTemplate } from '../data/resourceTemplates';
+import { ResourceTemplate } from '../data/resourceTemplates';
+import { RegulatoryDocument } from '../data/regulatoryLibraryData';
+import { getRegulatoryDocuments, getResourceTemplates } from '../services/regulatoryLibraryService';
+import { useShopAuth, getStoredAdminToken } from '../contexts/ShopAuthContext';
 import { generateTemplatePDF } from '../utils/resourcePdfGenerator';
 
-type CategoryFilter = 'All' | 'Legal Contracts' | 'Tax & Compliance' | 'Corporate & RJSC' | 'Employment & HR';
+type TimeFilterOption = 'All' | 'This Month' | 'Last 6 Months' | 'Last Year';
+type MainTabOption = 'regulatory' | 'templates';
 
 export function ResourceLibraryPage() {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Admin Auth Check
+  let isAdminLoggedIn = false;
+  try {
+    const auth = useShopAuth();
+    isAdminLoggedIn = Boolean(auth?.isAuthenticated || auth?.adminUser);
+  } catch {
+    isAdminLoggedIn = Boolean(getStoredAdminToken());
+  }
+  // Navigation View Tab
+  const [activeTab, setActiveTab] = useState<MainTabOption>('regulatory');
+
+  // Dynamic Datasets State
+  const [docs, setDocs] = useState<RegulatoryDocument[]>([]);
+  const [templates, setTemplates] = useState<ResourceTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Top Controls State
+  const [timeFilter, setTimeFilter] = useState<TimeFilterOption>('All');
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Sidebar Filter State
+  const [selectedAuthority, setSelectedAuthority] = useState<string>('All');
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  // Template State
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [previewTemplate, setPreviewTemplate] = useState<ResourceTemplate | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<RegulatoryDocument | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const categories: CategoryFilter[] = [
-    'All',
-    'Legal Contracts',
-    'Tax & Compliance',
-    'Corporate & RJSC',
-    'Employment & HR'
+  // Fetch dynamic dataset from Service
+  const loadLibraryData = async () => {
+    setLoading(true);
+    try {
+      const [fetchedDocs, fetchedTemplates] = await Promise.all([
+        getRegulatoryDocuments(),
+        getResourceTemplates(),
+      ]);
+      setDocs(fetchedDocs);
+      setTemplates(fetchedTemplates);
+    } catch (err) {
+      console.error('Failed loading regulatory library items:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLibraryData();
+  }, []);
+
+  const authoritiesList = [
+    { name: 'Bangladesh Bank', code: 'bb' },
+    { name: 'NBR', code: 'nbr' },
+    { name: 'BIDA', code: 'bida' },
+    { name: 'RJSC', code: 'rjsc' },
+    { name: 'BSEC', code: 'bsec' },
+    { name: 'Others', code: 'others' }
   ];
 
-  const filteredTemplates = RESOURCE_TEMPLATES.filter((template) => {
-    const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      query === '' ||
-      template.title.toLowerCase().includes(query) ||
-      template.subtitle.toLowerCase().includes(query) ||
-      template.description.toLowerCase().includes(query) ||
-      template.tags.some((tag) => tag.toLowerCase().includes(query)) ||
-      template.governingLaw.toLowerCase().includes(query);
+  const yearsList = [2026, 2025, 2024, 2023, 2022, 2021];
 
-    return matchesCategory && matchesSearch;
-  });
+  // Reset All Filters
+  const handleClearFilters = () => {
+    setTimeFilter('All');
+    setDateFilter('');
+    setSearchQuery('');
+    setSelectedAuthority('All');
+    setSelectedYear(null);
+    setSelectedCategory('All');
+  };
 
-  const handleDownload = (template: ResourceTemplate) => {
+  // Compute Authority Counts for Regulatory Documents
+  const authorityCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      'Bangladesh Bank': 0,
+      'NBR': 0,
+      'BIDA': 0,
+      'RJSC': 0,
+      'BSEC': 0,
+      'Others': 0
+    };
+
+    docs.forEach((doc) => {
+      if (doc.authority.includes('Bangladesh Bank')) counts['Bangladesh Bank']++;
+      else if (doc.authority.includes('National Board of Revenue') || doc.authority.includes('NBR')) counts['NBR']++;
+      else if (doc.authority.includes('BIDA')) counts['BIDA']++;
+      else if (doc.authority.includes('RJSC')) counts['RJSC']++;
+      else if (doc.authority.includes('BSEC')) counts['BSEC']++;
+      else counts['Others']++;
+    });
+
+    return counts;
+  }, [docs]);
+
+  // Filtered Regulatory Documents
+  const filteredRegulatoryDocs = useMemo(() => {
+    return docs.filter((doc) => {
+      let matchesAuth = true;
+      if (selectedAuthority !== 'All') {
+        if (selectedAuthority === 'Bangladesh Bank') matchesAuth = doc.authority.includes('Bangladesh Bank');
+        else if (selectedAuthority === 'NBR') matchesAuth = doc.authority.includes('National Board of Revenue') || doc.authority.includes('NBR');
+        else if (selectedAuthority === 'BIDA') matchesAuth = doc.authority.includes('BIDA');
+        else if (selectedAuthority === 'RJSC') matchesAuth = doc.authority.includes('RJSC');
+        else if (selectedAuthority === 'BSEC') matchesAuth = doc.authority.includes('BSEC');
+        else if (selectedAuthority === 'Others') matchesAuth = doc.authorityCode === 'others' || doc.authority.includes('Ministry of Law');
+      }
+
+      const matchesYear = selectedYear === null || doc.year === selectedYear;
+      const matchesDate = !dateFilter || doc.docDate === dateFilter;
+
+      let matchesTime = true;
+      if (timeFilter !== 'All') {
+        const docD = new Date(doc.docDate);
+        const now = new Date('2026-11-08');
+        if (timeFilter === 'This Month') {
+          matchesTime = docD.getMonth() === now.getMonth() && docD.getFullYear() === now.getFullYear();
+        } else if (timeFilter === 'Last 6 Months') {
+          const sixMonthsAgo = new Date(now);
+          sixMonthsAgo.setMonth(now.getMonth() - 6);
+          matchesTime = docD >= sixMonthsAgo;
+        } else if (timeFilter === 'Last Year') {
+          matchesTime = docD.getFullYear() === now.getFullYear() - 1 || doc.year === 2025;
+        }
+      }
+
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        q === '' ||
+        doc.authority.toLowerCase().includes(q) ||
+        doc.docNo.toLowerCase().includes(q) ||
+        doc.description.toLowerCase().includes(q) ||
+        doc.category.toLowerCase().includes(q) ||
+        doc.docDate.includes(q);
+
+      return matchesAuth && matchesYear && matchesDate && matchesTime && matchesSearch;
+    });
+  }, [docs, selectedAuthority, selectedYear, dateFilter, timeFilter, searchQuery]);
+
+  // Filtered Templates
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((template) => {
+      const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        q === '' ||
+        template.title.toLowerCase().includes(q) ||
+        template.subtitle.toLowerCase().includes(q) ||
+        template.description.toLowerCase().includes(q) ||
+        template.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+        template.governingLaw.toLowerCase().includes(q);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [templates, selectedCategory, searchQuery]);
+
+  const handleDownloadTemplate = (template: ResourceTemplate) => {
     setDownloadingId(template.id);
     try {
       generateTemplatePDF(template);
@@ -84,478 +210,423 @@ export function ResourceLibraryPage() {
     }, 2500);
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Legal Contracts':
-        return <Scale className="w-4 h-4 text-indigo-600" />;
-      case 'Tax & Compliance':
-        return <FileCheck2 className="w-4 h-4 text-emerald-600" />;
-      case 'Corporate & RJSC':
-        return <Briefcase className="w-4 h-4 text-blue-600" />;
-      case 'Employment & HR':
-        return <Users className="w-4 h-4 text-purple-600" />;
-      default:
-        return <FileText className="w-4 h-4 text-slate-600" />;
-    }
-  };
+  const categories = [
+    'All',
+    'Legal Contracts',
+    'Tax & Compliance',
+    'Corporate & RJSC',
+    'Employment & HR'
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="min-h-screen bg-[#F4F7F9] font-sans pb-20 text-[#333333]">
       <ServiceSEO
-        title="Resource Library (PDFs) & Statutory Legal Templates | Accounticca & E-Lawyers"
-        description="Download ready-to-use, compliant legal agreements, statutory tax checklists, RJSC board resolutions, and HR contracts governed by Bangladesh law."
-        serviceType="Legal & Tax Resource Library"
+        title="Regulatory Library - Forms, SROs & Legal Templates | E-Lawyers & Accounticca"
+        description="Collection of major notifications, SROs, circulars, and orders issued by regulatory authorities in Bangladesh including Bangladesh Bank, NBR, BIDA, RJSC, BSEC, and Ministry of Law."
+        serviceType="Regulatory & Legal Documentation Library"
         canonicalUrl="/resource-library"
         keywords={[
-          'Resource Library Bangladesh',
-          'Legal Agreement PDF Download',
-          'NDA Template Bangladesh',
-          'Tax Return Checklist PDF',
-          'RJSC Resolution Template',
-          'Employment Contract Bangladesh',
-          'Consultancy Agreement PDF'
+          'Regulatory Library Bangladesh',
+          'Bangladesh Bank Circulars 2026',
+          'NBR Income Tax SROs',
+          'RJSC eBRS Circulars',
+          'BIDA Foreign Investment Instructions',
+          'BSEC Corporate Governance Code',
+          'Legal Contract Templates PDF'
         ]}
         breadcrumbs={[
           { name: 'Home', url: '/' },
           { name: 'Resources', url: '/tools' },
-          { name: 'Resource Library (PDFs)', url: '/resource-library' }
+          { name: 'Regulatory Library', url: '/resource-library' }
         ]}
       />
 
       {/* Floating Status Notification */}
       {statusMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-300">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#0A2A66] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-blue-400 animate-in fade-in slide-in-from-bottom-3 duration-300">
           <Check className="w-4 h-4 text-emerald-400" />
           <span className="text-sm font-medium">{statusMessage}</span>
         </div>
       )}
 
-      {/* Hero Header */}
-      <div className="bg-gradient-to-b from-emerald-50/70 via-white to-slate-50 text-slate-900 pt-12 pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px]"></div>
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-slate-200/80">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-bold uppercase tracking-wider mb-4">
-                <FolderDown className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Statutory Legal & Tax Documentation Vault</span>
+      {/* Main Container */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] p-6 sm:p-8">
+          
+          {/* Header Section */}
+          <header className="mb-6 pb-4 border-b border-[#E5E7EB]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+              <div>
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+                    Regulatory Library
+                  </h1>
+                  <h2 className="text-xl sm:text-2xl font-semibold text-[#1A5BB8]">
+                    Forms &amp; Templates
+                  </h2>
+                </div>
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
-                Resource Library <span className="text-emerald-600 font-black">(PDFs)</span>
-              </h1>
-              <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-                Download verified, practitioner-grade legal draft templates, corporate resolutions, employment contracts, and statutory tax checklists customized for Bangladesh law (Contract Act 1872, Income Tax Act 2023, Companies Act 1994, and Labour Act 2006).
-              </p>
+
+              {/* Action Buttons: View Switcher & Admin Portal Trigger */}
+              <div className="flex items-center gap-2 shrink-0">
+                {isAdminLoggedIn && (
+                  <Link
+                    to="/admin/regulatory-library"
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-[#0A2A66] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    title="Open Admin Management Desk to add/edit circulars"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Admin Desk</span>
+                  </Link>
+                )}
+
+                <div className="flex items-center gap-1 bg-[#F4F7F9] p-1 rounded-xl border border-[#E5E7EB]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('regulatory')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      activeTab === 'regulatory'
+                        ? 'bg-[#0A2A66] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Circulars ({docs.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('templates')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      activeTab === 'templates'
+                        ? 'bg-[#0A2A66] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Templates ({templates.length})
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <Link
-                to="/tools"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 transition-all shadow-xs"
-              >
-                <span>Interactive Calculators</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-              <Link
-                to="/training"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm hover:shadow-emerald-600/30"
-              >
-                <span>Academy Courses &amp; Workshops</span>
-                <Sparkles className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
+            <p className="text-sm text-slate-500 max-w-4xl leading-relaxed">
+              Welcome to our regulatory library where you can find a collection of major notifications/SROs/orders/circulars issued by various regulatory authorities in Bangladesh (Bangladesh Bank, NBR, BIDA, RJSC, BSEC, Ministry of Law).
+            </p>
+          </header>
 
-          {/* Quick Stats Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-2">
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
-              <div className="text-2xl font-black text-emerald-600">{RESOURCE_TEMPLATES.length}+</div>
-              <div className="text-xs text-slate-600 font-medium mt-0.5">Compliant Drafts</div>
-            </div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
-              <div className="text-2xl font-black text-slate-900">100% Free</div>
-              <div className="text-xs text-slate-600 font-medium mt-0.5">One-Click PDF Export</div>
-            </div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
-              <div className="text-2xl font-black text-emerald-600">AY 2026-27</div>
-              <div className="text-xs text-slate-600 font-medium mt-0.5">Updated Tax SROs</div>
-            </div>
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
-              <div className="text-2xl font-black text-slate-900">Full Text</div>
-              <div className="text-xs text-slate-600 font-medium mt-0.5">Editable & Copyable</div>
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* Top Controls */}
+          <div className="bg-[#F4F7F9] p-3.5 sm:p-4 rounded-xl border border-[#E5E7EB] mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {(['All', 'This Month', 'Last 6 Months', 'Last Year'] as TimeFilterOption[]).map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeFilter(tf)}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    timeFilter === tf
+                      ? 'bg-[#0A2A66] text-white border-[#0A2A66] shadow-xs'
+                      : 'bg-white text-slate-700 border-[#E5E7EB] hover:bg-slate-50'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
 
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
-        {/* Search & Filter Toolbar Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-lg border border-slate-200/90 mb-8">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            {/* Search Bar */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="px-3 py-1.5 pr-8 bg-white border border-[#E5E7EB] rounded-lg text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#1A5BB8]"
+                  title="Filter by specific date"
+                />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="relative w-full sm:w-72 md:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search resources by title, keywords (e.g. NDA, Section 166, RJSC, HR, tax checklist)..."
+                placeholder="Search your items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-medium text-slate-800"
+                className="w-full pl-9 pr-8 py-2 bg-white border border-[#E5E7EB] rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-[#1A5BB8] focus:ring-2 focus:ring-[#1A5BB8]/20 transition-all text-slate-900"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 p-1"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
                 >
-                  Clear
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
+          </div>
 
-            {/* Category Filter Pills */}
-            <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-              {categories.map((cat) => (
+          {/* Main Layout Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
+            
+            {/* Sidebar Filters */}
+            <aside className="border border-[#E5E7EB] rounded-xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-[#0A2A66] text-white px-4 py-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-blue-300" />
+                  <h3 className="text-sm font-bold">Filter Options</h3>
+                </div>
                 <button
-                  key={cat}
                   type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    selectedCategory === cat
-                      ? 'bg-emerald-700 text-white shadow-xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  onClick={handleClearFilters}
+                  className="bg-[#E2E8F0] hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded text-[11px] font-semibold transition cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
+
+              {/* Authority Filter */}
+              <div className="p-4 border-b border-[#E5E7EB] space-y-2">
+                <div className="flex items-center justify-between text-xs font-extrabold text-slate-900 mb-2">
+                  <span>Filter By Authority</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+
+                <div
+                  onClick={() => setSelectedAuthority('All')}
+                  className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    selectedAuthority === 'All' ? 'bg-blue-50 text-[#1A5BB8] font-bold' : 'text-slate-700 hover:text-[#1A5BB8]'
                   }`}
                 >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+                  <span>All Authorities</span>
+                  <span className="text-slate-400 font-mono">({docs.length})</span>
+                </div>
 
-        {/* Featured NBR Official Publications Banner */}
-        <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Income Tax Guidelines Card */}
-          <div className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-md flex flex-col justify-between">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-extrabold uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  NBR Official Manual
-                </span>
-                <span className="text-xs text-indigo-200/80 font-bold">AY 2026-2027</span>
+                {authoritiesList.map((auth) => {
+                  const count = authorityCounts[auth.name] || 0;
+                  const isSelected = selectedAuthority === auth.name;
+
+                  return (
+                    <div
+                      key={auth.code}
+                      onClick={() => setSelectedAuthority(auth.name)}
+                      className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition cursor-pointer ${
+                        isSelected ? 'bg-blue-50 text-[#1A5BB8] font-bold' : 'text-slate-700 hover:text-[#1A5BB8]'
+                      }`}
+                    >
+                      <span>{auth.name}</span>
+                      <span className="text-slate-400 text-[11px] font-mono flex items-center gap-1">
+                        ({count}) <ChevronDown className="w-3 h-3 text-slate-300" />
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white mb-2 leading-tight">
-                আয়কর নির্দেশিকা ২০২৬-২০২৭
-              </h3>
-              <p className="text-sm text-indigo-200/90 leading-relaxed mb-6">
-                Official step-by-step practical guide issued by NBR for individual tax return submission, deduction slabs, and universal e-filing.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 relative z-10">
-              <a 
-                href="https://pub-1d8caf41922f46e1952565fc23269fb3.r2.dev/%E0%A6%86%E0%A7%9F%E0%A6%95%E0%A6%B0%20%E0%A6%A8%E0%A6%BF%E0%A6%B0%E0%A7%8D%E0%A6%A6%E0%A7%87%E0%A6%B6%E0%A6%BF%E0%A6%95%E0%A6%BE%20%E0%A7%A8%E0%A7%A6%E0%A7%A8%E0%A7%AC-%E0%A7%A8%E0%A7%A6%E0%A7%A8%E0%A7%AD.pdf" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl text-xs transition-all shadow-sm"
-              >
-                <Download className="w-4 h-4" />
-                Download Official PDF
-              </a>
-              <Link
-                to="/article/income-tax-guidelines-2026-2027-pdf-download"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs transition-all border border-white/10"
-              >
-                <span>Read Analysis</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
 
-          {/* Income Tax Circular Card */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-md flex flex-col justify-between">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[11px] font-extrabold uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                  Statutory Circular
-                </span>
-                <span className="text-xs text-slate-300 font-bold">Finance Act 2026</span>
+              {/* Year Filter */}
+              <div className="p-4 border-b border-[#E5E7EB]">
+                <div className="flex items-center justify-between text-xs font-extrabold text-slate-900 mb-2">
+                  <span>Filter by Year</span>
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 mt-2">
+                  {yearsList.map((yr) => {
+                    const isSelected = selectedYear === yr;
+
+                    return (
+                      <button
+                        key={yr}
+                        type="button"
+                        onClick={() => setSelectedYear(isSelected ? null : yr)}
+                        className={`py-1.5 px-2 rounded border text-xs font-semibold transition cursor-pointer text-center ${
+                          isSelected
+                            ? 'bg-[#0A2A66] text-white border-[#0A2A66]'
+                            : 'bg-white text-slate-700 border-[#E5E7EB] hover:bg-[#F4F7F9]'
+                        }`}
+                      >
+                        {yr}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white mb-2 leading-tight">
-                আয়কর পরিপত্র ২০২৬-২০২৭
-              </h3>
-              <p className="text-sm text-slate-300 leading-relaxed mb-6">
-                Statutory circular on legal amendments, TDS rates, corporate taxation slabs, and procedural compliance rules.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 relative z-10">
-              <a 
-                href="https://pub-1d8caf41922f46e1952565fc23269fb3.r2.dev/%E0%A6%86%E0%A7%9F%E0%A6%95%E0%A6%B0_%E0%A6%AA%E0%A6%B0%E0%A6%BF%E0%A6%AA%E0%A6%A4%E0%A7%8D%E0%A6%B0_%E0%A7%A8%E0%A7%A6%E0%A7%A8%E0%A7%AC-%E0%A7%A8%E0%A7%A6%E0%A7%A8%E0%A7%AD.pdf" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-sm"
-              >
-                <Download className="w-4 h-4" />
-                Download Official PDF
-              </a>
-              <Link
-                to="/article/income-tax-circular-2026-2027-pdf-download"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs transition-all border border-white/10"
-              >
-                <span>Read Circular Breakdown</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
+            </aside>
 
-        {/* Templates Grid Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Downloadable Templates ({filteredTemplates.length})
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Select any document below to generate high-resolution, print-ready PDF or copy raw clause drafts.
-            </p>
-          </div>
-          <span className="hidden sm:inline-flex text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            Governed by Bangladesh Laws
-          </span>
-        </div>
-
-        {/* Templates Grid */}
-        {filteredTemplates.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
-            <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-800 mb-1">No templates matched your search</h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Try searching with different terms like "NDA", "tax", "consultancy", or reset the filter.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('All');
-              }}
-              className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 transition-colors"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTemplates.map((template) => {
-              const isDownloading = downloadingId === template.id;
-              const isCopied = copiedId === template.id;
-
-              return (
-                <div
-                  key={template.id}
-                  className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-500/50 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col p-5 group"
-                >
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 group-hover:bg-emerald-50 group-hover:border-emerald-100 transition-colors">
-                        {getCategoryIcon(template.category)}
-                      </div>
+            {/* Main Table / Grid Area */}
+            <main>
+              {activeTab === 'regulatory' ? (
+                <div className="overflow-x-auto border border-[#E5E7EB] rounded-xl shadow-2xs bg-white">
+                  <table className="w-full text-left border-collapse min-w-[850px]">
+                    <thead className="bg-[#0A2A66] text-white border-b border-blue-900">
+                      <tr>
+                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[22%]">Authority</th>
+                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[25%]">Document No.</th>
+                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[15%]">Document Date</th>
+                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[38%]">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E7EB] text-xs sm:text-sm">
+                      {filteredRegulatoryDocs.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-12 text-center text-slate-500">
+                            <Info className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                            <p className="font-bold text-slate-700">No regulatory documents match your current filter</p>
+                            <button
+                              type="button"
+                              onClick={handleClearFilters}
+                              className="mt-3 px-3.5 py-1.5 bg-[#0A2A66] text-white text-xs font-bold rounded-lg transition"
+                            >
+                              Reset All Filters
+                            </button>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredRegulatoryDocs.map((doc) => (
+                          <tr key={doc.id} className="hover:bg-[#F9FAFB] transition-colors">
+                            <td className="py-4 px-4 font-semibold text-slate-900 align-top">
+                              {doc.authority}
+                            </td>
+                            <td className="py-4 px-4 align-top">
+                              {doc.pdfUrl ? (
+                                <a
+                                  href={doc.pdfUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#1A5BB8] hover:underline font-bold inline-flex items-center gap-1"
+                                >
+                                  <span>{doc.docNo}</span>
+                                  <Download className="w-3 h-3 text-emerald-600 shrink-0" />
+                                </a>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewDoc(doc)}
+                                  className="text-[#1A5BB8] hover:underline font-bold text-left cursor-pointer"
+                                >
+                                  {doc.docNo}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-4 px-4 text-slate-600 font-mono text-xs align-top whitespace-nowrap">
+                              {doc.docDate}
+                            </td>
+                            <td className="py-4 px-4 text-slate-700 leading-relaxed align-top">
+                              {doc.description}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredTemplates.map((template) => (
+                    <div
+                      key={template.id}
+                      className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+                    >
                       <div>
-                        <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                          {template.category}
-                        </span>
-                        <span className="text-xs text-slate-500 font-medium">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                            {template.category}
+                          </span>
+                          {template.badge && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              {template.badge}
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="text-base font-bold text-slate-900 mb-1">
+                          {template.title}
+                        </h4>
+                        <p className="text-xs text-[#1A5BB8] font-semibold mb-2">
+                          {template.subtitle}
+                        </p>
+                        <p className="text-xs text-slate-600 line-clamp-3 mb-3 leading-relaxed">
+                          {template.description}
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-mono text-slate-500">
                           {template.fileSizeEstimate}
                         </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewTemplate(template)}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition cursor-pointer"
+                          >
+                            Preview
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadTemplate(template)}
+                            disabled={downloadingId === template.id}
+                            className="px-3.5 py-1.5 bg-[#0A2A66] hover:bg-[#1A5BB8] text-white text-xs font-bold rounded-lg transition shadow-2xs cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>{downloadingId === template.id ? 'Exporting...' : 'PDF'}</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    {template.badge && (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                        {template.badge}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Title & Description */}
-                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-emerald-800 transition-colors mb-1.5 leading-snug">
-                    {template.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-semibold mb-2 line-clamp-1">
-                    {template.subtitle}
-                  </p>
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4 flex-1 line-clamp-3">
-                    {template.description}
-                  </p>
-
-                  {/* Governing Law Tag */}
-                  <div className="mb-4 pt-3 border-t border-slate-100">
-                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider block mb-1">
-                      Statutory Framework
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-700 bg-slate-50 px-2 py-1 rounded-md inline-block border border-slate-100 truncate max-w-full">
-                      {template.governingLaw}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(template)}
-                      disabled={isDownloading}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                    >
-                      <Download className={`w-3.5 h-3.5 ${isDownloading ? 'animate-bounce' : ''}`} />
-                      <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPreviewTemplate(template)}
-                      className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-                      title="Preview draft clauses"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleCopyText(template)}
-                      className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-                      title="Copy full text"
-                    >
-                      {isCopied ? (
-                        <Check className="w-4 h-4 text-emerald-600" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Legal Disclaimer Box */}
-        <div className="mt-14 bg-amber-50/70 border border-amber-200/80 rounded-2xl p-5 sm:p-6 text-amber-900">
-          <div className="flex items-start gap-3.5">
-            <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-            <div className="text-xs sm:text-sm leading-relaxed space-y-1">
-              <span className="font-bold block text-amber-950">
-                Notice Regarding Legal &amp; Compliance Templates
-              </span>
-              <p className="text-amber-900/90">
-                These templates are provided by <strong>Accounticca × E-Lawyers Bangladesh</strong> for informational and general transactional guidance. Because every commercial transaction and corporate profile is unique, we strongly advise having custom contracts reviewed by qualified legal and tax counsel prior to execution.
-              </p>
-            </div>
+              )}
+            </main>
           </div>
         </div>
       </div>
 
-      {/* Preview Modal */}
-      {previewTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-slate-50/50">
+      {/* Doc Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700">
-                  {previewTemplate.category}
+                <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded bg-blue-100 text-[#0A2A66]">
+                  {previewDoc.authority}
                 </span>
-                <h3 className="text-xl font-bold text-slate-900 mt-1">
-                  {previewTemplate.title}
+                <h3 className="text-lg font-black text-slate-900 mt-1">
+                  {previewDoc.docNo}
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Governing Law: {previewTemplate.governingLaw}
-                </p>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewTemplate(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                onClick={() => setPreviewDoc(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 text-slate-700 text-sm leading-relaxed">
-              <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-100 text-xs text-emerald-900">
-                <span className="font-bold">Template Overview: </span>
-                {previewTemplate.description}
+            <div className="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <div className="flex items-center justify-between font-mono bg-slate-50 p-2.5 rounded-xl text-xs">
+                <span>Issue Date: <strong className="text-slate-900">{previewDoc.docDate}</strong></span>
+                <span>Category: <strong className="text-[#1A5BB8]">{previewDoc.category}</strong></span>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  Key Clauses Included:
-                </h4>
-                {previewTemplate.sections.map((sec, idx) => (
-                  <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200/60">
-                    <h5 className="font-bold text-slate-900 text-xs mb-2">{sec.heading}</h5>
-                    {Array.isArray(sec.content) ? (
-                      <ul className="list-disc pl-5 space-y-1 text-xs text-slate-600">
-                        {sec.content.map((item, i) => (
-                          <li key={i}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-slate-600">{sec.content}</p>
-                    )}
-                  </div>
-                ))}
+              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 text-slate-900 font-medium">
+                {previewDoc.description}
               </div>
 
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
-                  Full Document Preview:
-                </h4>
-                <pre className="p-4 rounded-xl bg-slate-900 text-slate-200 text-xs font-mono whitespace-pre-wrap max-h-60 overflow-y-auto">
-                  {previewTemplate.fullText}
-                </pre>
-              </div>
+              {previewDoc.details && (
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="font-bold text-slate-900 block text-xs uppercase tracking-wider">Statutory Scope:</span>
+                  <p className="text-slate-600 text-xs leading-relaxed">{previewDoc.details}</p>
+                </div>
+              )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => handleCopyText(previewTemplate)}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition"
               >
-                {copiedId === previewTemplate.id ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Full Text</span>
-                  </>
-                )}
+                Close Summary
               </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPreviewTemplate(null)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDownload(previewTemplate)}
-                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download PDF</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -563,3 +634,5 @@ export function ResourceLibraryPage() {
     </div>
   );
 }
+
+export default ResourceLibraryPage;

@@ -64,6 +64,7 @@ import { EnrollmentPage } from './pages/EnrollmentPage';
 import { PaymentVerifyPage } from './pages/PaymentVerifyPage';
 import { PaymentCancelPage } from './pages/PaymentCancelPage';
 import { AdminShop } from './pages/AdminShop';
+import { AdminRegulatoryLibraryPage } from './pages/admin/AdminRegulatoryLibraryPage';
 import { ShopAdminLogin } from './pages/ShopAdminLogin';
 import { ShopAdminRouteGuard } from './components/auth/ShopAdminRouteGuard';
 import { LmsRouteGuard } from './components/auth/LmsRouteGuard';
@@ -73,6 +74,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { AuthProvider as LegacyAuthProvider } from './context/AuthContext';
 import { ShopAuthProvider } from './contexts/ShopAuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import SRO_TDS_2026_Content from './pages/SRO_TDS_2026';
 import { BookmarkProvider } from './contexts/BookmarkContext';
 import { CartProvider } from './contexts/CartContext';
 import { PurchaseProvider } from './contexts/PurchaseContext';
@@ -270,6 +272,9 @@ export default function App() {
                     <Route path="admin/email-templates" element={<ShopAdminRouteGuard><AdminShop initialTab="email-templates" /></ShopAdminRouteGuard>} />
                     <Route path="admin/email-history" element={<ShopAdminRouteGuard><AdminShop initialTab="email-history" /></ShopAdminRouteGuard>} />
                     <Route path="admin/seo" element={<ShopAdminRouteGuard><AdminShop initialTab="seo" /></ShopAdminRouteGuard>} />
+                    <Route path="admin/regulatory-library" element={<ShopAdminRouteGuard><AdminRegulatoryLibraryPage /></ShopAdminRouteGuard>} />
+                    <Route path="resource-library/admin" element={<ShopAdminRouteGuard><AdminRegulatoryLibraryPage /></ShopAdminRouteGuard>} />
+                    <Route path="SRO/TDS2026" element={<SRO_TDS_2026_Content />} />
                     <Route path="admin/products" element={<Navigate to="/admin/shop" replace />} />
                     <Route path="admin" element={<ShopAdminRouteGuard><AdminShop /></ShopAdminRouteGuard>} />
                     
