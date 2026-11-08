@@ -74,19 +74,15 @@ export const getAccessToken = (): string | null => {
   }
   try {
     const saved = localStorage.getItem(STORAGE_KEY_TOKEN);
-    const timestamp = localStorage.getItem(STORAGE_KEY_TIMESTAMP);
-    // Keep token active for 1 hour (3600s)
-    if (saved && timestamp) {
-      const elapsed = Date.now() - parseInt(timestamp, 10);
-      if (elapsed < 3600 * 1000) {
-        cachedAccessToken = saved;
-        return cachedAccessToken;
-      }
+    if (saved) {
+      cachedAccessToken = saved;
+      return cachedAccessToken;
     }
   } catch (e) {
     // ignore
   }
-  return null;
+  // Fallback to active session token if present
+  return cachedAccessToken;
 };
 
 export const getConnectedWorkspaceEmail = (): string => {

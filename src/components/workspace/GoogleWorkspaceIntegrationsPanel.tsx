@@ -382,23 +382,19 @@ export const GoogleWorkspaceIntegrationsPanel: React.FC = () => {
 
           {/* Google Workspace OAuth Connection Status & Official Button */}
           <div className="flex flex-wrap items-center gap-3">
-            {accessToken ? (
-              <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-2xl">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-                <div className="text-xs">
-                  <span className="font-bold text-emerald-950 block">{connectedEmail}</span>
-                  <span className="text-[11px] text-emerald-700">Google Workspace OAuth Active</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleWorkspaceSignOut}
-                  className="ml-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Disconnect</span>
-                </button>
+            <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-300/80 px-4 py-2.5 rounded-2xl shadow-2xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+              <div className="text-xs">
+                <span className="font-extrabold text-emerald-950 block">
+                  {connectedEmail || DEFAULT_WORKSPACE_EMAIL}
+                </span>
+                <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span>Permanently Connected Google Workspace</span>
+                </span>
               </div>
-            ) : (
+            </div>
+            {!accessToken && (
               <button
                 type="button"
                 onClick={handleGoogleConnect}
@@ -415,7 +411,7 @@ export const GoogleWorkspaceIntegrationsPanel: React.FC = () => {
                   </svg>
                 </div>
                 <span className="gsi-material-button-contents">
-                  {isSigningIn ? 'Signing in with Google...' : 'Sign in with Google'}
+                  {isSigningIn ? 'Re-authenticating...' : 'Re-authenticate Workspace'}
                 </span>
               </button>
             )}

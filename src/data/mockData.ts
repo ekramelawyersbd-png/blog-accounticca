@@ -1,4 +1,5 @@
 import { Article, Author, Category } from '../types';
+import { rjscEbrs2026Article } from './rjscEbrs2026Article';
 import { psrDisplaySection265Article } from './psrDisplaySection265Article';
 import { corporateTaxDeadline2026Article } from './corporateTaxDeadline2026Article';
 import { auditedFinancialStatementsArticle } from './auditedFinancialStatementsArticle';
@@ -84,6 +85,7 @@ export const categories: { id: string; name: Category; description: string }[] =
 ];
 
 export const mockArticles: Article[] = [
+  rjscEbrs2026Article,
   salaryTdsArticle,
   bangladeshIncomeTaxSlabs2026Article,
   sro213ApprovedCharitiesTaxRebateArticle,

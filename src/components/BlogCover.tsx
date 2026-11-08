@@ -76,6 +76,9 @@ const CATEGORY_THEMES: Record<string, { bg: string; badge: string; icon: React.E
 export function BlogCover({ article, className = '', showCaption = true }: BlogCoverProps) {
   const [imageError, setImageError] = useState(false);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>(
+    article.imageUrl?.includes('Infographic') || article.imageUrl?.includes('eBRS') ? 'contain' : 'cover'
+  );
 
   const categoryMeta = CATEGORY_DEFAULT_IMAGES[article.categoryId] || {
     url: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&q=80&w=1600',
@@ -116,8 +119,10 @@ export function BlogCover({ article, className = '', showCaption = true }: BlogC
     ? article.imageUrl 
     : (!imageError ? categoryMeta.url : null);
 
+  const isInfographic = activeImageUrl?.includes('Infographic') || activeImageUrl?.includes('eBRS');
+
   const activeCaption = article.imageUrl 
-    ? `Curated editorial asset for ${article.category}` 
+    ? (isInfographic ? 'Official RJSC eBRS Registration Process Infographic with Accounticca & E-Lawyers Compliance Footer' : `Curated editorial asset for ${article.category}`)
     : categoryMeta.credit;
 
   return (
@@ -125,30 +130,40 @@ export function BlogCover({ article, className = '', showCaption = true }: BlogC
       {/* Standardized 16:9 Visual Frame */}
       <div className="relative group overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-950 shadow-md transition-shadow duration-300 hover:shadow-xl">
         {activeImageUrl ? (
-          <div className="relative w-full aspect-[16/9] max-h-[460px] overflow-hidden bg-slate-950">
+          <div className="relative w-full aspect-[16/9] max-h-[500px] overflow-hidden bg-slate-950">
             <img
               src={activeImageUrl}
               alt={article.title}
               onError={handleImageError}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              className={`w-full h-full transition-all duration-500 ease-out ${
+                fitMode === 'contain' ? 'object-contain p-2 bg-slate-950' : 'object-cover group-hover:scale-105'
+              }`}
             />
             
             {/* Editorial Multi-Stop Gradient Overlay for Depth and Contrast */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-black/20" />
+            <div className={`absolute inset-0 pointer-events-none ${fitMode === 'contain' ? 'bg-gradient-to-t from-slate-950/80 via-transparent to-black/30' : 'bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-black/20'}`} />
 
             {/* Top-Right Badge: Category & Joint Identity */}
             <div className="absolute top-4 sm:top-6 inset-x-4 sm:inset-x-6 flex items-center justify-between gap-3 pointer-events-none">
-              <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-white text-xs font-semibold">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-white text-xs font-semibold shadow-sm">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="hidden sm:inline">Accounticca × E-Lawyers</span>
                 <span className="sm:hidden">Compliance Hub</span>
               </div>
 
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md shadow-sm ${theme.badge}`}>
-                <CategoryIcon className="w-3.5 h-3.5" />
-                <span>{theme.label}</span>
-              </span>
+              <div className="flex items-center gap-2 pointer-events-auto">
+                {isInfographic && (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 backdrop-blur-md">
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    Infographic
+                  </span>
+                )}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md shadow-sm ${theme.badge}`}>
+                  <CategoryIcon className="w-3.5 h-3.5" />
+                  <span>{theme.label}</span>
+                </span>
+              </div>
             </div>
 
             {/* Bottom Floating Title Overlay */}
@@ -170,17 +185,30 @@ export function BlogCover({ article, className = '', showCaption = true }: BlogC
                 </h2>
               </div>
 
-              {/* Fullscreen Lightbox Trigger Button */}
-              <button
-                type="button"
-                onClick={() => setIsZoomOpen(true)}
-                className="self-end sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 active:bg-white/30 backdrop-blur-md text-white text-xs font-medium border border-white/20 transition-all cursor-pointer shadow-sm hover:scale-105"
-                title="Expand cover image to full resolution"
-                aria-label="Expand image"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Expand View</span>
-              </button>
+              {/* Action Buttons: Fit Toggle & Fullscreen Lightbox */}
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                {isInfographic && (
+                  <button
+                    type="button"
+                    onClick={() => setFitMode(prev => prev === 'cover' ? 'contain' : 'cover')}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-sm"
+                    title={fitMode === 'cover' ? 'Switch to Full Infographic Fit' : 'Switch to Cover Crop'}
+                  >
+                    <span>{fitMode === 'cover' ? 'Fit Image' : 'Crop View'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsZoomOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md text-white text-xs font-bold border border-white/30 transition-all cursor-pointer shadow-sm hover:scale-105"
+                  title="Expand cover image to full resolution"
+                  aria-label="Expand image"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Expand View</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
