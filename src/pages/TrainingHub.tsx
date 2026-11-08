@@ -285,7 +285,7 @@ export function TrainingHub() {
                           }}
                           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
                         >
-                          <span>Buy Now</span>
+                          <span>Apply Now</span>
                         </button>
                         <button
                           type="button"
@@ -465,7 +465,7 @@ export function TrainingHub() {
                         }}
                         className="py-2.5 px-3 bg-slate-900 text-white hover:bg-emerald-700 rounded-xl font-bold transition-colors text-xs cursor-pointer whitespace-nowrap shrink-0"
                       >
-                        Buy Now
+                        Apply Now
                       </button>
                     </div>
                   )}

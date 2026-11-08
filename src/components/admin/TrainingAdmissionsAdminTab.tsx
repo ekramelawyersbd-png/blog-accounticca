@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
+  PieChart as PieChartIcon,
   GraduationCap,
   CheckCircle2,
   XCircle,
@@ -16,6 +17,13 @@ import {
   CheckCheck,
   UserCheck
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip
+} from 'recharts';
 import {
   TrainingAdmissionRecord,
   fetchTrainingAdmissionsFromFirestore,
@@ -228,7 +236,7 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Visual Summary Chart Card: Pending vs. Approved Applications */}
+      {/* Visual Summary Chart Card: Pending Review vs. Enrolled Status Ring Chart (Recharts) */}
       {(() => {
         const totalCount = admissions.length;
         const approvedCount = admissions.filter((a) => a.status === 'approved').length;
@@ -239,68 +247,154 @@ export const TrainingAdmissionsAdminTab: React.FC = () => {
         const pendingPercent = totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0;
         const rejectedPercent = totalCount > 0 ? Math.round((rejectedCount / totalCount) * 100) : 0;
 
+        const ringData = totalCount > 0 ? [
+          { name: 'Enrolled (Approved)', value: approvedCount, color: '#059669' },
+          { name: 'Pending Review', value: pendingCount, color: '#f59e0b' },
+          ...(rejectedCount > 0 ? [{ name: 'Rejected', value: rejectedCount, color: '#e11d48' }] : [])
+        ] : [
+          { name: 'No Applications', value: 1, color: '#cbd5e1' }
+        ];
+
         return (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Application Status Breakdown & Approval Rate
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <PieChartIcon className="w-4 h-4 text-emerald-600" />
+                  <span>Student Onboarding &amp; Access Status Ring Chart</span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Visual proportion of approved, pending review, and rejected student applications.
+                  Distribution comparison of Pending Review vs. Enrolled student access authorizations.
                 </p>
               </div>
-              <div className="text-xs font-mono tabular-nums text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
-                Total: {totalCount} Applications
+              <div className="text-xs font-mono tabular-nums text-slate-600 font-bold bg-slate-100 px-3 py-1.5 rounded-lg self-start sm:self-auto border border-slate-200">
+                Total Applications: {totalCount}
               </div>
             </div>
 
-            {/* Segmented Progress Bar Chart */}
-            <div className="space-y-2">
-              <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-                {approvedCount > 0 && (
-                  <div
-                    style={{ width: `${approvedPercent}%` }}
-                    className="bg-emerald-600 h-full transition-all duration-500"
-                    title={`Approved: ${approvedCount} (${approvedPercent}%)`}
-                  />
-                )}
-                {pendingCount > 0 && (
-                  <div
-                    style={{ width: `${pendingPercent}%` }}
-                    className="bg-amber-500 h-full transition-all duration-500"
-                    title={`Pending: ${pendingCount} (${pendingPercent}%)`}
-                  />
-                )}
-                {rejectedCount > 0 && (
-                  <div
-                    style={{ width: `${rejectedPercent}%` }}
-                    className="bg-rose-500 h-full transition-all duration-500"
-                    title={`Rejected: ${rejectedCount} (${rejectedPercent}%)`}
-                  />
-                )}
-                {totalCount === 0 && <div className="w-full bg-slate-200 h-full" />}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              {/* Ring Donut Chart Column */}
+              <div className="lg:col-span-5 flex flex-col items-center justify-center relative min-h-[190px] bg-slate-50/60 rounded-2xl p-4 border border-slate-100">
+                <div className="w-full h-[180px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={ringData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={74}
+                        paddingAngle={totalCount > 1 ? 4 : 0}
+                        dataKey="value"
+                      >
+                        {ringData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: any, name: any) => [
+                          totalCount > 0 ? `${val} applicants (${Math.round((Number(val) / totalCount) * 100)}%)` : '0 applicants',
+                          name
+                        ]}
+                        contentStyle={{
+                          backgroundColor: '#0f172a',
+                          border: 'none',
+                          borderRadius: '0.75rem',
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.15)'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Donut Center Overlay Label */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-slate-900 leading-none tracking-tight">
+                    {approvedPercent}%
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-1">
+                    Enrolled Rate
+                  </span>
+                </div>
               </div>
 
-              {/* Chart Legend */}
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block shrink-0" />
-                  <span className="text-slate-700 font-semibold">
-                    Approved: <strong className="text-slate-900">{approvedCount}</strong> ({approvedPercent}%)
-                  </span>
+              {/* Status Breakdown & Metrics List */}
+              <div className="lg:col-span-7 space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Enrolled Status Card */}
+                  <div className="p-4 rounded-xl bg-emerald-50/90 border border-emerald-200 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+                        <span>Enrolled (Approved)</span>
+                      </span>
+                      <span className="text-xs font-black text-emerald-700 font-mono bg-emerald-100/80 px-2 py-0.5 rounded">
+                        {approvedPercent}%
+                      </span>
+                    </div>
+                    <div className="text-2xl font-black text-emerald-950 font-mono pt-1">
+                      {approvedCount} <span className="text-xs font-normal text-emerald-700 font-sans">students</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800/90 leading-relaxed">
+                      Granted view-only portal access to course learning dashboard.
+                    </p>
+                  </div>
+
+                  {/* Pending Review Status Card */}
+                  <div className="p-4 rounded-xl bg-amber-50/90 border border-amber-200 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+                        <span>Pending Review</span>
+                      </span>
+                      <span className="text-xs font-black text-amber-700 font-mono bg-amber-100/80 px-2 py-0.5 rounded">
+                        {pendingPercent}%
+                      </span>
+                    </div>
+                    <div className="text-2xl font-black text-amber-950 font-mono pt-1">
+                      {pendingCount} <span className="text-xs font-normal text-amber-700 font-sans font-medium">applications</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                      Awaiting administrative verification &amp; course grant.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-500 inline-block shrink-0" />
-                  <span className="text-slate-700 font-semibold">
-                    Pending Review: <strong className="text-slate-900">{pendingCount}</strong> ({pendingPercent}%)
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-500 inline-block shrink-0" />
-                  <span className="text-slate-700 font-semibold">
-                    Rejected: <strong className="text-slate-900">{rejectedCount}</strong> ({rejectedPercent}%)
-                  </span>
+
+                {/* Progress bar visual flow */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                    <span>Distribution Bar Ratio</span>
+                    <span className="font-mono text-slate-700">
+                      {approvedCount} Enrolled · {pendingCount} Pending{rejectedCount > 0 ? ` · ${rejectedCount} Rejected` : ''}
+                    </span>
+                  </div>
+                  <div className="h-3.5 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner border border-slate-200/60">
+                    {approvedCount > 0 && (
+                      <div
+                        style={{ width: `${approvedPercent}%` }}
+                        className="bg-emerald-600 h-full transition-all duration-500"
+                        title={`Enrolled: ${approvedCount} (${approvedPercent}%)`}
+                      />
+                    )}
+                    {pendingCount > 0 && (
+                      <div
+                        style={{ width: `${pendingPercent}%` }}
+                        className="bg-amber-500 h-full transition-all duration-500"
+                        title={`Pending Review: ${pendingCount} (${pendingPercent}%)`}
+                      />
+                    )}
+                    {rejectedCount > 0 && (
+                      <div
+                        style={{ width: `${rejectedPercent}%` }}
+                        className="bg-rose-500 h-full transition-all duration-500"
+                        title={`Rejected: ${rejectedCount} (${rejectedPercent}%)`}
+                      />
+                    )}
+                    {totalCount === 0 && <div className="w-full bg-slate-200 h-full" />}
+                  </div>
                 </div>
               </div>
             </div>

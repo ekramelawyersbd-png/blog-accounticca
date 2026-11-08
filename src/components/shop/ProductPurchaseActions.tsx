@@ -209,7 +209,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
           onClick={(e) => onBuyNow(e, product)}
           className="h-12 px-6 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 active:scale-95 text-slate-950 rounded-xl text-sm font-black transition-all shadow-md hover:shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span>Buy Now</span>
+          <span>Apply Now</span>
           <ArrowRight className="w-4 h-4 text-slate-950" />
         </button>
 
@@ -255,7 +255,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
           onClick={(e) => onBuyNow(e, product)}
           className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
         >
-          <span>Buy Now</span>
+          <span>Apply Now</span>
           <ArrowRight className="h-3.5 w-3.5 text-amber-300" />
         </button>
       </div>
@@ -295,7 +295,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
             : 'bg-slate-900 hover:bg-slate-800'
         }`}
       >
-        <span>Buy Now</span>
+        <span>Apply Now</span>
         <ArrowRight
           className={`w-3.5 h-3.5 ${
             variant === 'course' || pType === 'Academy Courses' ? 'text-white' : 'text-amber-300'

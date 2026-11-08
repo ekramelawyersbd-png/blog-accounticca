@@ -108,7 +108,7 @@ export const LockedToolView: React.FC<LockedToolViewProps> = ({
               className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base shadow-lg transition-all cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
             >
               <ShoppingBag className="w-5 h-5 text-emerald-200" />
-              <span>Buy Now (৳{product.price.toLocaleString()})</span>
+              <span>Apply Now (৳{product.price.toLocaleString()})</span>
               <ArrowRight className="w-5 h-5 text-emerald-100" />
             </Link>
           ) : (
