@@ -4,11 +4,6 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
-
-function AppointmentPracticeRedirect() {
-  const { practiceArea } = useParams<{ practiceArea: string }>();
-  return <Navigate to={`/contact?tab=appointment&area=${encodeURIComponent(practiceArea || '')}`} replace />;
-}
 import { Layout } from './components/layout/Layout';
 import { Home } from './pages/Home';
 import { Category } from './pages/Category';
@@ -95,6 +90,11 @@ import { CareerCustomerCarePage } from './pages/CareerCustomerCarePage';
 import { CareerMtoPage } from './pages/CareerMtoPage';
 import { CareerSalesMarketingPage } from './pages/CareerSalesMarketingPage';
 import { CareersHubPage } from './pages/CareersHubPage';
+
+function AppointmentPracticeRedirect() {
+  const { practiceArea } = useParams<{ practiceArea: string }>();
+  return <Navigate to={`/contact?tab=appointment&area=${encodeURIComponent(practiceArea || '')}`} replace />;
+}
 
 export default function App() {
   return (

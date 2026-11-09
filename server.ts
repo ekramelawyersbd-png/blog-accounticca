@@ -2028,34 +2028,49 @@ app.post('/api/github/sync', async (req, res) => {
   }
 });
 
-// Server boot with Vite middleware in dev or express.static in prod
+// Server boot with immediate port 3000 binding and Vite middleware mounted on frontendRouter
 async function startServer() {
   const distPath = fs.existsSync(path.join(__dirname, 'dist', 'index.html'))
     ? path.join(__dirname, 'dist')
     : path.resolve(process.cwd(), 'dist');
 
+  const frontendRouter = express.Router();
+
   const mountStaticProd = () => {
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
+    frontendRouter.use(express.static(distPath));
+    frontendRouter.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   };
 
-  if (!IS_PROD) {
-    try {
-      const { createServer: createViteServer } = await import('vite');
-      const vite = await createViteServer({
-        server: { middlewareMode: true, hmr: false },
-        appType: 'spa',
-      });
-      app.use(vite.middlewares);
-    } catch (viteErr) {
-      console.warn('[Server] Vite dev middleware unavailable, falling back to static dist:', viteErr);
-      mountStaticProd();
-    }
-  } else {
+  let viteReadyPromise: Promise<void> = Promise.resolve();
+
+  if (IS_PROD) {
     mountStaticProd();
+  } else {
+    viteReadyPromise = (async () => {
+      try {
+        const { createServer: createViteServer } = await import('vite');
+        const vite = await createViteServer({
+          server: { middlewareMode: true, hmr: false },
+          appType: 'spa',
+        });
+        frontendRouter.use(vite.middlewares);
+      } catch (viteErr) {
+        console.warn('[Server] Vite dev middleware unavailable, falling back to static dist:', viteErr);
+        mountStaticProd();
+      }
+    })();
+
+    app.use(async (req, _res, next) => {
+      if (!req.path.startsWith('/api/')) {
+        await viteReadyPromise;
+      }
+      next();
+    });
   }
+
+  app.use(frontendRouter);
 
   let server: any = null;
   const maxRetries = 10;
@@ -2066,6 +2081,8 @@ async function startServer() {
       console.log(
         `[Accounticca x E-Lawyers BD] Server running on http://0.0.0.0:${PORT} (Node ${process.version}, mode: ${IS_PROD ? 'production' : 'development'})`
       );
+      console.log(`  ➜  Local:   http://localhost:${PORT}/`);
+      console.log(`  ➜  Network: http://0.0.0.0:${PORT}/`);
     });
 
     server.on('error', (err: any) => {

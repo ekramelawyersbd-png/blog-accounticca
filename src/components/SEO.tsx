@@ -1,5 +1,4 @@
-import React, { useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
+import React, { useMemo, useEffect } from 'react';
 import { useLocation, useInRouterContext } from 'react-router-dom';
 import { Article } from '../types';
 
@@ -418,8 +417,14 @@ export function SEO({
 
   const shouldNoIndex = noindex || isPrivatePath;
 
+  useEffect(() => {
+    if (typeof document !== 'undefined' && formattedTitle) {
+      document.title = formattedTitle;
+    }
+  }, [formattedTitle]);
+
   return (
-    <Helmet prioritizeSeoTags>
+    <>
       {/* Primary Document Title & Meta Tags */}
       <title>{formattedTitle}</title>
       <meta name="title" content={formattedTitle} />
@@ -485,7 +490,7 @@ export function SEO({
       ))}
 
       {children}
-    </Helmet>
+    </>
   );
 }
 

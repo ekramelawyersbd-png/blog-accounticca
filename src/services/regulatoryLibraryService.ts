@@ -1,10 +1,10 @@
 import { REGULATORY_DOCUMENTS, RegulatoryDocument } from '../data/regulatoryLibraryData';
 import { RESOURCE_TEMPLATES, ResourceTemplate } from '../data/resourceTemplates';
 
-const DOCS_STORAGE_KEY = 'e_lawyers_regulatory_docs_v1';
+const DOCS_STORAGE_KEY = 'e_lawyers_regulatory_docs_v2';
 const TEMPLATES_STORAGE_KEY = 'e_lawyers_resource_templates_v1';
 
-// Helper to get stored docs or fallback to initial defaults
+// Helper to get stored docs or fallback to initial defaults (merging any new built-in IDs)
 export async function getRegulatoryDocuments(): Promise<RegulatoryDocument[]> {
   try {
     const raw = localStorage.getItem(DOCS_STORAGE_KEY);
@@ -12,8 +12,19 @@ export async function getRegulatoryDocuments(): Promise<RegulatoryDocument[]> {
       localStorage.setItem(DOCS_STORAGE_KEY, JSON.stringify(REGULATORY_DOCUMENTS));
       return REGULATORY_DOCUMENTS;
     }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : REGULATORY_DOCUMENTS;
+    const parsed: RegulatoryDocument[] = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return REGULATORY_DOCUMENTS;
+    }
+    // Ensure any newly shipped built-in statutory documents are merged in if missing
+    const existingIds = new Set(parsed.map((d) => d.id));
+    const missingDefaults = REGULATORY_DOCUMENTS.filter((d) => !existingIds.has(d.id));
+    if (missingDefaults.length > 0) {
+      const merged = [...missingDefaults, ...parsed];
+      localStorage.setItem(DOCS_STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    }
+    return parsed;
   } catch (err) {
     console.error('Failed to load regulatory documents:', err);
     return REGULATORY_DOCUMENTS;
@@ -22,7 +33,12 @@ export async function getRegulatoryDocuments(): Promise<RegulatoryDocument[]> {
 
 // Save or Update a Regulatory Document
 export async function saveRegulatoryDocument(
-  docInput: Partial<RegulatoryDocument> & { authority: RegulatoryDocument['authority']; docNo: string; docDate: string; description: string }
+  docInput: Partial<RegulatoryDocument> & {
+    authority: RegulatoryDocument['authority'];
+    docNo: string;
+    docDate: string;
+    description: string;
+  }
 ): Promise<RegulatoryDocument> {
   const currentDocs = await getRegulatoryDocuments();
 
@@ -48,7 +64,10 @@ export async function saveRegulatoryDocument(
     description: docInput.description.trim(),
     category: docInput.category || 'Circular',
     pdfUrl: docInput.pdfUrl?.trim() || undefined,
+    internalUrl: docInput.internalUrl?.trim() || undefined,
     details: docInput.details?.trim() || undefined,
+    highlights: docInput.highlights,
+    isPinned: docInput.isPinned,
   };
 
   const existingIndex = currentDocs.findIndex((d) => d.id === id);
@@ -90,7 +109,13 @@ export async function getResourceTemplates(): Promise<ResourceTemplate[]> {
 
 // Save or Update a Legal Template
 export async function saveResourceTemplate(
-  templateInput: Partial<ResourceTemplate> & { title: string; subtitle: string; category: ResourceTemplate['category']; description: string; fullText: string }
+  templateInput: Partial<ResourceTemplate> & {
+    title: string;
+    subtitle: string;
+    category: ResourceTemplate['category'];
+    description: string;
+    fullText: string;
+  }
 ): Promise<ResourceTemplate> {
   const currentTemplates = await getResourceTemplates();
 
@@ -137,7 +162,10 @@ export async function deleteResourceTemplate(id: string): Promise<void> {
 }
 
 // Reset data back to original statutory defaults
-export async function resetRegulatoryLibraryDefaults(): Promise<{ docs: RegulatoryDocument[]; templates: ResourceTemplate[] }> {
+export async function resetRegulatoryLibraryDefaults(): Promise<{
+  docs: RegulatoryDocument[];
+  templates: ResourceTemplate[];
+}> {
   localStorage.setItem(DOCS_STORAGE_KEY, JSON.stringify(REGULATORY_DOCUMENTS));
   localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(RESOURCE_TEMPLATES));
   return { docs: REGULATORY_DOCUMENTS, templates: RESOURCE_TEMPLATES };

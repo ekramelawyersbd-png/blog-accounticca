@@ -25,7 +25,7 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
 
 export interface DebouncedZodValidationResult<T extends z.ZodTypeAny> {
   debouncedData: z.input<T>;
-  validationResult: z.ZodSafeParseResult<z.output<T>>;
+  validationResult: z.SafeParseReturnType<z.input<T>, z.output<T>>;
   fieldErrors: Record<string, string>;
   isValid: boolean;
   isDebouncing: boolean;

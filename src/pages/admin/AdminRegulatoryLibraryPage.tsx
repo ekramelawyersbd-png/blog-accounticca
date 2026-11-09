@@ -624,6 +624,30 @@ export function AdminRegulatoryLibraryPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Internal Guide Route (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /SRO/TDS2026"
+                    value={editingDoc.internalUrl || ''}
+                    onChange={(e) => setEditingDoc({ ...editingDoc, internalUrl: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editingDoc.isPinned)}
+                      onChange={(e) => setEditingDoc({ ...editingDoc, isPinned: e.target.checked })}
+                      className="rounded border-slate-300 text-[#0A2A66] focus:ring-blue-600"
+                    />
+                    <span>Feature in Top Spotlight Bar</span>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Detailed Statutory Notes (Optional)</label>
                 <textarea

@@ -369,7 +369,14 @@ export function ResourceLibrary() {
                           {doc.authority}
                         </td>
                         <td className="py-3 px-3.5 align-top">
-                          {doc.pdfUrl ? (
+                          {doc.internalUrl ? (
+                            <a
+                              href={doc.internalUrl}
+                              className="text-[#1A5BB8] hover:underline font-bold inline-flex items-center gap-1"
+                            >
+                              <span>{doc.docNo}</span>
+                            </a>
+                          ) : doc.pdfUrl ? (
                             <a
                               href={doc.pdfUrl}
                               target="_blank"
