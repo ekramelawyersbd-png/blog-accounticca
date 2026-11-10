@@ -403,7 +403,8 @@ export const SRO_TDS_2026: React.FC = () => {
         }
 
         .sro-page-wrapper .layout-wrapper {
-          max-width: 1400px;
+          width: 1424px;
+          max-width: 100%;
           margin: 30px auto;
           padding: 0 20px;
           display: grid;

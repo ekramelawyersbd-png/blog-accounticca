@@ -94,11 +94,12 @@ export function Navbar() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      const key = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+      if ((e.metaKey || e.ctrlKey) && key === 'k') {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
         if (!searchOpen) {

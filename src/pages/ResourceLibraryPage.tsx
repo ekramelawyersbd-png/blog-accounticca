@@ -572,7 +572,7 @@ export function ResourceLibraryPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="w-[1424px] max-w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* ================= FEATURED 2026-2027 STATUTORY SPOTLIGHT ================= */}
         {activeTab === 'regulatory' && pinnedDocs.length > 0 && (
           <section className="mb-6">

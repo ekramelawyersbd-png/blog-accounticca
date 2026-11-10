@@ -559,7 +559,8 @@ export const ProtectedPdfReader: React.FC<ProtectedPdfReaderProps> = ({
       return;
     }
 
-    if ((e.ctrlKey || e.metaKey) && ['c', 'p', 's', 'u'].includes(e.key.toLowerCase())) {
+    const key = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+    if ((e.ctrlKey || e.metaKey) && ['c', 'p', 's', 'u'].includes(key)) {
       e.preventDefault();
       e.stopPropagation();
       const actionMap: Record<string, string> = {
@@ -568,7 +569,7 @@ export const ProtectedPdfReader: React.FC<ProtectedPdfReaderProps> = ({
         s: 'Saving/Downloading file (Ctrl+S)',
         u: 'Viewing source',
       };
-      triggerProtectionNotice(actionMap[e.key.toLowerCase()] || 'Action');
+      triggerProtectionNotice(actionMap[key] || 'Action');
       return;
     }
 

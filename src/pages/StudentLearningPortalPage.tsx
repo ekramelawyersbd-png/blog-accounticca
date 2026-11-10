@@ -128,11 +128,11 @@ export const StudentLearningPortalPage: React.FC<{
   // Build dropdown options from all courses on the /training Academy page + LmsContext courses
   const academyCourseOptions = useMemo<AcademyPortalCourseOption[]>(() => {
     const baseAcademy = getAcademyPortalCourses();
-    const seenTitles = new Set(baseAcademy.map((c) => c.title.trim().toLowerCase()));
+    const seenTitles = new Set(baseAcademy.map((c) => (c.title || '').trim().toLowerCase()));
     const extraFromContext: AcademyPortalCourseOption[] = [];
 
     courses.forEach((c) => {
-      const key = c.title.trim().toLowerCase();
+      const key = (c.title || '').trim().toLowerCase();
       if (!seenTitles.has(key)) {
         seenTitles.add(key);
         const slug = slugifyAcademyCourseName(c.title);
@@ -409,7 +409,7 @@ export const StudentLearningPortalPage: React.FC<{
   useEffect(() => {
     if (paramCertificateId) {
       const found = allCertificates.find(
-        (c) => c.certificateId.toUpperCase() === paramCertificateId.toUpperCase()
+        (c) => (c.certificateId || '').toUpperCase() === paramCertificateId.toUpperCase()
       );
       if (found) {
         setActiveCertificateModal(found);
@@ -421,7 +421,7 @@ export const StudentLearningPortalPage: React.FC<{
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isAdminView) {
-        const key = e.key.toLowerCase();
+        const key = typeof e.key === 'string' ? e.key.toLowerCase() : '';
         if (
           (e.ctrlKey || e.metaKey) &&
           (key === 'c' || key === 'p' || key === 's')
