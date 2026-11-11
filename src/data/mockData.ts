@@ -36,6 +36,7 @@ import { inputTaxRebateBangladeshArticle } from './inputTaxRebateBangladeshArtic
 import { identificationRegistrationSystemsArticle } from './identificationRegistrationSystemsArticle';
 import { sro213ApprovedCharitiesTaxRebateArticle } from './sro213ApprovedCharitiesTaxRebateArticle';
 import { bangladeshIncomeTaxSlabs2026Article } from './bangladeshIncomeTaxSlabs2026Article';
+import { bangladeshTdsRules2026Article } from './bangladeshTdsRules2026Article';
 
 import { teamMembers } from './teamData';
 
@@ -85,6 +86,7 @@ export const categories: { id: string; name: Category; description: string }[] =
 ];
 
 export const mockArticles: Article[] = [
+  bangladeshTdsRules2026Article,
   rjscEbrs2026Article,
   salaryTdsArticle,
   bangladeshIncomeTaxSlabs2026Article,

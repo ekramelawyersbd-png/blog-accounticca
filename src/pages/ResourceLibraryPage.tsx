@@ -23,6 +23,9 @@ import {
   FileCheck2,
   Building2,
   ArrowRight,
+  LayoutGrid,
+  List,
+  Sparkles,
 } from 'lucide-react';
 import {
   RESOURCE_TEMPLATES,
@@ -135,6 +138,15 @@ export function ResourceLibraryPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [expandedDocIds, setExpandedDocIds] = useState<string[]>([]);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
+
+  const toggleExpandDoc = (id: string) => {
+    setExpandedDocIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   const showToast = (msg: string) => {
     setStatusMessage(msg);
@@ -410,7 +422,7 @@ export function ResourceLibraryPage() {
     (searchQuery.trim() ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-20 font-sans">
+    <div className="w-[1527px] max-w-full mx-auto min-h-screen bg-[#F8FAFC] text-slate-900 pb-20 font-sans">
       {/* Toast Notification */}
       {statusMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#0A2A66] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-blue-400/40 animate-in fade-in slide-in-from-bottom-4 duration-200">
@@ -419,43 +431,41 @@ export function ResourceLibraryPage() {
         </div>
       )}
 
-      {/* Institutional Top Banner */}
-      <div className="bg-[#0A2A66] text-white border-b border-blue-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div>
-              {/* Breadcrumb */}
-              <nav className="flex items-center gap-2 text-xs font-medium text-blue-200 mb-3">
-                <Link to="/" className="hover:text-white transition">
-                  Home
-                </Link>
-                <span>/</span>
-                <span className="text-white font-semibold">Regulatory Library</span>
-              </nav>
-
-              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-                  Regulatory Library
-                </h1>
-                <span className="text-sm sm:text-lg font-semibold text-amber-300">
-                  Statutory Gazette Archive &amp; Legal Templates
+      {/* Compact Institutional Top Header */}
+      <div className="w-full max-w-[1527px] mx-auto bg-[#0A2A66] text-white border-b border-blue-900">
+        <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-amber-300 bg-blue-950/80 border border-blue-800 px-2.5 py-0.5 rounded-md">
+                  <Scale className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Bangladesh Statutory Gazette • AY 2026–2027</span>
+                </span>
+                <span className="text-[11px] font-mono text-blue-200 bg-blue-900/50 border border-blue-800/80 px-2.5 py-0.5 rounded-md tabular-nums">
+                  {docsList.length} Gazette Instruments
+                </span>
+                <span className="text-[11px] font-mono text-emerald-300 bg-blue-900/50 border border-blue-800/80 px-2.5 py-0.5 rounded-md tabular-nums">
+                  {templatesList.length} Legal Templates
                 </span>
               </div>
 
-              <p className="text-xs sm:text-sm text-blue-100/90 max-w-3xl mt-2.5 leading-relaxed">
-                Authoritative repository of Bangladesh Bank (FEPD/BRPD) circulars, National Board of
-                Revenue (NBR) SROs &amp; Paripatras, RJSC eBRS directives, BIDA investment guidelines,
-                and statutory corporate compliance templates for Assessment Year 2026–2027.
-              </p>
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                  Regulatory Library
+                </h1>
+                <span className="text-xs sm:text-sm font-medium text-blue-200">
+                  NBR SROs, Bangladesh Bank Circulars, RJSC Directives &amp; Corporate Templates
+                </span>
+              </div>
             </div>
 
             {/* Primary View Switcher & Utility Actions */}
-            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-              <div className="flex items-center gap-1 bg-blue-950/80 p-1 rounded-xl border border-blue-800">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 bg-blue-950/90 p-1 rounded-xl border border-blue-800">
                 <button
                   type="button"
                   onClick={() => setActiveTab('regulatory')}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap tabular-nums ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap tabular-nums ${
                     activeTab === 'regulatory'
                       ? 'bg-white text-[#0A2A66] shadow-xs'
                       : 'text-blue-100 hover:text-white'
@@ -466,7 +476,7 @@ export function ResourceLibraryPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('templates')}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap tabular-nums ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap tabular-nums ${
                     activeTab === 'templates'
                       ? 'bg-white text-[#0A2A66] shadow-xs'
                       : 'text-blue-100 hover:text-white'
@@ -499,7 +509,7 @@ export function ResourceLibraryPage() {
               {isAdminLoggedIn && (
                 <Link
                   to="/admin/regulatory-library"
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+                  className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap"
                   title="Manage Regulatory Library (Admin CRUD)"
                 >
                   <Settings className="w-3.5 h-3.5" />
@@ -508,79 +518,19 @@ export function ResourceLibraryPage() {
               )}
             </div>
           </div>
-
-          {/* Statutory Metrics Summary Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7 pt-6 border-t border-blue-800/70">
-            <div className="bg-blue-950/50 border border-blue-800/80 rounded-xl px-4 py-3">
-              <span className="text-[11px] font-medium text-blue-200 block">
-                Indexed Gazette Instruments
-              </span>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums">
-                  {docsList.length}
-                </span>
-                <span className="text-[11px] font-semibold text-emerald-300">2021–2026</span>
-              </div>
-            </div>
-
-            <div className="bg-blue-950/50 border border-blue-800/80 rounded-xl px-4 py-3">
-              <span className="text-[11px] font-medium text-blue-200 block">
-                NBR &amp; Bangladesh Bank
-              </span>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums">
-                  {(authorityCounts['National Board of Revenue (NBR)'] || 0) +
-                    (authorityCounts['Bangladesh Bank'] || 0)}
-                </span>
-                <span className="text-[11px] font-semibold text-blue-200">Fiscal &amp; FX</span>
-              </div>
-            </div>
-
-            <div className="bg-blue-950/50 border border-blue-800/80 rounded-xl px-4 py-3">
-              <span className="text-[11px] font-medium text-blue-200 block">
-                Vetted Legal Drafts
-              </span>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums">
-                  {templatesList.length}
-                </span>
-                <span className="text-[11px] font-semibold text-amber-300">Instant PDF</span>
-              </div>
-            </div>
-
-            <div className="bg-blue-950/50 border border-blue-800/80 rounded-xl px-4 py-3">
-              <span className="text-[11px] font-medium text-blue-200 block">
-                Saved in Your Session
-              </span>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums">
-                  {bookmarkedIds.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('regulatory');
-                    setShowBookmarkedOnly((prev) => !prev);
-                  }}
-                  className="text-[11px] font-bold text-amber-300 hover:underline cursor-pointer"
-                >
-                  {showBookmarkedOnly ? 'Show All' : 'Filter Saved'}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="w-[1424px] max-w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      {/* Main Content Container */}
+      <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 pt-5">
         {/* ================= FEATURED 2026-2027 STATUTORY SPOTLIGHT ================= */}
         {activeTab === 'regulatory' && pinnedDocs.length > 0 && (
-          <section className="mb-6">
-            <div className="flex items-center justify-between mb-3">
+          <section className="mb-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-[#0A2A66]" />
-                <h2 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#0A2A66]">
-                  Key 2026–2027 Statutory &amp; Tax Reference Guides
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#0A2A66]">
+                  Featured 2026–2027 Statutory &amp; Tax Reference Guides
                 </h2>
               </div>
               <Link
@@ -592,14 +542,14 @@ export function ResourceLibraryPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {pinnedDocs.map((doc) => (
                 <div
                   key={doc.id}
-                  className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-2xs hover:border-[#1A5BB8] transition flex flex-col justify-between"
+                  className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs hover:border-[#1A5BB8] hover:shadow-xs transition flex flex-col justify-between h-full"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
                       <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-blue-50 text-[#0A2A66] border border-blue-200/60">
                         {doc.category} • {doc.year}
                       </span>
@@ -608,20 +558,20 @@ export function ResourceLibraryPage() {
                       </span>
                     </div>
 
-                    <h3 className="text-xs sm:text-sm font-extrabold text-[#0A2A66] leading-snug mb-1.5">
+                    <h3 className="text-xs sm:text-sm font-extrabold text-[#0A2A66] leading-snug mb-1 line-clamp-1">
                       {doc.docNo}
                     </h3>
 
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-2.5">
                       {doc.description}
                     </p>
                   </div>
 
-                  <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                     {doc.internalUrl ? (
                       <Link
                         to={doc.internalUrl}
-                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#1A5BB8] hover:text-[#0A2A66] transition"
+                        className="inline-flex items-center gap-1 text-xs font-extrabold text-[#1A5BB8] hover:text-[#0A2A66] transition"
                       >
                         <BookOpen className="w-3.5 h-3.5" />
                         <span>Interactive Guide</span>
@@ -630,20 +580,20 @@ export function ResourceLibraryPage() {
                       <button
                         type="button"
                         onClick={() => setPreviewDoc(doc)}
-                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#1A5BB8] hover:text-[#0A2A66] cursor-pointer"
+                        className="inline-flex items-center gap-1 text-xs font-extrabold text-[#1A5BB8] hover:text-[#0A2A66] cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>View Summary</span>
                       </button>
                     )}
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       {doc.pdfUrl && (
                         <a
                           href={doc.pdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 transition"
+                          className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 transition"
                           title="Download Official PDF"
                         >
                           <Download className="w-3 h-3" />
@@ -653,7 +603,7 @@ export function ResourceLibraryPage() {
                       <button
                         type="button"
                         onClick={() => setPreviewDoc(doc)}
-                        className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition cursor-pointer"
+                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition cursor-pointer"
                       >
                         Details
                       </button>
@@ -665,18 +615,18 @@ export function ResourceLibraryPage() {
           </section>
         )}
 
-        {/* ================= TOP CONTROLS BAR ================= */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 mb-6 space-y-3 shadow-2xs">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* Left Time Filter Buttons & Date Input */}
-            <div className="flex flex-wrap items-center gap-2">
+        {/* ================= TOP CONTROLS & FILTER BAR ================= */}
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 mb-5 space-y-2.5 shadow-2xs">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Left Time Filter Buttons, Date Input & Saved Toggle */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {(['All', 'This Month', 'Last 6 Months', 'Last Year'] as TimeFilterOption[]).map(
                 (tf) => (
                   <button
                     key={tf}
                     type="button"
                     onClick={() => setTimeFilter(tf)}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer whitespace-nowrap ${
                       timeFilter === tf
                         ? 'bg-[#0A2A66] text-white border-[#0A2A66]'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -687,23 +637,21 @@ export function ResourceLibraryPage() {
                 )
               )}
 
-              {/* Date Picker */}
-              <div className="relative">
-                <input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-mono tabular-nums focus:outline-none focus:border-[#1A5BB8]"
-                  aria-label="Filter by exact issue date"
-                />
-              </div>
+              {/* Exact Date Picker */}
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-mono tabular-nums focus:outline-none focus:border-[#1A5BB8]"
+                aria-label="Filter by exact issue date"
+              />
 
               {/* Saved Bookmarks Toggle */}
               {activeTab === 'regulatory' && (
                 <button
                   type="button"
                   onClick={() => setShowBookmarkedOnly((prev) => !prev)}
-                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer tabular-nums ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer tabular-nums whitespace-nowrap ${
                     showBookmarkedOnly
                       ? 'bg-amber-500 text-slate-950 border-amber-500'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -715,37 +663,20 @@ export function ResourceLibraryPage() {
               )}
             </div>
 
-            {/* Right Sort & Search Box */}
-            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-              {activeTab === 'regulatory' && (
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-                    aria-label="Sort regulatory documents"
-                  >
-                    <option value="date-desc">Newest First</option>
-                    <option value="date-asc">Oldest First</option>
-                    <option value="authority">Authority (A–Z)</option>
-                    <option value="docNo">Document No.</option>
-                  </select>
-                </div>
-              )}
-
-              <div className="relative flex-1 sm:w-80">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {/* Right Search Box, Sort & View Mode Switcher */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto">
+              <div className="relative flex-1 sm:w-64 xl:w-80 min-w-[200px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
-                  type="text"
+                  type="search"
                   placeholder={
                     activeTab === 'regulatory'
-                      ? 'Search SRO 273, FEPD circular, authority, or keyword...'
+                      ? 'Search SRO 273, circular, authority, or keyword...'
                       : 'Search legal contracts, RJSC forms, HR templates...'
                   }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#1A5BB8] focus:ring-2 focus:ring-[#1A5BB8]/15 transition"
+                  className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#1A5BB8] focus:ring-2 focus:ring-[#1A5BB8]/15 transition"
                 />
                 {searchQuery && (
                   <button
@@ -753,19 +684,67 @@ export function ResourceLibraryPage() {
                     onClick={() => setSearchQuery('')}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
+
+              {activeTab === 'regulatory' && (
+                <>
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shrink-0">
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortOption)}
+                      className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                      aria-label="Sort regulatory documents"
+                    >
+                      <option value="date-desc">Newest First</option>
+                      <option value="date-asc">Oldest First</option>
+                      <option value="authority">Authority (A–Z)</option>
+                      <option value="docNo">Document No.</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer ${
+                        viewMode === 'table'
+                          ? 'bg-white text-[#0A2A66] shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                      title="Ledger Table View"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Table</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('grid')}
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer ${
+                        viewMode === 'grid'
+                          ? 'bg-white text-[#0A2A66] shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                      title="Card Grid View"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Cards</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Document Type Category Filter Strip */}
+          {/* Document Type Category Filter Strip & Quick Topic Presets */}
           {activeTab === 'regulatory' && (
-            <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+            <div className="pt-2.5 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">
-                  Instrument Type:
+                  Type:
                 </span>
                 {REGULATORY_CATEGORIES.map((cat) => {
                   const isSelected = selectedDocCategory === cat;
@@ -787,196 +766,236 @@ export function ResourceLibraryPage() {
                 })}
               </div>
 
-              {activeFilterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Reset {activeFilterCount} Active Filter{activeFilterCount > 1 ? 's' : ''}</span>
-                </button>
-              )}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-400 inline-flex items-center gap-1 mr-0.5">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Quick Topics:</span>
+                </span>
+                {[
+                  { label: 'TDS 2026 (SRO 273)', query: '273' },
+                  { label: 'FX & Remittance', query: 'FEPD' },
+                  { label: 'VAT / Mushak', query: 'VAT' },
+                  { label: 'RJSC eBRS', query: 'RJSC' },
+                ].map((preset) => {
+                  const isActivePreset = searchQuery.toLowerCase() === preset.query.toLowerCase();
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setSearchQuery(isActivePreset ? '' : preset.query)}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold border transition cursor-pointer ${
+                        isActivePreset
+                          ? 'bg-amber-100 border-amber-300 text-amber-950 font-bold'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="ml-1 text-xs font-bold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reset ({activeFilterCount})</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* ================= MAIN 2-COLUMN LAYOUT ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-[290px_1fr] gap-6 items-start">
+        {/* Mobile Filter Drawer Toggle */}
+        <div className="lg:hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen((prev) => !prev)}
+            className="w-full py-2.5 px-4 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between text-xs font-extrabold text-[#0A2A66] cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-[#1A5BB8]" />
+              <span>
+                {mobileFiltersOpen ? 'Hide Archive Filters' : 'Show Archive Filters (Authority & Year)'}
+              </span>
+            </span>
+            {mobileFiltersOpen ? (
+              <ChevronUp className="w-4 h-4 text-slate-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-500" />
+            )}
+          </button>
+        </div>
+
+        {/* ================= MAIN 2-COLUMN WORKSPACE LAYOUT ================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-5 items-start">
           {/* LEFT SIDEBAR: FILTER */}
-          <aside className="space-y-4 lg:sticky lg:top-6">
+          <aside className={`${mobileFiltersOpen ? 'block' : 'hidden lg:block'} space-y-4 lg:sticky lg:top-20`}>
             <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
               {/* Filter Header */}
-              <div className="bg-[#0A2A66] text-white px-4 py-3.5 flex items-center justify-between">
+              <div className="bg-[#0A2A66] text-white px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-blue-300" />
-                  <h3 className="text-sm font-bold tracking-wide text-white">Filter Archive</h3>
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wide text-white">
+                    {activeTab === 'regulatory' ? 'Filter Gazette Archive' : 'Template Categories'}
+                  </h3>
                 </div>
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className="bg-white/15 hover:bg-white/25 text-white px-2.5 py-1 rounded text-xs font-semibold transition cursor-pointer"
+                  className="bg-white/15 hover:bg-white/25 text-white px-2 py-0.5 rounded text-[11px] font-semibold transition cursor-pointer"
                 >
-                  Clear All
+                  Reset
                 </button>
               </div>
 
-              {/* Filter By Authority */}
-              <div className="p-4 border-b border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setAuthorityExpanded(!authorityExpanded)}
-                  className="w-full flex items-center justify-between text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-3 cursor-pointer"
-                >
-                  <span>Filter By Authority</span>
-                  {authorityExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-slate-500" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-500" />
-                  )}
-                </button>
-
-                {authorityExpanded && (
-                  <div className="space-y-1">
+              {activeTab === 'regulatory' ? (
+                <>
+                  {/* Filter By Authority */}
+                  <div className="p-3.5 border-b border-slate-200">
                     <button
                       type="button"
-                      onClick={() => {
-                        setActiveTab('regulatory');
-                        setSelectedAuthority('All');
-                      }}
-                      className={`w-full flex items-center justify-between py-2 px-2.5 rounded-lg text-xs transition cursor-pointer ${
-                        selectedAuthority === 'All'
-                          ? 'bg-[#0A2A66] text-white font-bold'
-                          : 'text-slate-700 hover:bg-slate-100 font-medium'
-                      }`}
+                      onClick={() => setAuthorityExpanded(!authorityExpanded)}
+                      className="w-full flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-slate-900 mb-2.5 cursor-pointer"
                     >
-                      <span>All Authorities</span>
-                      <span
-                        className={`text-xs font-mono tabular-nums ${
-                          selectedAuthority === 'All' ? 'text-blue-200' : 'text-slate-400'
-                        }`}
-                      >
-                        ({docsList.length})
-                      </span>
+                      <span>Issuing Authority</span>
+                      {authorityExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-slate-500" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-500" />
+                      )}
                     </button>
 
-                    {authoritiesList.map((auth) => {
-                      const count = authorityCounts[auth.name] || 0;
-                      const isSelected = selectedAuthority === auth.name;
-
-                      return (
+                    {authorityExpanded && (
+                      <div className="space-y-1">
                         <button
-                          key={auth.code}
                           type="button"
-                          onClick={() => {
-                            setActiveTab('regulatory');
-                            setSelectedAuthority(isSelected ? 'All' : auth.name);
-                          }}
-                          className={`w-full flex items-center justify-between py-2 px-2.5 rounded-lg text-xs transition cursor-pointer text-left ${
-                            isSelected
+                          onClick={() => setSelectedAuthority('All')}
+                          className={`w-full flex items-center justify-between py-1.5 px-2.5 rounded-lg text-xs transition cursor-pointer ${
+                            selectedAuthority === 'All'
                               ? 'bg-[#0A2A66] text-white font-bold'
                               : 'text-slate-700 hover:bg-slate-100 font-medium'
                           }`}
                         >
-                          <span className="truncate pr-2">{auth.shortName}</span>
+                          <span>All Authorities</span>
                           <span
-                            className={`text-xs font-mono tabular-nums shrink-0 ${
-                              isSelected ? 'text-blue-200' : 'text-slate-400'
+                            className={`text-xs font-mono tabular-nums ${
+                              selectedAuthority === 'All' ? 'text-blue-200' : 'text-slate-400'
                             }`}
                           >
-                            ({count})
+                            ({docsList.length})
                           </span>
                         </button>
-                      );
-                    })}
+
+                        {authoritiesList.map((auth) => {
+                          const count = authorityCounts[auth.name] || 0;
+                          const isSelected = selectedAuthority === auth.name;
+
+                          return (
+                            <button
+                              key={auth.code}
+                              type="button"
+                              onClick={() => setSelectedAuthority(isSelected ? 'All' : auth.name)}
+                              className={`w-full flex items-center justify-between py-1.5 px-2.5 rounded-lg text-xs transition cursor-pointer text-left ${
+                                isSelected
+                                  ? 'bg-[#0A2A66] text-white font-bold'
+                                  : 'text-slate-700 hover:bg-slate-100 font-medium'
+                              }`}
+                            >
+                              <span className="pr-2 leading-snug">{auth.shortName}</span>
+                              <span
+                                className={`text-xs font-mono tabular-nums shrink-0 ${
+                                  isSelected ? 'text-blue-200' : 'text-slate-400'
+                                }`}
+                              >
+                                ({count})
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Filter By Year */}
-              <div className="p-4 border-b border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setYearExpanded(!yearExpanded)}
-                  className="w-full flex items-center justify-between text-xs font-extrabold uppercase tracking-wider text-slate-900 mb-3 cursor-pointer"
-                >
-                  <span>Filter By Gazette Year</span>
-                  {yearExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-slate-500" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-500" />
-                  )}
-                </button>
+                  {/* Filter By Year */}
+                  <div className="p-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setYearExpanded(!yearExpanded)}
+                      className="w-full flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-slate-900 mb-2.5 cursor-pointer"
+                    >
+                      <span>Gazette Year</span>
+                      {yearExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-slate-500" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-500" />
+                      )}
+                    </button>
 
-                {yearExpanded && (
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {yearsList.map((yr) => {
-                      const isSelected = selectedYear === yr;
-                      const count = yearCounts[yr] || 0;
+                    {yearExpanded && (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {yearsList.map((yr) => {
+                          const isSelected = selectedYear === yr;
+                          const count = yearCounts[yr] || 0;
 
+                          return (
+                            <button
+                              key={yr}
+                              type="button"
+                              onClick={() => setSelectedYear(isSelected ? null : yr)}
+                              className={`py-1.5 px-2 rounded-lg border text-xs font-bold transition cursor-pointer text-center tabular-nums ${
+                                isSelected
+                                  ? 'bg-[#0A2A66] text-white border-[#0A2A66] shadow-2xs'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              <span className="block">{yr}</span>
+                              <span
+                                className={`text-[10px] font-mono block ${
+                                  isSelected ? 'text-blue-200' : 'text-slate-400'
+                                }`}
+                              >
+                                {count} {count === 1 ? 'doc' : 'docs'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Template Categories (when on Templates Tab) */
+                <div className="p-3.5">
+                  <div className="space-y-1">
+                    {TEMPLATE_CATEGORIES.map((category) => {
+                      const isSelected = selectedTemplateCategory === category;
                       return (
                         <button
-                          key={yr}
+                          key={category}
                           type="button"
-                          onClick={() => {
-                            setActiveTab('regulatory');
-                            setSelectedYear(isSelected ? null : yr);
-                          }}
-                          className={`py-2 px-2 rounded-lg border text-xs font-bold transition cursor-pointer text-center tabular-nums ${
+                          onClick={() => setSelectedTemplateCategory(category)}
+                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
                             isSelected
-                              ? 'bg-[#0A2A66] text-white border-[#0A2A66] shadow-2xs'
-                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              ? 'bg-[#0A2A66] text-white font-bold'
+                              : 'text-slate-700 hover:bg-slate-100'
                           }`}
                         >
-                          <span className="block">{yr}</span>
-                          <span
-                            className={`text-[10px] font-mono block ${
-                              isSelected ? 'text-blue-200' : 'text-slate-400'
-                            }`}
-                          >
-                            {count} {count === 1 ? 'doc' : 'docs'}
-                          </span>
+                          <span>{category}</span>
+                          <ArrowRight className="w-3.5 h-3.5 opacity-60" />
                         </button>
                       );
                     })}
                   </div>
-                )}
-              </div>
-
-              {/* Template Categories (when on Templates Tab) */}
-              <div className="p-4 bg-slate-50/70">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-900 block mb-2.5">
-                  Legal Draft Categories
-                </span>
-                <div className="space-y-1">
-                  {TEMPLATE_CATEGORIES.map((category) => {
-                    const isSelected =
-                      activeTab === 'templates' && selectedTemplateCategory === category;
-                    return (
-                      <button
-                        key={category}
-                        type="button"
-                        onClick={() => {
-                          setActiveTab('templates');
-                          setSelectedTemplateCategory(category);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
-                          isSelected
-                            ? 'bg-[#1A5BB8] text-white font-bold'
-                            : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
-                        }`}
-                      >
-                        <span>{category}</span>
-                        <ArrowRight className="w-3 h-3 opacity-60" />
-                      </button>
-                    );
-                  })}
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Companion Statutory Calculators Card */}
-            <div className="border border-slate-200 rounded-xl bg-white p-4 shadow-2xs space-y-2.5">
+            <div className="border border-slate-200 rounded-xl bg-white p-3.5 shadow-2xs space-y-2">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0A2A66] block">
                 Companion Tax &amp; Legal Tools
               </span>
@@ -995,10 +1014,10 @@ export function ResourceLibraryPage() {
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </Link>
               <Link
-                to="/deferred-tax-calculator"
+                to="/tools"
                 className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-bold text-slate-800 transition"
               >
-                <span>IAS 12 Deferred Tax Engine</span>
+                <span>All Statutory Compliance Tools</span>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </Link>
             </div>
@@ -1007,239 +1026,435 @@ export function ResourceLibraryPage() {
           {/* RIGHT DATA AREA */}
           <main className="min-w-0">
             {activeTab === 'regulatory' ? (
-              /* ================= REGULATORY DOCUMENTS TABLE ================= */
+              /* ================= REGULATORY DOCUMENTS VIEW (TABLE OR CARDS) ================= */
               <div className="space-y-3">
-                {/* Active Filter Status Bar */}
+                {/* Active Filter Status Bar & Removable Filter Chips */}
                 <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                   <p className="text-xs font-semibold text-slate-600 tabular-nums">
                     Showing <strong className="text-slate-900">{filteredRegulatoryDocs.length}</strong> of{' '}
                     <strong className="text-slate-900">{docsList.length}</strong> statutory instruments
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {selectedAuthority !== 'All' && (
-                      <span>
-                        {' '}
-                        • Authority: <strong className="text-[#0A2A66]">{selectedAuthority}</strong>
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAuthority('All')}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0A2A66] border border-blue-200 text-[11px] font-bold cursor-pointer hover:bg-blue-100"
+                      >
+                        <span>{selectedAuthority}</span>
+                        <X className="w-3 h-3" />
+                      </button>
                     )}
                     {selectedYear !== null && (
-                      <span>
-                        {' '}
-                        • Year: <strong className="text-[#0A2A66]">{selectedYear}</strong>
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedYear(null)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0A2A66] border border-blue-200 text-[11px] font-bold cursor-pointer hover:bg-blue-100"
+                      >
+                        <span>Year: {selectedYear}</span>
+                        <X className="w-3 h-3" />
+                      </button>
                     )}
-                  </p>
+                    {selectedDocCategory !== 'All' && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDocCategory('All')}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0A2A66] border border-blue-200 text-[11px] font-bold cursor-pointer hover:bg-blue-100"
+                      >
+                        <span>Type: {selectedDocCategory}</span>
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                    {searchQuery.trim() !== '' && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-bold cursor-pointer hover:bg-amber-100"
+                      >
+                        <span>Query: &ldquo;{searchQuery}&rdquo;</span>
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-2xs">
-                  <table className="w-full text-left border-collapse min-w-[820px]">
-                    <thead className="bg-[#0A2A66] text-white border-b border-blue-900">
-                      <tr>
-                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[20%]">
-                          Authority
-                        </th>
-                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[24%]">
-                          Document No.
-                        </th>
-                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[13%]">
-                          Document Date
-                        </th>
-                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider w-[31%]">
-                          Description
-                        </th>
-                        <th className="py-3.5 px-4 text-xs font-extrabold text-white tracking-wider text-right w-[12%]">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
-                      {filteredRegulatoryDocs.length === 0 ? (
+                {viewMode === 'table' ? (
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-2xs">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-[#0A2A66] text-white border-b border-blue-900">
                         <tr>
-                          <td colSpan={5} className="py-14 text-center text-slate-500">
-                            <Info className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                            <p className="font-bold text-slate-800 text-base">
-                              No regulatory documents match your current filters
-                            </p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Try clearing the selected year, authority, or search keyword.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={handleClearFilters}
-                              className="mt-4 px-4 py-2 bg-[#0A2A66] text-white rounded-lg text-xs font-bold hover:bg-[#1A5BB8] transition cursor-pointer"
-                            >
-                              Reset All Filters
-                            </button>
-                          </td>
+                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider w-[20%]">
+                            Authority
+                          </th>
+                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider w-[23%]">
+                            Document No.
+                          </th>
+                          <th className="py-3 px-3 text-xs font-extrabold text-white tracking-wider w-[11%] whitespace-nowrap">
+                            Issue Date
+                          </th>
+                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider">
+                            Subject &amp; Scope
+                          </th>
+                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider text-right w-[135px]">
+                            Actions
+                          </th>
                         </tr>
-                      ) : (
-                        filteredRegulatoryDocs.map((doc) => {
-                          const isBookmarked = bookmarkedIds.includes(doc.id);
-                          const isCopied = copiedId === doc.id;
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
+                        {filteredRegulatoryDocs.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-14 text-center text-slate-500">
+                              <Info className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                              <p className="font-bold text-slate-800 text-base">
+                                No regulatory documents match your current filters
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Try clearing the selected year, authority, or search keyword.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="mt-4 px-4 py-2 bg-[#0A2A66] text-white rounded-lg text-xs font-bold hover:bg-[#1A5BB8] transition cursor-pointer"
+                              >
+                                Reset All Filters
+                              </button>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredRegulatoryDocs.map((doc) => {
+                            const isBookmarked = bookmarkedIds.includes(doc.id);
+                            const isCopied = copiedId === doc.id;
+                            const isExpanded = expandedDocIds.includes(doc.id);
 
-                          return (
-                            <tr
-                              key={doc.id}
-                              className={`hover:bg-blue-50/40 transition-colors ${
-                                doc.isPinned ? 'bg-amber-50/20' : ''
-                              }`}
-                            >
-                              {/* Column 1: Authority */}
-                              <td className="py-3.5 px-4 align-top">
-                                <span className="font-bold text-slate-900 block leading-snug">
-                                  {doc.authority}
-                                </span>
-                                <div className="flex flex-wrap items-center gap-1 mt-1">
-                                  <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/80">
-                                    {doc.category}
-                                  </span>
-                                  {doc.isPinned && (
-                                    <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
-                                      Featured
+                            return (
+                              <React.Fragment key={doc.id}>
+                                <tr
+                                  className={`hover:bg-blue-50/40 transition-colors ${
+                                    doc.isPinned ? 'bg-amber-50/20' : ''
+                                  } ${isExpanded ? 'bg-blue-50/30' : ''}`}
+                                >
+                                  {/* Column 1: Authority */}
+                                  <td className="py-3.5 px-3.5 align-top">
+                                    <span className="font-bold text-slate-900 block leading-snug text-xs sm:text-sm">
+                                      {doc.authority}
                                     </span>
-                                  )}
-                                </div>
-                              </td>
-
-                              {/* Column 2: Document No */}
-                              <td className="py-3.5 px-4 align-top">
-                                {doc.internalUrl ? (
-                                  <Link
-                                    to={doc.internalUrl}
-                                    className="text-[#1A5BB8] hover:text-[#0A2A66] hover:underline font-extrabold inline-flex items-start gap-1.5 leading-snug"
-                                  >
-                                    <span>{doc.docNo}</span>
-                                    <BookOpen className="w-3.5 h-3.5 text-[#1A5BB8] shrink-0 mt-0.5" />
-                                  </Link>
-                                ) : doc.pdfUrl ? (
-                                  <a
-                                    href={doc.pdfUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#1A5BB8] hover:text-[#0A2A66] hover:underline font-bold inline-flex items-start gap-1.5 leading-snug"
-                                  >
-                                    <span>{doc.docNo}</span>
-                                    <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                                  </a>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setPreviewDoc(doc)}
-                                    className="text-[#1A5BB8] hover:text-[#0A2A66] hover:underline font-bold text-left cursor-pointer leading-snug"
-                                  >
-                                    {doc.docNo}
-                                  </button>
-                                )}
-                              </td>
-
-                              {/* Column 3: Document Date */}
-                              <td className="py-3.5 px-4 text-slate-600 font-mono text-xs tabular-nums align-top whitespace-nowrap">
-                                {doc.docDate}
-                              </td>
-
-                              {/* Column 4: Description */}
-                              <td className="py-3.5 px-4 text-slate-700 leading-relaxed align-top">
-                                <p className="text-slate-800 font-medium">{doc.description}</p>
-                                {doc.highlights && doc.highlights.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {doc.highlights.map((hl) => (
-                                      <span
-                                        key={hl}
-                                        className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-50 text-[#0A2A66] border border-blue-200/60"
-                                      >
-                                        {hl}
+                                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                                      <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/80">
+                                        {doc.category}
                                       </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </td>
+                                      {doc.isPinned && (
+                                        <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                                          Featured
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
 
-                              {/* Column 5: Actions */}
-                              <td className="py-3.5 px-4 align-top text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  {doc.internalUrl && (
-                                    <Link
-                                      to={doc.internalUrl}
-                                      className="px-2.5 py-1 rounded-lg bg-[#0A2A66] hover:bg-[#1A5BB8] text-white text-[11px] font-bold transition whitespace-nowrap"
-                                      title="Open Full Interactive Guide"
-                                    >
-                                      Read Guide
-                                    </Link>
-                                  )}
-
-                                  {doc.pdfUrl && (
-                                    <a
-                                      href={doc.pdfUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition"
-                                      title="Download Official Gazette PDF"
-                                    >
-                                      <Download className="w-3.5 h-3.5" />
-                                    </a>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => setPreviewDoc(doc)}
-                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-                                    title="View Statutory Summary & Details"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyCitation(doc)}
-                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-                                    title="Copy Statutory Citation"
-                                  >
-                                    {isCopied ? (
-                                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  {/* Column 2: Document No */}
+                                  <td className="py-3.5 px-3.5 align-top">
+                                    {doc.internalUrl ? (
+                                      <Link
+                                        to={doc.internalUrl}
+                                        className="text-[#1A5BB8] hover:text-[#0A2A66] hover:underline font-extrabold inline-flex items-start gap-1 leading-snug text-xs sm:text-sm"
+                                      >
+                                        <span>{doc.docNo}</span>
+                                        <BookOpen className="w-3.5 h-3.5 text-[#1A5BB8] shrink-0 mt-0.5" />
+                                      </Link>
+                                    ) : doc.pdfUrl ? (
+                                      <a
+                                        href={doc.pdfUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#1A5BB8] hover:text-[#0A2A66] hover:underline font-bold inline-flex items-start gap-1 leading-snug text-xs sm:text-sm"
+                                      >
+                                        <span>{doc.docNo}</span>
+                                        <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                      </a>
                                     ) : (
-                                      <Copy className="w-3.5 h-3.5" />
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewDoc(doc)}
+                                        className="text-[#1A5BB8] hover:text-[#0A2A66] hover:underline font-bold text-left cursor-pointer leading-snug text-xs sm:text-sm"
+                                      >
+                                        {doc.docNo}
+                                      </button>
                                     )}
-                                  </button>
+                                  </td>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleBookmark(doc.id)}
-                                    className={`p-1.5 rounded-lg border transition cursor-pointer ${
-                                      isBookmarked
-                                        ? 'bg-amber-100 border-amber-300 text-amber-700'
-                                        : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700'
-                                    }`}
-                                    title={isBookmarked ? 'Remove Bookmark' : 'Bookmark Instrument'}
+                                  {/* Column 3: Document Date */}
+                                  <td className="py-3.5 px-3 text-slate-600 font-mono text-xs tabular-nums align-top whitespace-nowrap">
+                                    {doc.docDate}
+                                  </td>
+
+                                  {/* Column 4: Description */}
+                                  <td className="py-3.5 px-3.5 text-slate-700 leading-relaxed align-top">
+                                    <p className="text-slate-800 font-medium text-xs sm:text-sm">
+                                      {doc.description}
+                                    </p>
+                                    {doc.highlights && doc.highlights.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1.5">
+                                        {doc.highlights.map((hl) => (
+                                          <span
+                                            key={hl}
+                                            className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-50 text-[#0A2A66] border border-blue-200/60"
+                                          >
+                                            {hl}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {doc.details && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleExpandDoc(doc.id)}
+                                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#1A5BB8] hover:text-[#0A2A66] cursor-pointer"
+                                      >
+                                        {isExpanded ? (
+                                          <>
+                                            <ChevronUp className="w-3.5 h-3.5" />
+                                            <span>Hide Operational Scope</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown className="w-3.5 h-3.5" />
+                                            <span>Read Operational Scope</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
+                                  </td>
+
+                                  {/* Column 5: Actions */}
+                                  <td className="py-3.5 px-3.5 align-top text-right">
+                                    <div className="flex flex-wrap items-center justify-end gap-1">
+                                      {doc.internalUrl && (
+                                        <Link
+                                          to={doc.internalUrl}
+                                          className="px-2 py-1 rounded-md bg-[#0A2A66] hover:bg-[#1A5BB8] text-white text-[11px] font-bold transition whitespace-nowrap"
+                                          title="Open Full Interactive Guide"
+                                        >
+                                          Guide
+                                        </Link>
+                                      )}
+
+                                      {doc.pdfUrl && (
+                                        <a
+                                          href={doc.pdfUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="p-1.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition"
+                                          title="Download Official Gazette PDF"
+                                        >
+                                          <Download className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewDoc(doc)}
+                                        className="p-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                                        title="View Statutory Summary & Details"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyCitation(doc)}
+                                        className="p-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
+                                        title="Copy Statutory Citation"
+                                      >
+                                        {isCopied ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleBookmark(doc.id)}
+                                        className={`p-1.5 rounded-md border transition cursor-pointer ${
+                                          isBookmarked
+                                            ? 'bg-amber-100 border-amber-300 text-amber-700'
+                                            : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700'
+                                        }`}
+                                        title={isBookmarked ? 'Remove Bookmark' : 'Bookmark Instrument'}
+                                      >
+                                        <Bookmark className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+
+                                {isExpanded && doc.details && (
+                                  <tr className="bg-slate-50/90">
+                                    <td colSpan={5} className="px-4 py-3.5 border-t border-blue-100">
+                                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                        <div className="space-y-1 max-w-3xl">
+                                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#0A2A66] block">
+                                            Statutory Scope &amp; Operational Summary — {doc.docNo}
+                                          </span>
+                                          <p className="text-xs text-slate-700 leading-relaxed">
+                                            {doc.details}
+                                          </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCopyCitation(doc)}
+                                            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                                          >
+                                            <Copy className="w-3.5 h-3.5" />
+                                            <span>Copy Citation</span>
+                                          </button>
+                                          {doc.internalUrl && (
+                                            <Link
+                                              to={doc.internalUrl}
+                                              className="px-2.5 py-1.5 rounded-lg bg-[#0A2A66] hover:bg-[#1A5BB8] text-white text-xs font-bold inline-flex items-center gap-1.5"
+                                            >
+                                              <BookOpen className="w-3.5 h-3.5" />
+                                              <span>Interactive Guide</span>
+                                            </Link>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* Card Grid View for Regulatory Instruments */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredRegulatoryDocs.map((doc) => {
+                      const isBookmarked = bookmarkedIds.includes(doc.id);
+                      const isCopied = copiedId === doc.id;
+                      return (
+                        <div
+                          key={doc.id}
+                          className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs hover:border-[#1A5BB8] transition flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-2.5">
+                              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded bg-blue-50 text-[#0A2A66] border border-blue-200/70">
+                                {doc.authority}
+                              </span>
+                              <span className="text-xs font-mono text-slate-500 tabular-nums">
+                                {doc.docDate}
+                              </span>
+                            </div>
+
+                            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 mb-1.5">
+                              {doc.docNo}
+                            </h3>
+                            <p className="text-xs text-slate-700 font-medium leading-relaxed mb-3">
+                              {doc.description}
+                            </p>
+
+                            {doc.details && (
+                              <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">
+                                {doc.details}
+                              </p>
+                            )}
+
+                            {doc.highlights && doc.highlights.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mb-4">
+                                {doc.highlights.map((hl) => (
+                                  <span
+                                    key={hl}
+                                    className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700"
                                   >
-                                    <Bookmark className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                                    {hl}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                              {doc.category} • {doc.year}
+                            </span>
+
+                            <div className="flex items-center gap-1.5">
+                              {doc.internalUrl && (
+                                <Link
+                                  to={doc.internalUrl}
+                                  className="px-2.5 py-1 rounded-lg bg-[#0A2A66] hover:bg-[#1A5BB8] text-white text-xs font-bold transition"
+                                >
+                                  Guide
+                                </Link>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDoc(doc)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                              >
+                                Details
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCitation(doc)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                                title="Copy Citation"
+                              >
+                                {isCopied ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleBookmark(doc.id)}
+                                className={`p-1.5 rounded-lg border cursor-pointer ${
+                                  isBookmarked
+                                    ? 'bg-amber-100 border-amber-300 text-amber-700'
+                                    : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700'
+                                }`}
+                                title="Bookmark"
+                              >
+                                <Bookmark className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : (
               /* ================= LEGAL TEMPLATES VIEW ================= */
               <div className="space-y-4">
                 {/* Category Filter Pills for Templates */}
-                <div className="flex flex-wrap items-center gap-2 pb-1">
-                  {TEMPLATE_CATEGORIES.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => setSelectedTemplateCategory(category)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                        selectedTemplateCategory === category
-                          ? 'bg-[#0A2A66] text-white shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {TEMPLATE_CATEGORIES.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setSelectedTemplateCategory(category)}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          selectedTemplateCategory === category
+                            ? 'bg-[#0A2A66] text-white shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500 tabular-nums">
+                    Showing <strong className="text-slate-900">{filteredTemplates.length}</strong> templates
+                  </span>
                 </div>
 
                 {/* Templates Cards Grid */}

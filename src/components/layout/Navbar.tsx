@@ -166,41 +166,23 @@ export function Navbar() {
   ];
 
   const resourceLinks = [
-    { 
-      name: 'Student Learning Portal (LMS)', 
-      path: '/student/dashboard', 
-      description: '10-Class curriculum, video lessons, notes, PPT, quizzes & final exam',
-      icon: GraduationCap 
+    {
+      name: 'TDS Rules 2026 (SRO 273)',
+      path: '/SRO/TDS2026',
+      description: 'উৎসে কর বিধিমালা, ২০২৬ — Complete gazette, rate tables, calculator & CSV',
+      icon: ScrollText,
     },
     { 
-      name: 'Certificate Verification', 
-      path: '/verify-certificate', 
-      description: 'Public registry to verify official course certificates',
-      icon: Award 
+      name: 'Regulatory Library', 
+      path: '/resource-library', 
+      description: 'Statutory gazette archive, NBR SROs, circulars & legal templates',
+      icon: BookOpen 
     },
     { 
       name: 'Tools Hub', 
       path: '/tools', 
       description: 'Calculators, compliance checklists & utilities',
       icon: Wrench 
-    },
-    { 
-      name: 'Google Workspace Hub', 
-      path: '/workspace', 
-      description: 'Drive, Sheets, Calendar, Docs & Meetings integration',
-      icon: Briefcase 
-    },
-    { 
-      name: 'Resource Library (PDFs)', 
-      path: '/resource-library', 
-      description: 'Download NDA, service agreement & tax checklists',
-      icon: ScrollText 
-    },
-    { 
-      name: 'Glossary', 
-      path: '/glossary', 
-      description: 'Definitions of legal, fiscal & tax terms',
-      icon: BookOpen 
     },
     { 
       name: 'Tax Calculator 2026-27', 
@@ -221,27 +203,39 @@ export function Navbar() {
       icon: Building2 
     },
     { 
-      name: 'VAT Guide', 
+      name: 'VAT Guide & Mushak', 
       path: '/vat-guide', 
       description: 'Withholding rules, deductions & compliance',
       icon: FileText 
     },
     { 
-      name: 'TDS Reference', 
+      name: 'TDS Reference Database', 
       path: '/tds-guide', 
       description: 'Section 89, 90 & 119 TDS rates & database',
       icon: BookOpen 
     },
     { 
-      name: 'Training & CPD', 
-      path: '/training', 
-      description: 'Webinars, masterclasses & legal workshops',
+      name: 'Student Learning Portal (LMS)', 
+      path: '/student/dashboard', 
+      description: '10-Class curriculum, video lessons, notes, PPT, quizzes & final exam',
       icon: GraduationCap 
     },
     { 
-      name: 'Legal & Tax FAQs', 
-      path: '/faq', 
-      description: 'Frequently asked questions on tax, VAT & law',
+      name: 'Certificate Verification', 
+      path: '/verify-certificate', 
+      description: 'Public registry to verify official course certificates',
+      icon: Award 
+    },
+    { 
+      name: 'Google Workspace Hub', 
+      path: '/workspace', 
+      description: 'Drive, Sheets, Calendar, Docs & Meetings integration',
+      icon: Briefcase 
+    },
+    { 
+      name: 'Glossary & Legal Terms', 
+      path: '/glossary', 
+      description: 'Definitions of legal, fiscal & tax terms',
       icon: HelpCircle 
     },
   ];
@@ -277,9 +271,10 @@ export function Navbar() {
     location.pathname.startsWith('/category/') || 
     location.pathname.startsWith('/article/');
     
-  const isResourceActive = resourceLinks.some(
-    link => link.path !== '/training' && location.pathname === link.path
-  );
+  const isResourceActive =
+    resourceLinks.some((link) => link.path !== '/training' && location.pathname === link.path) ||
+    location.pathname.startsWith('/resource-library') ||
+    location.pathname.startsWith('/SRO/');
 
   const isCommunityActive = location.pathname === '/community' || 
     location.pathname === '/experts' || 
@@ -360,49 +355,100 @@ export function Navbar() {
     <header 
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-200 ease-out print:hidden",
-        isScrolled && !isOpen ? "pt-1.5 sm:pt-2 px-2.5 sm:px-5 lg:px-8" : "bg-white/95 backdrop-blur-md border-b border-slate-200/60 px-0"
+        isScrolled && !isOpen ? "pt-1.5 sm:pt-2 px-2.5 sm:px-5 lg:px-8" : "bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-0 shadow-2xs"
       )}
     >
+      {/* Top Institutional Statutory Utility Strip (Visible at top of page) */}
+      {!isScrolled && (
+        <section
+          aria-label="Statutory Gazette & Quick Compliance Bar"
+          className="hidden md:block bg-[#0A2A66] text-blue-100 border-b border-blue-900/80 text-[11px]"
+        >
+          <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0 truncate">
+              <span className="inline-flex items-center gap-1.5 font-mono font-bold uppercase tracking-wider text-amber-300 bg-blue-950/90 border border-blue-800 px-2 py-0.5 rounded text-[10px] shrink-0">
+                <ShieldCheck className="w-3 h-3 text-amber-300" />
+                <span>AY 2026–2027 Gazette</span>
+              </span>
+              <Link
+                to="/SRO/TDS2026"
+                className="font-semibold text-white hover:text-amber-300 transition-colors truncate inline-flex items-center gap-1.5"
+              >
+                <span>উৎসে কর বিধিমালা, ২০২৬ (এস.আর.ও. নং-২৭৩-আইন/আয়কর-৫/২০২৬) — Interactive Rate Tables &amp; Calculator</span>
+                <span className="text-amber-300 font-bold">→</span>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-3.5 shrink-0 font-semibold">
+              <Link
+                to="/tax-calculator"
+                className="text-blue-100 hover:text-white transition-colors inline-flex items-center gap-1"
+              >
+                <Calculator className="w-3 h-3 text-emerald-300" />
+                <span>Tax Calculator</span>
+              </Link>
+              <span className="text-blue-700">•</span>
+              <Link
+                to="/verify-certificate"
+                className="text-blue-100 hover:text-white transition-colors inline-flex items-center gap-1"
+              >
+                <Award className="w-3 h-3 text-amber-300" />
+                <span>Verify Certificate</span>
+              </Link>
+              <span className="text-blue-700">•</span>
+              <Link
+                to="/student/dashboard"
+                className="text-blue-100 hover:text-white transition-colors inline-flex items-center gap-1"
+              >
+                <GraduationCap className="w-3 h-3 text-sky-300" />
+                <span>Student Portal</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div 
         className={cn(
-          "w-full max-w-[1380px] mx-auto transition-all duration-200 ease-out",
+          "w-full max-w-[1527px] mx-auto transition-all duration-200 ease-out",
           isScrolled && !isOpen
-            ? "bg-white/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(15,23,42,0.10),0_2px_6px_rgba(15,23,42,0.04)] rounded-2xl border border-slate-200/90 ring-1 ring-slate-900/5 px-3 sm:px-5 lg:px-8"
+            ? "bg-white/95 backdrop-blur-xl shadow-[0_10px_30px_rgba(15,23,42,0.10),0_2px_6px_rgba(15,23,42,0.04)] rounded-2xl border border-slate-200/90 ring-1 ring-slate-900/5 px-3 sm:px-5 lg:px-7"
             : "px-3 sm:px-6 lg:px-8"
         )}
       >
         <div className={cn(
-          "flex justify-between items-center gap-3 sm:gap-4 transition-all duration-200 ease-out",
+          "w-[1500px] max-w-full mx-auto flex justify-between items-center gap-2 sm:gap-4 transition-all duration-200 ease-out",
           isScrolled && !isOpen 
             ? "h-13 sm:h-14 py-0.5" 
-            : "h-16 sm:h-18"
+            : "h-16 sm:h-[68px]"
         )}>
-          {/* Logo */}
+          {/* Brand Logo */}
           <div className="flex items-center shrink-0">
-            <Link to="/" className="flex items-center gap-3 group focus:outline-none">
+            <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none">
               <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-sm shrink-0 overflow-hidden bg-slate-950 border border-slate-800 p-0.5 group-hover:scale-105 group-hover:border-amber-400 group-hover:shadow-md transition-all duration-200">
                 <img src="/logo.png" alt="E-Lawyers & Accounticca Logo" className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 leading-tight group-hover:text-emerald-950 transition-colors">
+                  <h1 className="text-base sm:text-xl font-black tracking-tight text-slate-900 leading-tight group-hover:text-emerald-950 transition-colors">
                     Compliance <span className="text-emerald-700">Hub</span>
                   </h1>
                 </div>
-                <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-slate-500 font-extrabold leading-none mt-0.5 flex items-center gap-1.5">
+                <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.18em] text-slate-500 font-extrabold leading-none mt-0.5 flex items-center gap-1.5">
                   <span>Legal</span>
                   <span className="text-emerald-600 font-black">•</span>
                   <span>Tax</span>
                   <span className="text-emerald-600 font-black">•</span>
-                  <span>Tech</span>
+                  <span>Advisory</span>
                 </p>
               </div>
             </Link>
           </div>
 
-          {/* Desktop Navigation (Center/Main row) */}
+          {/* Desktop Navigation (Center Pill Bar) */}
           <nav 
-            className="hidden lg:flex items-center gap-1 xl:gap-1.5 bg-slate-100/80 p-1 rounded-full border border-slate-200/70 backdrop-blur-xs shadow-2xs"
+            aria-label="Primary Navigation"
+            className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-slate-100/85 p-1 rounded-full border border-slate-200/80 backdrop-blur-xs shadow-2xs"
           >
             {/* Dynamic Blog Dropdown Menu */}
             <div 
@@ -415,7 +461,7 @@ export function Navbar() {
                 type="button"
                 onClick={() => setBlogOpen((prev) => !prev)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap focus:outline-none cursor-pointer",
+                  "inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap focus:outline-none cursor-pointer",
                   isBlogActive || blogOpen
                     ? "bg-white text-emerald-800 shadow-2xs font-extrabold" 
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/60 font-semibold"
@@ -436,13 +482,13 @@ export function Navbar() {
               {/* Blog Dropdown Panel */}
               {blogOpen && (
                 <div 
-                  className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[540px] bg-white rounded-2xl shadow-xl border border-slate-100 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute left-0 top-full mt-2 w-[540px] bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150"
                   role="menu"
                   aria-orientation="vertical"
                 >
                   <div className="flex items-center justify-between pb-2 mb-2 px-2 border-b border-slate-100">
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
-                      Articles & Law Categories
+                      Articles &amp; Law Categories
                     </span>
                     <Link 
                       to="/search" 
@@ -453,7 +499,7 @@ export function Navbar() {
                     </Link>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {blogCategories.map((item) => {
                       const Icon = item.icon;
                       const isActive = location.pathname === item.path;
@@ -493,6 +539,25 @@ export function Navbar() {
                       );
                     })}
                   </div>
+
+                  {/* Featured Statutory Spotlight inside Articles Menu */}
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-3 px-2 py-2 rounded-xl bg-blue-50/70 border border-blue-100">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-mono font-bold uppercase text-[#0A2A66] block">
+                        Featured Statutory Gazette
+                      </span>
+                      <p className="text-xs font-extrabold text-slate-900 truncate">
+                        উৎসে কর বিধিমালা, ২০২৬ (এস.আর.ও. নং-২৭৩)
+                      </p>
+                    </div>
+                    <Link
+                      to="/SRO/TDS2026"
+                      onClick={() => setBlogOpen(false)}
+                      className="px-3 py-1.5 rounded-lg bg-[#0A2A66] hover:bg-[#1A5BB8] text-white text-[11px] font-bold shrink-0 transition-colors"
+                    >
+                      Open Gazette →
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -508,7 +573,7 @@ export function Navbar() {
                 type="button"
                 onClick={() => setResourcesOpen((prev) => !prev)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap focus:outline-none cursor-pointer",
+                  "inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap focus:outline-none cursor-pointer",
                   isResourceActive || resourcesOpen
                     ? "bg-white text-emerald-800 shadow-2xs font-extrabold" 
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/60 font-semibold"
@@ -517,7 +582,7 @@ export function Navbar() {
                 aria-haspopup="true"
               >
                 <Wrench className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Resources</span>
+                <span>Tools &amp; Resources</span>
                 <ChevronDown 
                   className={cn(
                     "w-3.5 h-3.5 transition-transform duration-200", 
@@ -529,24 +594,24 @@ export function Navbar() {
               {/* Resources Dropdown Panel */}
               {resourcesOpen && (
                 <div 
-                  className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[520px] bg-white rounded-2xl shadow-xl border border-slate-100 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[560px] bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150"
                   role="menu"
                   aria-orientation="vertical"
                 >
                   <div className="flex items-center justify-between pb-2 mb-2 px-2 border-b border-slate-100">
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
-                      Legal & Tax Resources
+                      Calculators, Portals &amp; Statutory Databases
                     </span>
                     <Link 
                       to="/tools" 
                       className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors"
                       onClick={() => setResourcesOpen(false)}
                     >
-                      View All Tools →
+                      Explore All Tools →
                     </Link>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {resourceLinks.map((item) => {
                       const Icon = item.icon;
                       const isActive = location.pathname === item.path;
@@ -573,10 +638,15 @@ export function Navbar() {
                           </div>
                           <div className="min-w-0">
                             <div className={cn(
-                              "text-xs font-bold transition-colors leading-tight",
+                              "text-xs font-bold transition-colors leading-tight flex items-center gap-1.5",
                               isActive ? "text-emerald-900" : "text-slate-900 group-hover:text-emerald-700"
                             )}>
-                              {item.name}
+                              <span>{item.name}</span>
+                              {item.path === '/SRO/TDS2026' && (
+                                <span className="text-[9px] font-mono font-extrabold uppercase px-1.5 py-0.2 rounded-full bg-amber-300 text-slate-950 shrink-0">
+                                  SRO 273
+                                </span>
+                              )}
                             </div>
                             <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 leading-normal">
                               {item.description}
@@ -594,7 +664,7 @@ export function Navbar() {
             <Link
               to="/training"
               className={cn(
-                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
+                "inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
                 location.pathname.startsWith('/training')
                   ? "bg-white text-emerald-800 shadow-2xs font-extrabold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/60 font-semibold"
@@ -609,14 +679,14 @@ export function Navbar() {
               <Link
                 to="/admin/shop"
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
                   location.pathname.startsWith('/admin/shop')
                     ? "bg-white text-emerald-800 shadow-2xs font-extrabold ring-1 ring-emerald-200"
                     : "text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 font-bold border border-emerald-200/80"
                 )}
               >
                 <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Admin Shop</span>
+                <span>Admin</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </Link>
             )}
@@ -625,7 +695,7 @@ export function Navbar() {
             <Link
               to="/Careers"
               className={cn(
-                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
+                "inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
                 location.pathname.startsWith('/Careers') || location.pathname.startsWith('/careers')
                   ? "bg-[#10243a] text-white shadow-2xs font-extrabold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/60 font-semibold"
@@ -633,14 +703,13 @@ export function Navbar() {
             >
               <Briefcase className="w-3.5 h-3.5 text-[#c7a76b]" />
               <span>Careers</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </Link>
 
             {/* Contact */}
             <Link
               to="/contact"
               className={cn(
-                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
+                "inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] tracking-wide transition-all duration-200 whitespace-nowrap",
                 location.pathname === '/contact'
                   ? "bg-white text-emerald-800 shadow-2xs font-extrabold"
                   : "text-slate-600 hover:text-slate-900 hover:bg-white/60 font-semibold"
@@ -651,25 +720,25 @@ export function Navbar() {
             </Link>
           </nav>
           
-          {/* Right actions: Search + Cart + Auth + Mobile menu toggle */}
-          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-            {/* Cart Trigger Button - hidden on mobile view only, moved to three dot */}
+          {/* Right actions: Search + Saved Bookmarks + Cart + Auth + Mobile menu toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Desktop Global Search Trigger (Cmd+K / Ctrl+K) */}
             <div className="relative hidden sm:flex items-center">
               <button
                 type="button"
-                onClick={toggleCart}
-                className="h-9 w-9 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-emerald-50/60 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 transition-all flex items-center justify-center cursor-pointer shadow-2xs relative"
-                title="Shopping Cart"
-                aria-label="Shopping Cart"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
+                className="h-9 px-3 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-emerald-50/60 hover:border-emerald-300 text-slate-600 hover:text-emerald-800 transition-all flex items-center gap-2 group cursor-pointer shadow-2xs"
+                aria-label="Search articles, tools, and products (Cmd+K/Ctrl+K)"
+                title="Search articles, tools, and products (Cmd+K/Ctrl+K)"
               >
-                <ShoppingBag className="w-4 h-4 text-emerald-700" />
-                {totalItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-emerald-600 text-white font-extrabold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-xs ring-2 ring-white">
-                    {totalItemsCount}
-                  </span>
-                )}
+                <Search className="w-4 h-4 text-slate-500 group-hover:text-emerald-700 transition-colors" />
+                <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-800 hidden xl:inline">Search...</span>
+                <kbd className="hidden md:inline-flex items-center text-[10px] font-mono font-bold text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded border border-slate-300">
+                  ⌘K
+                </kbd>
               </button>
             </div>
+
             {/* Mobile Search Trigger Icon */}
             <div className="relative flex sm:hidden items-center">
               <button
@@ -683,20 +752,36 @@ export function Navbar() {
               </button>
             </div>
 
-            {/* Desktop Global Search Trigger (Cmd+K / Ctrl+K) */}
+            {/* Desktop Saved Bookmarks Quick Link */}
+            <Link
+              to="/dashboard?tab=saved"
+              className="hidden md:flex h-9 w-9 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-emerald-50/60 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 transition-all items-center justify-center relative shadow-2xs"
+              title="Saved Articles & Bookmarks"
+              aria-label="Saved Articles & Bookmarks"
+            >
+              <Bookmark className="w-4 h-4 text-slate-600" />
+              {savedBookmarkCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 font-extrabold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-xs ring-2 ring-white tabular-nums">
+                  {savedBookmarkCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Cart Trigger Button */}
             <div className="relative hidden sm:flex items-center">
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
-                className="h-9 px-3 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-emerald-50/60 hover:border-emerald-300 text-slate-600 hover:text-emerald-800 transition-all flex items-center gap-2 group cursor-pointer shadow-2xs"
-                aria-label="Search articles, tools, and products (Cmd+K/Ctrl+K)"
-                title="Search articles, tools, and products (Cmd+K/Ctrl+K)"
+                onClick={toggleCart}
+                className="h-9 w-9 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-emerald-50/60 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 transition-all flex items-center justify-center cursor-pointer shadow-2xs relative"
+                title="Shopping Cart"
+                aria-label="Shopping Cart"
               >
-                <Search className="w-4 h-4 text-slate-500 group-hover:text-emerald-700 transition-colors" />
-                <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-800 hidden md:inline">Search...</span>
-                <kbd className="hidden lg:inline-flex items-center text-[10px] font-mono font-bold text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded border border-slate-300">
-                  ⌘K
-                </kbd>
+                <ShoppingBag className="w-4 h-4 text-emerald-700" />
+                {totalItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-emerald-600 text-white font-extrabold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-xs ring-2 ring-white tabular-nums">
+                    {totalItemsCount}
+                  </span>
+                )}
               </button>
             </div>
 

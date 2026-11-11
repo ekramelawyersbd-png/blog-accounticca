@@ -20,9 +20,50 @@ const triggerCsvDownload = (csvRows: string[], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
+const parseBengaliOrEnglishPercent = (raw: string): number | null => {
+  const map: Record<string, string> = {
+    '০': '0',
+    '১': '1',
+    '২': '2',
+    '৩': '3',
+    '৪': '4',
+    '৫': '5',
+    '৬': '6',
+    '৭': '7',
+    '৮': '8',
+    '৯': '9',
+  };
+  const normalized = raw.replace(/[০-৯]/g, (m) => map[m] || m);
+  const match = normalized.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (!match) return null;
+  const val = parseFloat(match[1]);
+  return Number.isFinite(val) ? val : null;
+};
+
 export const SRO_TDS_2026: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const keywordInputRef = useRef<HTMLInputElement>(null);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
+  const [globalQuery, setGlobalQuery] = useState<string>('');
+  const [activeQuickRate, setActiveQuickRate] = useState<string>('');
+  const [matchedStats, setMatchedStats] = useState<{
+    visibleRows: number;
+    totalRows: number;
+    matchingTables: number;
+    totalTables: number;
+  }>({
+    visibleRows: 99,
+    totalRows: 99,
+    matchingTables: 7,
+    totalTables: 7,
+  });
+
+  // Interactive TDS & Rule 12 Gross-Up Calculator State
+  const [billAmount, setBillAmount] = useState<string>('100000');
+  const [tdsRate, setTdsRate] = useState<string>('5');
+  const [isGrossUp, setIsGrossUp] = useState<boolean>(false);
+  const [noPsrPenalty, setNoPsrPenalty] = useState<boolean>(false);
+  const [selectedRuleLabel, setSelectedRuleLabel] = useState<string>('সাধারণ পণ্য সরবরাহ / সেবা');
 
   const showToast = (msg: string) => {
     setExportFeedback(msg);
@@ -30,6 +71,53 @@ export const SRO_TDS_2026: React.FC = () => {
       setExportFeedback((prev) => (prev === msg ? null : prev));
     }, 3500);
   };
+
+  const applyGlobalFilterToAllTables = (textVal: string, rateVal: string) => {
+    const root = containerRef.current;
+    if (!root) return;
+    const containers = root.querySelectorAll('.table-container');
+    containers.forEach((container) => {
+      const rateInput = container.querySelector('.search-rate') as HTMLInputElement | null;
+      const textInput = container.querySelector('.search-text') as HTMLInputElement | null;
+      if (rateInput) {
+        rateInput.value = rateVal;
+        rateInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (textInput) {
+        textInput.value = textVal;
+        textInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+  };
+
+  const handleGlobalSearchChange = (val: string) => {
+    setGlobalQuery(val);
+    applyGlobalFilterToAllTables(val, activeQuickRate);
+  };
+
+  const handleQuickRateSelect = (rateChip: string) => {
+    const nextRate = activeQuickRate === rateChip ? '' : rateChip;
+    setActiveQuickRate(nextRate);
+    applyGlobalFilterToAllTables(globalQuery, nextRate);
+  };
+
+  const handleKeywordTagSelect = (keyword: string) => {
+    const nextQuery = globalQuery === keyword ? '' : keyword;
+    setGlobalQuery(nextQuery);
+    applyGlobalFilterToAllTables(nextQuery, activeQuickRate);
+  };
+
+  // Computed TDS & Rule 12 Gross-Up values
+  const numericBill = Math.max(0, parseFloat(billAmount.replace(/,/g, '')) || 0);
+  const baseRate = Math.max(0, Math.min(99, parseFloat(tdsRate) || 0));
+  const effectiveRate = noPsrPenalty ? Math.min(99, baseRate * 1.5) : baseRate;
+
+  // Rule 12 Formula: গ = (১০০ × ক) / (১০০ − খ)
+  const grossedUpBase = isGrossUp
+    ? (100 * numericBill) / Math.max(1, 100 - effectiveRate)
+    : numericBill;
+  const calculatedTds = (grossedUpBase * effectiveRate) / 100;
+  const netPayableToVendor = isGrossUp ? numericBill : Math.max(0, numericBill - calculatedTds);
 
   // Export all currently visible (filtered) rows across all tables on the page
   const handleExportAllFilteredCsv = () => {
@@ -144,8 +232,69 @@ export const SRO_TDS_2026: React.FC = () => {
       return str.replace(/[0-9]/g, (match) => map[match]);
     };
 
+    const toEnglishNumber = (str: string) => {
+      const map: Record<string, string> = {
+        '০': '0',
+        '১': '1',
+        '২': '2',
+        '৩': '3',
+        '৪': '4',
+        '৫': '5',
+        '৬': '6',
+        '৭': '7',
+        '৮': '8',
+        '৯': '9',
+      };
+      return str.replace(/[০-৯]/g, (match) => map[match]);
+    };
+
     const tableContainers = document.querySelectorAll('.sro-page-wrapper .table-container');
     const cleanupFns: Array<() => void> = [];
+
+    const recomputeAggregateStats = () => {
+      let visibleRows = 0;
+      let totalRows = 0;
+      let matchingTables = 0;
+      const totalTables = tableContainers.length;
+
+      tableContainers.forEach((container) => {
+        const rows = container.querySelectorAll('tbody tr');
+        let tableVisible = 0;
+        rows.forEach((r) => {
+          totalRows++;
+          if ((r as HTMLElement).style.display !== 'none') {
+            visibleRows++;
+            tableVisible++;
+          }
+        });
+        if (tableVisible > 0) {
+          matchingTables++;
+        }
+      });
+
+      setMatchedStats({
+        visibleRows,
+        totalRows,
+        matchingTables,
+        totalTables,
+      });
+    };
+
+    const handleGlobalShortcut = (e: KeyboardEvent) => {
+      const key = typeof e.key === 'string' ? e.key : '';
+      const activeTag = document.activeElement?.tagName;
+      if (
+        key === '/' &&
+        activeTag !== 'INPUT' &&
+        activeTag !== 'TEXTAREA' &&
+        activeTag !== 'SELECT'
+      ) {
+        e.preventDefault();
+        keywordInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalShortcut);
+    cleanupFns.push(() => window.removeEventListener('keydown', handleGlobalShortcut));
 
     tableContainers.forEach((container, index) => {
       const rateInput = container.querySelector('.search-rate') as HTMLInputElement | null;
@@ -171,45 +320,75 @@ export const SRO_TDS_2026: React.FC = () => {
         const textQuery = textInput ? textInput.value.trim().toLowerCase() : '';
 
         const rateQueryBengali = toBengaliNumber(rateQuery);
-        const textQueryBengali = toBengaliNumber(textQuery);
+        const rateQueryEnglish = toEnglishNumber(rateQuery);
+
+        // Split keyword query into tokens so multi-word searches match across any cells in the row
+        const keywordTokens = textQuery
+          .split(/\s+/)
+          .map((t) => t.trim())
+          .filter(Boolean);
 
         let visibleCount = 0;
+        const hasActiveFilter = rateQuery !== '' || keywordTokens.length > 0;
 
         rows.forEach((row) => {
           const rowEl = row as HTMLTableRowElement;
-          const rowText = (rowEl.textContent || '').toLowerCase();
+          const normalizedRowText = (rowEl.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
           const lastCellIndex = rowEl.cells.length - 1;
           const rateCell =
             lastCellIndex >= 0
-              ? (rowEl.cells[lastCellIndex].textContent || '').toLowerCase()
-              : rowText;
+              ? (rowEl.cells[lastCellIndex].textContent || '')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .toLowerCase()
+              : normalizedRowText;
 
           const matchesRate =
             rateQuery === '' ||
             rateCell.includes(rateQuery) ||
-            rateCell.includes(rateQueryBengali);
+            rateCell.includes(rateQueryBengali) ||
+            rateCell.includes(rateQueryEnglish);
+
           const matchesText =
-            textQuery === '' ||
-            rowText.includes(textQuery) ||
-            rowText.includes(textQueryBengali);
+            keywordTokens.length === 0 ||
+            keywordTokens.every((token) => {
+              const tokenBn = toBengaliNumber(token);
+              const tokenEn = toEnglishNumber(token);
+              return (
+                normalizedRowText.includes(token) ||
+                normalizedRowText.includes(tokenBn) ||
+                normalizedRowText.includes(tokenEn)
+              );
+            });
 
           if (matchesRate && matchesText) {
             rowEl.style.display = '';
+            if (hasActiveFilter) {
+              rowEl.classList.add('row-keyword-match');
+            } else {
+              rowEl.classList.remove('row-keyword-match');
+            }
             visibleCount++;
           } else {
             rowEl.style.display = 'none';
+            rowEl.classList.remove('row-keyword-match');
           }
         });
 
         updateCountBadge(visibleCount, rows.length);
 
         if (resetBtn) {
-          resetBtn.style.display = rateQuery !== '' || textQuery !== '' ? 'inline-flex' : 'none';
+          resetBtn.style.display = hasActiveFilter ? 'inline-flex' : 'none';
         }
 
         if (noResultsMsg) {
           noResultsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
         }
+
+        recomputeAggregateStats();
       };
 
       const handleReset = () => {
@@ -253,16 +432,88 @@ export const SRO_TDS_2026: React.FC = () => {
         showToast(`সফলভাবে ${exportedCount}টি সারির CSV ডাউনলোড হয়েছে (${filename})`);
       };
 
+      const tableEl = container.querySelector('table');
+      let activeColIndex: number | null = null;
+
+      const clearColumnHighlight = () => {
+        if (!tableEl || activeColIndex === null) return;
+        tableEl.querySelectorAll('.col-hover, .cell-hover').forEach((el) => {
+          el.classList.remove('col-hover', 'cell-hover');
+        });
+        activeColIndex = null;
+      };
+
+      const handleTableMouseOver = (e: Event) => {
+        if (!tableEl) return;
+        const target = e.target as HTMLElement | null;
+        const cell = target?.closest('td, th') as HTMLTableCellElement | null;
+        if (!cell || !tableEl.contains(cell)) {
+          clearColumnHighlight();
+          return;
+        }
+
+        const colIdx = cell.cellIndex;
+        if (colIdx !== activeColIndex) {
+          tableEl.querySelectorAll('.col-hover').forEach((el) => el.classList.remove('col-hover'));
+          activeColIndex = colIdx;
+          const allRows = tableEl.querySelectorAll('tr');
+          allRows.forEach((tr) => {
+            const targetCell = (tr as HTMLTableRowElement).cells[colIdx];
+            if (targetCell) {
+              targetCell.classList.add('col-hover');
+            }
+          });
+        }
+
+        tableEl.querySelectorAll('.cell-hover').forEach((el) => el.classList.remove('cell-hover'));
+        if (cell.tagName === 'TD') {
+          cell.classList.add('cell-hover');
+        }
+      };
+
+      const handleTableMouseLeave = () => {
+        clearColumnHighlight();
+      };
+
+      const handleTableClick = (e: Event) => {
+        const target = e.target as HTMLElement | null;
+        const rateCell = target?.closest('td.rate-col') as HTMLTableCellElement | null;
+        if (!rateCell) return;
+        const parsed = parseBengaliOrEnglishPercent(rateCell.textContent || '');
+        if (parsed !== null) {
+          const rowEl = rateCell.closest('tr');
+          const descCell =
+            rowEl && rowEl.cells.length >= 2
+              ? rowEl.cells[rowEl.cells.length === 3 ? 1 : 0]?.textContent?.trim()
+              : '';
+          setTdsRate(String(parsed));
+          if (descCell) {
+            setSelectedRuleLabel(descCell.slice(0, 65) + (descCell.length > 65 ? '...' : ''));
+          }
+          showToast(`ক্যালকুলেটরে ${parsed}% উৎসে করহার সেট করা হয়েছে!`);
+        }
+      };
+
       if (rateInput) rateInput.addEventListener('input', filterTable);
       if (textInput) textInput.addEventListener('input', filterTable);
       if (resetBtn) resetBtn.addEventListener('click', handleReset);
       if (exportBtn) exportBtn.addEventListener('click', handleExportTableCsv);
+      if (tableEl) {
+        tableEl.addEventListener('mouseover', handleTableMouseOver);
+        tableEl.addEventListener('mouseleave', handleTableMouseLeave);
+        tableEl.addEventListener('click', handleTableClick);
+      }
 
       cleanupFns.push(() => {
         if (rateInput) rateInput.removeEventListener('input', filterTable);
         if (textInput) textInput.removeEventListener('input', filterTable);
         if (resetBtn) resetBtn.removeEventListener('click', handleReset);
         if (exportBtn) exportBtn.removeEventListener('click', handleExportTableCsv);
+        if (tableEl) {
+          tableEl.removeEventListener('mouseover', handleTableMouseOver);
+          tableEl.removeEventListener('mouseleave', handleTableMouseLeave);
+          tableEl.removeEventListener('click', handleTableClick);
+        }
       });
     });
 
@@ -292,6 +543,9 @@ export const SRO_TDS_2026: React.FC = () => {
           --border-color: #dce4ec;
           --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
           --radius: 10px;
+          width: 1527px;
+          max-width: 100%;
+          margin: 0 auto;
           font-family: 'Hind Siliguri', 'SolaimanLipi', system-ui, -apple-system, sans-serif;
           background-color: var(--bg-body);
           color: var(--text-main);
@@ -403,8 +657,8 @@ export const SRO_TDS_2026: React.FC = () => {
         }
 
         .sro-page-wrapper .layout-wrapper {
-          width: 1424px;
-          max-width: 100%;
+          width: 100%;
+          max-width: 1527px;
           margin: 30px auto;
           padding: 0 20px;
           display: grid;
@@ -528,6 +782,93 @@ export const SRO_TDS_2026: React.FC = () => {
           font-weight: 500;
         }
 
+        .sro-page-wrapper .sro-realtime-search-panel {
+          background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+          border: 2px solid #0f4c81;
+          border-radius: var(--radius);
+          padding: 20px 24px;
+          box-shadow: 0 8px 24px rgba(15, 76, 129, 0.08);
+          position: sticky;
+          top: 14px;
+          z-index: 40;
+        }
+        .sro-page-wrapper .sro-realtime-search-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 12px;
+        }
+        .sro-page-wrapper .sro-realtime-search-title {
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: var(--primary);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .sro-page-wrapper .sro-realtime-stats-badge {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #0f4c81;
+          background: #dbeafe;
+          border: 1px solid #93c5fd;
+          padding: 4px 12px;
+          border-radius: 50px;
+        }
+        .sro-page-wrapper .sro-realtime-input-row {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .sro-page-wrapper .sro-realtime-input-wrap {
+          flex: 1;
+          min-width: 240px;
+          position: relative;
+        }
+        .sro-page-wrapper .sro-realtime-input {
+          width: 100%;
+          padding: 11px 16px;
+          border: 1.5px solid #94a3b8;
+          border-radius: 8px;
+          font-family: inherit;
+          font-size: 0.98rem;
+          color: var(--text-main);
+          background: #ffffff;
+          outline: none;
+          transition: all 0.2s ease;
+        }
+        .sro-page-wrapper .sro-realtime-input:focus {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 4px rgba(15, 76, 129, 0.14);
+        }
+        .sro-page-wrapper .sro-keyword-chips {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-top: 10px;
+        }
+        .sro-page-wrapper .sro-keyword-chip {
+          padding: 3px 10px;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid #cbd5e1;
+          background: #ffffff;
+          color: #334155;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .sro-page-wrapper .sro-keyword-chip:hover,
+        .sro-page-wrapper .sro-keyword-chip.active {
+          background: var(--primary);
+          color: #ffffff;
+          border-color: var(--primary);
+        }
+
         .sro-page-wrapper .table-container {
           margin: 20px 0;
           border: 1px solid var(--border-color);
@@ -546,8 +887,12 @@ export const SRO_TDS_2026: React.FC = () => {
         }
         .sro-page-wrapper .search-box {
           flex: 1;
-          min-width: 180px;
+          min-width: 200px;
           position: relative;
+        }
+        .sro-page-wrapper .search-box.search-box-rate {
+          flex: 0.65;
+          min-width: 165px;
         }
         .sro-page-wrapper .search-box input {
           width: 100%;
@@ -635,11 +980,20 @@ export const SRO_TDS_2026: React.FC = () => {
           position: sticky;
           top: 0;
           z-index: 10;
+          transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .sro-page-wrapper th.col-hover,
+        .sro-page-wrapper table:has(tr > *:nth-child(1):hover) tr > th:nth-child(1),
+        .sro-page-wrapper table:has(tr > *:nth-child(2):hover) tr > th:nth-child(2),
+        .sro-page-wrapper table:has(tr > *:nth-child(3):hover) tr > th:nth-child(3) {
+          background: #1663a6;
+          box-shadow: inset 0 -3px 0 #38bdf8;
         }
         .sro-page-wrapper td {
           padding: 14px 16px;
           border-bottom: 1px solid var(--border-color);
           vertical-align: top;
+          transition: background-color 0.15s ease, box-shadow 0.15s ease;
         }
         .sro-page-wrapper tbody tr:nth-child(even) {
           background-color: #f8fafc;
@@ -647,12 +1001,40 @@ export const SRO_TDS_2026: React.FC = () => {
         .sro-page-wrapper tbody tr:hover {
           background-color: #eef5fc;
         }
+        .sro-page-wrapper tbody tr.row-keyword-match {
+          background-color: #f0fdf4;
+        }
+        .sro-page-wrapper tbody tr.row-keyword-match td:first-child {
+          box-shadow: inset 4px 0 0 #10b981;
+        }
+        .sro-page-wrapper td.col-hover,
+        .sro-page-wrapper table:has(tr > *:nth-child(1):hover) tbody tr > td:nth-child(1),
+        .sro-page-wrapper table:has(tr > *:nth-child(2):hover) tbody tr > td:nth-child(2),
+        .sro-page-wrapper table:has(tr > *:nth-child(3):hover) tbody tr > td:nth-child(3) {
+          background-color: rgba(15, 76, 129, 0.065);
+        }
+        .sro-page-wrapper tbody tr:hover td.col-hover,
+        .sro-page-wrapper td.cell-hover {
+          background-color: rgba(15, 76, 129, 0.13);
+          box-shadow: inset 0 0 0 1px rgba(15, 76, 129, 0.22);
+        }
         .sro-page-wrapper .rate-col {
           font-weight: 700;
           color: var(--accent);
           white-space: nowrap;
           text-align: center;
           background: rgba(217, 83, 79, 0.05);
+          cursor: pointer;
+        }
+        .sro-page-wrapper .rate-col.col-hover,
+        .sro-page-wrapper table:has(tr > *:nth-child(2):hover) tbody tr > td.rate-col:nth-child(2),
+        .sro-page-wrapper table:has(tr > *:nth-child(3):hover) tbody tr > td.rate-col:nth-child(3) {
+          background-color: rgba(217, 83, 79, 0.12);
+        }
+        .sro-page-wrapper tbody tr:hover .rate-col.col-hover,
+        .sro-page-wrapper .rate-col.cell-hover {
+          background-color: rgba(217, 83, 79, 0.18);
+          box-shadow: inset 0 0 0 1px rgba(217, 83, 79, 0.35);
         }
         .sro-page-wrapper .no-results {
           display: none;
@@ -755,6 +1137,93 @@ export const SRO_TDS_2026: React.FC = () => {
           <span className="gov-badge">📅 তারিখ: ২৪ আষাঢ়, ১৪৩৩ বঙ্গাব্দ / ০৮ জুলাই, ২০২৬ খ্রিষ্টাব্দ</span>
           <span className="gov-badge">⚖️ আয়কর আইন, ২০২৩ এর ধারা ৩৪৩ এর ক্ষমতাবলে</span>
         </div>
+
+        {/* Global Multi-Table Search & Quick Rate Chips */}
+        <div style={{ maxWidth: '820px', margin: '22px auto 0', padding: '0 10px' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '10px',
+              background: 'rgba(255,255,255,0.12)',
+              padding: '8px',
+              borderRadius: '10px',
+              border: '1px solid rgba(255,255,255,0.25)',
+              backdropFilter: 'blur(8px)',
+              flexWrap: 'wrap',
+            }}
+          >
+            <input
+              type="text"
+              value={globalQuery}
+              onChange={(e) => handleGlobalSearchChange(e.target.value)}
+              placeholder="🔍 সকল তফসিল ও সারণীতে একসাথে খুঁজুন (যেমন: পরামর্শক, ভাড়া, সফটওয়্যার, কয়লা)..."
+              style={{
+                flex: 1,
+                minWidth: '220px',
+                padding: '10px 14px',
+                borderRadius: '7px',
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.95rem',
+                color: '#1e293b',
+                background: '#ffffff',
+              }}
+            />
+            {(globalQuery || activeQuickRate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setGlobalQuery('');
+                  setActiveQuickRate('');
+                  applyGlobalFilterToAllTables('', '');
+                }}
+                className="hero-btn hero-btn-secondary"
+                style={{ padding: '8px 14px' }}
+              >
+                ✖ ফিল্টার মুছুন
+              </button>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '6px',
+              flexWrap: 'wrap',
+              marginTop: '10px',
+            }}
+          >
+            <span style={{ fontSize: '0.82rem', color: '#cbd5e1', marginRight: '4px' }}>
+              ⚡ করহার অনুযায়ী ফিল্টার:
+            </span>
+            {['০.৫%', '১%', '১.৫%', '২%', '৩%', '৫%', '৮%', '১০%', '১৫%', '২০%'].map((chip) => {
+              const isSelected = activeQuickRate === chip;
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => handleQuickRateSelect(chip)}
+                  style={{
+                    padding: '3px 11px',
+                    borderRadius: '50px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: isSelected ? '1px solid #fbbf24' : '1px solid rgba(255,255,255,0.28)',
+                    background: isSelected ? '#fbbf24' : 'rgba(255,255,255,0.1)',
+                    color: isSelected ? '#0f172a' : '#ffffff',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {chip}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="hero-actions">
           <button
             type="button"
@@ -775,6 +1244,75 @@ export const SRO_TDS_2026: React.FC = () => {
 
       <div className="layout-wrapper">
         <main className="main-content">
+          {/* Real-Time Keyword Search Bar directly above the SRO_TDS_2026_Content tables */}
+          <div className="sro-realtime-search-panel" role="search" aria-label="টেবিল কীওয়ার্ড অনুসন্ধান">
+            <div className="sro-realtime-search-header">
+              <div className="sro-realtime-search-title">
+                <span>🔎</span>
+                <span>এস.আর.ও. ২৭৩ টেবিল রিয়েল-টাইম কীওয়ার্ড ফিল্টার (Real-Time Table Search)</span>
+              </div>
+              <span className="sro-realtime-stats-badge" aria-live="polite">
+                দৃশ্যমান সারি: {matchedStats.visibleRows} / {matchedStats.totalRows} • সক্রিয় টেবিল:{' '}
+                {matchedStats.matchingTables} / {matchedStats.totalTables}
+              </span>
+            </div>
+
+            <div className="sro-realtime-input-row">
+              <div className="sro-realtime-input-wrap">
+                <input
+                  ref={keywordInputRef}
+                  id="sro-table-keyword-search"
+                  type="search"
+                  value={globalQuery}
+                  onChange={(e) => handleGlobalSearchChange(e.target.value)}
+                  placeholder="🔍 কীওয়ার্ড বা করহার লিখে রিয়েল-টাইমে টেবিলের সারি খুঁজুন (যেমন: পরামর্শক, সফটওয়্যার, ভাড়া, কয়লা, ১০%, 5%)... [Shortcut: /]"
+                  aria-label="টেবিলের সারি কীওয়ার্ড দিয়ে খুঁজুন"
+                  className="sro-realtime-input"
+                />
+              </div>
+              {(globalQuery || activeQuickRate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGlobalQuery('');
+                    setActiveQuickRate('');
+                    applyGlobalFilterToAllTables('', '');
+                  }}
+                  className="export-csv-btn"
+                  style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                >
+                  ✖ ফিল্টার রিসেট
+                </button>
+              )}
+            </div>
+
+            <div className="sro-keyword-chips">
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                জনপ্রিয় কীওয়ার্ড:
+              </span>
+              {[
+                'পরামর্শক',
+                'সফটওয়্যার',
+                'ভাড়া',
+                'বিজ্ঞাপন',
+                'পেট্রোলিয়াম',
+                'কয়লা',
+                'লভ্যাংশ',
+                'আমদানি',
+                'জুন',
+              ].map((kw) => (
+                <button
+                  key={kw}
+                  type="button"
+                  onClick={() => handleKeywordTagSelect(kw)}
+                  className={`sro-keyword-chip ${globalQuery === kw ? 'active' : ''}`}
+                >
+                  {kw}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Section 1 */}
           <section id="sec1">
             <h2>
@@ -842,16 +1380,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
-                    className="search-rate"
-                    placeholder="🔍 করহার খুঁজুন (যেমন: ৫% বা 5%)"
+                    type="search"
+                    className="search-text"
+                    aria-label="ঠিকাদার ও সরবরাহকারী টেবিল কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 কীওয়ার্ড দিয়ে খুঁজুন (যেমন: পেট্রোলিয়াম, তেল, কয়লা, চিনি, ই-কমার্স)..."
                   />
                 </div>
-                <div className="search-box">
+                <div className="search-box search-box-rate">
                   <input
-                    type="text"
-                    className="search-text"
-                    placeholder="🔍 বিবরণ দিয়ে খুঁজুন (যেমন: পেট্রোলিয়াম, তেল, কয়লা)..."
+                    type="search"
+                    className="search-rate"
+                    aria-label="ঠিকাদার ও সরবরাহকারী টেবিল করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ৫% বা 5%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1025,16 +1565,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
-                    className="search-rate"
-                    placeholder="🔍 করহার খুঁজুন (যেমন: ১০% বা 10%)"
+                    type="search"
+                    className="search-text"
+                    aria-label="সেবার ক্ষেত্রে কর টেবিল কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 সেবার কীওয়ার্ড খুঁজুন (যেমন: পরামর্শক, সফটওয়্যার, অডিট, বিজ্ঞাপন, ভাড়া)..."
                   />
                 </div>
-                <div className="search-box">
+                <div className="search-box search-box-rate">
                   <input
-                    type="text"
-                    className="search-text"
-                    placeholder="🔍 সেবার নাম খুঁজুন (যেমন: পরামর্শক, অডিট, বিজ্ঞাপন, ভাড়া)..."
+                    type="search"
+                    className="search-rate"
+                    aria-label="সেবার ক্ষেত্রে কর টেবিল করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ১০% বা 10%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1315,16 +1857,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
-                    className="search-rate"
-                    placeholder="🔍 করহার খুঁজুন (যেমন: ২০% বা 20%)"
+                    type="search"
+                    className="search-text"
+                    aria-label="অনিবাসীদের আয় টেবিল কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 অনিবাসী সেবার কীওয়ার্ড খুঁজুন (যেমন: পরামর্শক, লভ্যাংশ, সফটওয়্যার, বীমা)..."
                   />
                 </div>
-                <div className="search-box">
+                <div className="search-box search-box-rate">
                   <input
-                    type="text"
-                    className="search-text"
-                    placeholder="🔍 অনিবাসী সেবার বিবরণ খুঁজুন..."
+                    type="search"
+                    className="search-rate"
+                    aria-label="অনিবাসীদের আয় টেবিল করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ২০% বা 20%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1478,9 +2022,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
+                    type="search"
                     className="search-text"
-                    placeholder="🔍 মৌজা বা হার দিয়ে খুঁজুন..."
+                    aria-label="সম্পত্তি হস্তান্তর সারণী-২ কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 মৌজা বা কীওয়ার্ড দিয়ে খুঁজুন (যেমন: পৌরসভা, উপজেলা, শতকপ্রতি)..."
+                  />
+                </div>
+                <div className="search-box search-box-rate">
+                  <input
+                    type="search"
+                    className="search-rate"
+                    aria-label="সম্পত্তি হস্তান্তর সারণী-২ করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ২%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1524,9 +2077,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
+                    type="search"
                     className="search-text"
-                    placeholder="🔍 শ্রেণি বা বর্ণনা দিয়ে খুঁজুন..."
+                    aria-label="স্থাপনা ও ফ্ল্যাট অতিরিক্ত কর কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 শ্রেণি বা বর্ণনা দিয়ে খুঁজুন (যেমন: বর্গমিটার, দলিল, স্থাপনা)..."
+                  />
+                </div>
+                <div className="search-box search-box-rate">
+                  <input
+                    type="search"
+                    className="search-rate"
+                    aria-label="স্থাপনা ও ফ্ল্যাট করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ৬%, ৮%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1575,9 +2137,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
+                    type="search"
                     className="search-text"
-                    placeholder="🔍 জেলা বা করহার দিয়ে খুঁজুন..."
+                    aria-label="ডেভেলপার ভূমি ও ফ্ল্যাট হস্তান্তর কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 জেলা বা কীওয়ার্ড দিয়ে খুঁজুন (যেমন: ঢাকা, চট্টগ্রাম, গাজীপুর)..."
+                  />
+                </div>
+                <div className="search-box search-box-rate">
+                  <input
+                    type="search"
+                    className="search-rate"
+                    aria-label="ডেভেলপার ভূমি ও ফ্ল্যাট করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ৩%, ৫%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1628,16 +2199,18 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
-                    className="search-rate"
-                    placeholder="🔍 করহার খুঁজুন (যেমন: ০%, ১%, ৫%)"
+                    type="search"
+                    className="search-text"
+                    aria-label="আমদানি পণ্য টেবিল কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 আমদানি পণ্যের কীওয়ার্ড খুঁজুন (যেমন: খাদ্যশস্য, সার, ওষুধ, কাঁচামাল, স্ক্র্যাপ)..."
                   />
                 </div>
-                <div className="search-box">
+                <div className="search-box search-box-rate">
                   <input
-                    type="text"
-                    className="search-text"
-                    placeholder="🔍 আমদানি পণ্যের বিভাগ খুঁজুন..."
+                    type="search"
+                    className="search-rate"
+                    aria-label="আমদানি পণ্য টেবিল করহার অনুসন্ধান"
+                    placeholder="⚡ করহার (যেমন: ০%, ১%, ৫%)"
                   />
                 </div>
                 <div className="table-actions">
@@ -1729,9 +2302,10 @@ export const SRO_TDS_2026: React.FC = () => {
               <div className="table-controls">
                 <div className="search-box">
                   <input
-                    type="text"
+                    type="search"
                     className="search-text"
-                    placeholder="🔍 মাস বা সময়সীমা খুঁজুন..."
+                    aria-label="কর জমাদানের সময়সীমা কীওয়ার্ড অনুসন্ধান"
+                    placeholder="🔍 মাস বা সময়সীমা কীওয়ার্ড দিয়ে খুঁজুন (যেমন: জুলাই, জুন, সপ্তাহ)..."
                   />
                 </div>
                 <div className="table-actions">
@@ -1838,7 +2412,7 @@ export const SRO_TDS_2026: React.FC = () => {
           </section>
         </main>
 
-        {/* SIDEBAR (STICKY TOC) */}
+        {/* SIDEBAR (STICKY TOC + INSTANT TDS & GROSS-UP CALCULATOR) */}
         <aside className="sidebar">
           <div className="sticky-toc">
             <h3>এই আর্টিকেলে যা আছে</h3>
@@ -1874,6 +2448,211 @@ export const SRO_TDS_2026: React.FC = () => {
                 <a href="#schedules">তফসিল ও ফরম</a>
               </li>
             </ul>
+
+            {/* Interactive TDS & Rule 12 Gross-Up Calculator */}
+            <div
+              style={{
+                marginTop: '22px',
+                paddingTop: '18px',
+                borderTop: '2px solid var(--primary-light)',
+              }}
+            >
+              <h3 style={{ marginBottom: '8px', fontSize: '1.08rem' }}>
+                🧮 তাৎক্ষণিক উৎসে কর ক্যালকুলেটর
+              </h3>
+              <p
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--text-muted)',
+                  marginBottom: '10px',
+                  textAlign: 'left',
+                  lineHeight: 1.45,
+                }}
+              >
+                টেবিলের যেকোনো <strong>করহার</strong> সেলে ক্লিক করলে তা স্বয়ংক্রিয়ভাবে এখানে যুক্ত হবে।
+              </p>
+
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    color: 'var(--primary)',
+                    background: 'var(--primary-light)',
+                    padding: '5px 8px',
+                    borderRadius: '5px',
+                  }}
+                >
+                  খাত: {selectedRuleLabel}
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    বিল / ভিত্তিমূল্য (টাকা):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={billAmount}
+                    onChange={(e) => setBillAmount(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.92rem',
+                      fontWeight: 600,
+                      background: '#fff',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    উৎসে করহার (%):
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    max="99"
+                    value={tdsRate}
+                    onChange={(e) => setTdsRate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.92rem',
+                      fontWeight: 600,
+                      background: '#fff',
+                    }}
+                  />
+                </div>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isGrossUp}
+                    onChange={(e) => setIsGrossUp(e.target.checked)}
+                  />
+                  <span>বিধি ১২ গ্রস-আপ (কর ব্যতীত পরিশোধ)</span>
+                </label>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={noPsrPenalty}
+                    onChange={(e) => setNoPsrPenalty(e.target.checked)}
+                  />
+                  <span>PSR না থাকলে ৫০% অতিরিক্ত হার</span>
+                </label>
+
+                <div
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '0.84rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <span>কার্যকর করহার:</span>
+                    <strong style={{ color: 'var(--accent)' }}>{effectiveRate.toFixed(2)}%</strong>
+                  </div>
+                  {isGrossUp && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      <span>গ্রস-আপ বিল (গ):</span>
+                      <strong>
+                        ৳ {grossedUpBase.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '4px',
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    <span>কর্তনযোগ্য কর (TDS):</span>
+                    <strong>
+                      ৳ {calculatedTds.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      paddingTop: '5px',
+                      borderTop: '1px dashed #cbd5e1',
+                      color: 'var(--primary)',
+                    }}
+                  >
+                    <span>নীট প্রদেয় অর্থ:</span>
+                    <strong>
+                      ৳ {netPayableToVendor.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </aside>
       </div>

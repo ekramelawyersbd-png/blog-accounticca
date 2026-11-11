@@ -65,6 +65,19 @@ export function Home() {
 
   const featuredRegulatoryInsights = [
     {
+      id: 'reg-sro-273-tds-rules-2026',
+      badge: 'SRO No. 273-Law/Income Tax-5/2026 · Sec 343',
+      effectiveDate: 'Effective 1 July 2026',
+      impactLevel: 'High Impact',
+      title: 'উৎসে কর বিধিমালা, ২০২৬ (এস.আর.ও. নং-২৭৩): ঠিকাদার, সেবা, অনিবাসী ও আমদানিতে নতুন TDS হার',
+      summary:
+        'জাতীয় রাজস্ব বোর্ড (NBR) কর্তৃক জারিকৃত উৎসে কর বিধিমালা, ২০২৬—ধারা ৮৯ (পণ্য সরবরাহ ও ঠিকাদার), ধারা ৯০ (সেবা), ধারা ১১৯ (অনিবাসী), ধারা ১২০ (আমদানি), এবং বিধি ১২ অনুযায়ী গ্রস-আপ সূত্র ও CSV ডাউনলোড।',
+      statReference: 'SRO 273-Law/Income Tax-5/2026 · ITA 2023',
+      articlePath: '/SRO/TDS2026',
+      toolPath: '/resource-library',
+      toolLabel: 'Regulatory Library'
+    },
+    {
       id: 'reg-salary-tds-2026-2027',
       badge: 'Income Tax Act 2023 · ধারা ৮৬ (Section 86)',
       effectiveDate: 'Payroll & AY 2026–2027',

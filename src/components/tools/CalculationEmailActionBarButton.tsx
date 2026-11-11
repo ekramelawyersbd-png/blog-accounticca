@@ -95,18 +95,6 @@ export const CalculationEmailActionBarButton: React.FC<CalculationEmailActionBar
     <div className="inline-flex items-center gap-2">
       <button
         type="button"
-        onClick={handleEmailClick}
-        title={title}
-        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${variantStyles} ${className}`}
-        data-testid="email-calculation-action-btn"
-      >
-        <Mail className="w-3.5 h-3.5 text-cyan-200 shrink-0" />
-        <span>{label}</span>
-        <Sparkles className="w-3 h-3 text-emerald-300 shrink-0 opacity-80" />
-      </button>
-
-      <button
-        type="button"
         onClick={handleWhatsAppShare}
         title="Share calculation results instantly via WhatsApp"
         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
