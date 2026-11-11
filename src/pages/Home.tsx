@@ -34,6 +34,7 @@ import { INITIAL_EXPERTS, INITIAL_QUESTIONS } from '../data/communityData';
 import { format } from 'date-fns';
 import { Testimonials } from '../components/Testimonials';
 import { QuickContactSection } from '../components/QuickContactSection';
+import { DigitalTaxActPromo } from '../components/DigitalTaxActPromo';
 import { SEO } from '../components/SEO';
 import { SHOP_PRODUCTS, ShopProduct } from '../data/shopProducts';
 import { useCart } from '../contexts/CartContext';
@@ -2044,6 +2045,9 @@ export function Home() {
           </aside>
         </div>
       </section>
+
+      {/* Digital Income Tax Act 2023 Portal Promo */}
+      <DigitalTaxActPromo />
 
       {/* 10. Inquiry and appointment intake (Centered 60% Display Width Form) */}
       <QuickContactSection />
