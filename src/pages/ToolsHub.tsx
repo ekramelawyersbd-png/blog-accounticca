@@ -32,6 +32,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { recordToolSigning } from '../services/toolSigningService';
 import { CalculationEmailModal } from '../components/tools/CalculationEmailModal';
+import { ToolSEO } from '../components/SEO';
 
 export type ToolCategory =
   | 'Taxation'
@@ -510,6 +511,12 @@ export const ToolsHub: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ToolSEO
+        toolId="tools-hub"
+        title="Bangladesh Legal, Tax, VAT & RJSC Compliance Tools Directory"
+        canonicalUrl="/tools"
+        category="BusinessApplication"
+      />
       {/* Header Banner */}
       <div className="bg-linear-to-r from-slate-900 via-blue-900 to-indigo-950 rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-4xl space-y-3">

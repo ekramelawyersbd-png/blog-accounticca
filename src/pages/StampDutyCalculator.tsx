@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Scale, RefreshCw } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
+import { ToolSEO } from '../components/SEO';
 
 export const StampDutyCalculator: React.FC = () => {
   const [deedValue, setDeedValue] = useState<number>(5000000); // 50 Lakh
@@ -65,12 +66,20 @@ export const StampDutyCalculator: React.FC = () => {
   }), [deedValue, propertyLocation, stampDuty, registrationFee, lgt, ait, totalGovtCost, lgtRate, aitRate]);
 
   return (
-    <ToolAccessGuard
-      toolId="stamp-duty"
-      toolName="Land &amp; Property Stamp Duty Calculator"
-      toolCategory="Property &amp; Deed Registration"
-      toolPath="/tools/stamp-duty"
-    >
+    <>
+      <ToolSEO
+        toolId="stamp-duty"
+        title="Land & Flat Deed Stamp Duty & Registration Calculator"
+        canonicalUrl="/tools/stamp-duty"
+        category="FinanceApplication"
+        statutoryBasis="Stamp Act 1899, Registration Act 1908 & Sec 125 ITA 2023"
+      />
+      <ToolAccessGuard
+        toolId="stamp-duty"
+        toolName="Land &amp; Property Stamp Duty Calculator"
+        toolCategory="Property &amp; Deed Registration"
+        toolPath="/tools/stamp-duty"
+      >
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -204,5 +213,6 @@ export const StampDutyCalculator: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
+    </>
   );
 };

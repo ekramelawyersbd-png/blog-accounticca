@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Building2, RefreshCw } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
+import { ToolSEO } from '../components/SEO';
 
 export const CompanyRegistrationFee: React.FC = () => {
   const [authorizedCapital, setAuthorizedCapital] = useState<number>(1000000); // 10 Lakh
@@ -84,12 +85,20 @@ export const CompanyRegistrationFee: React.FC = () => {
   }), [authorizedCapital, registrationFee, nameClearanceFee, filingFees, certifiedCopiesFee, moaStamp, aoaStamp, totalGovernmentFee]);
 
   return (
-    <ToolAccessGuard
-      toolId="company-registration"
-      toolName="RJSC Company Registration Fee Estimator"
-      toolCategory="Corporate Law &amp; RJSC"
-      toolPath="/tools/company-registration"
-    >
+    <>
+      <ToolSEO
+        toolId="company-registration"
+        title="RJSC Private Limited Company Fee Estimator"
+        canonicalUrl="/tools/company-registration"
+        category="FinanceApplication"
+        statutoryBasis="Companies Act 1994 (Schedule II) & Stamp Act 1899"
+      />
+      <ToolAccessGuard
+        toolId="company-registration"
+        toolName="RJSC Company Registration Fee Estimator"
+        toolCategory="Corporate Law &amp; RJSC"
+        toolPath="/tools/company-registration"
+      >
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -223,5 +232,6 @@ export const CompanyRegistrationFee: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
+    </>
   );
 };

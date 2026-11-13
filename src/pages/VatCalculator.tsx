@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Receipt, Coins, RefreshCw, FileText } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
+import { ToolSEO } from '../components/SEO';
 
 export const VatCalculator: React.FC = () => {
   const [basePrice, setBasePrice] = useState<number>(100000);
@@ -71,12 +72,20 @@ export const VatCalculator: React.FC = () => {
   }), [basePrice, vatRate, isPriceInclusive, vdsApplicable, netPrice, vatAmount, totalPayable, vdsAmount, netSupplierReceivable]);
 
   return (
-    <ToolAccessGuard
-      toolId="vat-calculator"
-      toolName="VAT &amp; Mushak 6.3 Calculator"
-      toolCategory="VAT &amp; Customs"
-      toolPath="/tools/vat"
-    >
+    <>
+      <ToolSEO
+        toolId="vat-calculator"
+        title="Bangladesh VAT & Mushak 6.3 Calculator"
+        canonicalUrl="/tools/vat"
+        category="FinanceApplication"
+        statutoryBasis="Value Added Tax & Supplementary Duty Act 2012"
+      />
+      <ToolAccessGuard
+        toolId="vat-calculator"
+        toolName="VAT &amp; Mushak 6.3 Calculator"
+        toolCategory="VAT &amp; Customs"
+        toolPath="/tools/vat"
+      >
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -253,5 +262,6 @@ export const VatCalculator: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
+    </>
   );
 };

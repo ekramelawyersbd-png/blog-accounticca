@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Briefcase, RefreshCw } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
+import { ToolSEO } from '../components/SEO';
 
 export const GratuityCalculator: React.FC = () => {
   const [basicSalary, setBasicSalary] = useState<number>(50000); // Last drawn basic salary
@@ -69,12 +70,20 @@ export const GratuityCalculator: React.FC = () => {
   }), [basicSalary, serviceYears, separationType, gratuityDaysPerYear, isEligible, totalGratuity, noticeDays, noticePay]);
 
   return (
-    <ToolAccessGuard
-      toolId="gratuity-calculator"
-      toolName="Gratuity &amp; Severance Pay Calculator"
-      toolCategory="Labour Law &amp; Employment"
-      toolPath="/tools/gratuity"
-    >
+    <>
+      <ToolSEO
+        toolId="gratuity-calculator"
+        title="Bangladesh Labour Act Gratuity & Notice Pay Calculator"
+        canonicalUrl="/tools/gratuity"
+        category="FinanceApplication"
+        statutoryBasis="Bangladesh Labour Act 2006 · Sections 2(10), 26 & 27"
+      />
+      <ToolAccessGuard
+        toolId="gratuity-calculator"
+        toolName="Gratuity &amp; Severance Pay Calculator"
+        toolCategory="Labour Law &amp; Employment"
+        toolPath="/tools/gratuity"
+      >
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -221,5 +230,6 @@ export const GratuityCalculator: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
+    </>
   );
 };

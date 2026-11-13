@@ -101,9 +101,11 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
   return (
     <div className="min-h-screen bg-slate-50/50 pb-16 pt-6">
       <ToolSEO
-        title={`${title} – ${category} | Accounticca & E-Lawyers`}
+        toolId={toolId}
+        title={title}
         description={description}
         canonicalUrl={currentToolRoute}
+        category={category}
         keywords={[title, category, 'Bangladesh Tax Calculator', 'RJSC Compliance', 'Income Tax Act 2023']}
         breadcrumbs={[
           { name: 'Home', url: '/' },

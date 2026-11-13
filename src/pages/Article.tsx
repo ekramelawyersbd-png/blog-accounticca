@@ -102,11 +102,6 @@ export function Article() {
 
   useEffect(() => {
     if (article) {
-      document.title = article.metaTitle || `${article.title} | Compliance Hub`;
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) {
-        metaDesc.setAttribute('content', article.metaDescription || article.excerpt);
-      }
       const categoryObj = categories.find(c => c.id === article.category);
       void trackArticleReadingPattern({
         articleId: article.id,

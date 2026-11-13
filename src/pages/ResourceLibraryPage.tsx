@@ -42,6 +42,7 @@ import {
 } from '../services/regulatoryLibraryService';
 import { generateTemplatePDF } from '../utils/resourcePdfGenerator';
 import { useShopAuth, getStoredAdminToken } from '../contexts/ShopAuthContext';
+import { ToolSEO } from '../components/SEO';
 
 type TimeFilterOption = 'All' | 'This Month' | 'Last 6 Months' | 'Last Year';
 type MainTabOption = 'regulatory' | 'templates';
@@ -58,11 +59,6 @@ const TEMPLATE_CATEGORIES = [
 const BOOKMARKS_STORAGE_KEY = 'e_lawyers_bookmarked_reg_docs_v1';
 
 export function ResourceLibraryPage() {
-  useEffect(() => {
-    document.title =
-      'Regulatory Library | Circulars, SRO 273 TDS 2026 & Legal Templates | E-Lawyers Bangladesh';
-  }, []);
-
   const { adminUser, isAuthenticated } = useShopAuth();
   const [hasAdminToken, setHasAdminToken] = useState<boolean>(false);
 
@@ -422,7 +418,14 @@ export function ResourceLibraryPage() {
     (searchQuery.trim() ? 1 : 0);
 
   return (
-    <div className="w-[1527px] max-w-full mx-auto min-h-screen bg-[#F8FAFC] text-slate-900 pb-20 font-sans">
+    <div className="w-full min-h-screen bg-[#F8FAFC] text-slate-900 pb-20 font-sans">
+      <ToolSEO
+        toolId="resource-library"
+        title="Bangladesh Regulatory Library, SRO Circulars & Legal Templates"
+        canonicalUrl="/resource-library"
+        category="BusinessApplication"
+        statutoryBasis="NBR SROs, Income Tax Act 2023, VAT Act 2012 & RJSC"
+      />
       {/* Toast Notification */}
       {statusMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#0A2A66] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-blue-400/40 animate-in fade-in slide-in-from-bottom-4 duration-200">
@@ -432,9 +435,9 @@ export function ResourceLibraryPage() {
       )}
 
       {/* Compact Institutional Top Header */}
-      <div className="w-full max-w-[1527px] mx-auto bg-[#0A2A66] text-white border-b border-blue-900">
-        <div className="w-full max-w-[1527px] mx-auto px-0 py-5">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="w-full min-h-[242.5px] flex items-center bg-[#0A2A66] text-white border-b border-blue-900">
+        <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
             <div className="space-y-1.5 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-amber-300 bg-blue-950/80 border border-blue-800 px-2.5 py-0.5 rounded-md">
@@ -460,8 +463,8 @@ export function ResourceLibraryPage() {
             </div>
 
             {/* Primary View Switcher & Utility Actions */}
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1 bg-blue-950/90 p-1 rounded-xl border border-blue-800">
+            <div className="flex flex-wrap items-center gap-2 max-w-full">
+              <div className="flex flex-wrap items-center gap-1 bg-blue-950/90 p-1 rounded-xl border border-blue-800 max-w-full">
                 <button
                   type="button"
                   onClick={() => setActiveTab('regulatory')}

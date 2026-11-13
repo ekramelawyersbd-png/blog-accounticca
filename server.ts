@@ -11,6 +11,18 @@ import {
   renderTransactionalTemplate,
   type TransactionalEmailTemplate,
 } from './src/utils/transactionalEmailTemplates';
+import {
+  resolveSeoMetadataForPath,
+  generateAllBlogArticlesSeoMetadata,
+  generateAllToolsSeoMetadata,
+  injectSeoMetadataIntoHtml,
+} from './src/services/seoMetadataService';
+import {
+  DEFAULT_SEO_CONFIG,
+  generateRobotsTxt,
+  generateLlmsTxt,
+} from './src/utils/seoConfig';
+import { crawlAllRoutesForSitemap } from './src/utils/sitemapGenerator';
 
 const execFileAsync = promisify(execFile);
 
@@ -2036,10 +2048,79 @@ async function startServer() {
 
   const frontendRouter = express.Router();
 
+  const resolveRequestOrigin = (req: express.Request) => {
+    const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim();
+    const proto = forwardedProto || req.protocol || 'https';
+    const host = req.get('host');
+    if (host) return `${proto}://${host}`;
+    return process.env.APP_URL || 'https://accounticca.ai.studio';
+  };
+
+  // Automated SEO Metadata & Open Graph Summary Endpoints
+  app.get('/api/seo/metadata', (req, res) => {
+    const targetPath = String(req.query.path || '/').trim();
+    const origin = resolveRequestOrigin(req);
+    const meta = resolveSeoMetadataForPath(targetPath, { origin });
+    if (!meta) {
+      res.status(404).json({
+        success: false,
+        error: `No article or tool metadata matched route "${targetPath}".`,
+      });
+      return;
+    }
+    res.json({ success: true, metadata: meta });
+  });
+
+  app.get('/api/seo/metadata/catalog', (req, res) => {
+    const origin = resolveRequestOrigin(req);
+    const articles = generateAllBlogArticlesSeoMetadata(undefined, origin);
+    const tools = generateAllToolsSeoMetadata(origin);
+    res.json({
+      success: true,
+      origin,
+      counts: {
+        articles: articles.length,
+        tools: tools.length,
+        total: articles.length + tools.length,
+      },
+      articles,
+      tools,
+    });
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    const origin = resolveRequestOrigin(req);
+    const report = crawlAllRoutesForSitemap({ origin, seoConfig: DEFAULT_SEO_CONFIG });
+    res.type('application/xml').send(report.xml);
+  });
+
+  app.get('/robots.txt', (req, res) => {
+    const origin = resolveRequestOrigin(req);
+    res.type('text/plain').send(generateRobotsTxt(origin, DEFAULT_SEO_CONFIG));
+  });
+
+  app.get('/llms.txt', (req, res) => {
+    const origin = resolveRequestOrigin(req);
+    res.type('text/plain').send(generateLlmsTxt(origin, DEFAULT_SEO_CONFIG));
+  });
+
   const mountStaticProd = () => {
-    frontendRouter.use(express.static(distPath));
-    frontendRouter.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    const prodIndexPath = path.join(distPath, 'index.html');
+    const cachedIndexHtml = fs.existsSync(prodIndexPath)
+      ? fs.readFileSync(prodIndexPath, 'utf-8')
+      : '';
+
+    frontendRouter.use(express.static(distPath, { index: false }));
+    frontendRouter.get('*', (req, res) => {
+      if (cachedIndexHtml) {
+        const origin = resolveRequestOrigin(req);
+        const seoMeta = resolveSeoMetadataForPath(req.path, { origin });
+        if (seoMeta) {
+          res.type('html').send(injectSeoMetadataIntoHtml(cachedIndexHtml, seoMeta));
+          return;
+        }
+      }
+      res.sendFile(prodIndexPath);
     });
   };
 

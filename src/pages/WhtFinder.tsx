@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
+import { ToolSEO } from '../components/SEO';
 
 interface WhtRule {
   section: string;
@@ -72,12 +73,20 @@ export const WhtFinder: React.FC = () => {
   );
 
   return (
-    <ToolAccessGuard
-      toolId="wht-finder"
-      toolName="Withholding Tax (TDS / WHT) Rate Finder"
-      toolCategory="Taxation &amp; Deduction at Source"
-      toolPath="/tools/wht"
-    >
+    <>
+      <ToolSEO
+        toolId="wht-finder"
+        title="Withholding Tax (TDS / WHT) Section Rate Finder"
+        canonicalUrl="/tools/wht"
+        category="BusinessApplication"
+        statutoryBasis="Income Tax Act 2023 · Chapter VII"
+      />
+      <ToolAccessGuard
+        toolId="wht-finder"
+        toolName="Withholding Tax (TDS / WHT) Rate Finder"
+        toolCategory="Taxation &amp; Deduction at Source"
+        toolPath="/tools/wht"
+      >
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -174,5 +183,6 @@ export const WhtFinder: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
+    </>
   );
 };

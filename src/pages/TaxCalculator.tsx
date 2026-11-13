@@ -27,6 +27,7 @@ import {
   generateCalculationReferenceId,
   getDefaultLegalNotesForTool,
 } from '../utils/calculationEmailTemplate';
+import { ToolSEO } from '../components/SEO';
 
 export const TaxCalculator: React.FC = () => {
   const { user } = useAuth();
@@ -514,12 +515,20 @@ export const TaxCalculator: React.FC = () => {
   ]);
 
   return (
-    <ToolAccessGuard
-      toolId="tax-calculator"
-      toolName="Individual Income Tax Calculator (AY 2026-27)"
-      toolCategory="Taxation & Compliance"
-      toolPath="/tax-calculator"
-    >
+    <>
+      <ToolSEO
+        toolId="tax-calculator"
+        title="Individual Income Tax & Rebate Calculator (AY 2026–27)"
+        canonicalUrl="/tax-calculator"
+        category="FinanceApplication"
+        statutoryBasis="Income Tax Act 2023 · Section 78, 86 & Schedule 6 Part 3"
+      />
+      <ToolAccessGuard
+        toolId="tax-calculator"
+        toolName="Individual Income Tax Calculator (AY 2026-27)"
+        toolCategory="Taxation & Compliance"
+        toolPath="/tax-calculator"
+      >
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-6 space-y-6">
         {/* Title and Statutory Header (Full Width Layout matching Image 1) */}
         <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5 w-full">
@@ -1561,5 +1570,6 @@ export const TaxCalculator: React.FC = () => {
         />
       </div>
     </ToolAccessGuard>
+    </>
   );
 };

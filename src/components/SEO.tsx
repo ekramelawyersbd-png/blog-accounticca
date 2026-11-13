@@ -1,6 +1,11 @@
 import React, { useMemo, useEffect } from 'react';
 import { useLocation, useInRouterContext } from 'react-router-dom';
 import { Article } from '../types';
+import {
+  generateArticleSeoMetadata,
+  generateToolSeoMetadata,
+  removeStaticHeadDuplicates,
+} from '../services/seoMetadataService';
 
 export interface BreadcrumbItem {
   name: string;
@@ -70,6 +75,16 @@ export interface SEOProps {
   breadcrumbs?: BreadcrumbItem[];
   /** Custom Schema.org object or array of objects to inject */
   customSchema?: Record<string, any> | Array<Record<string, any>>;
+  /** Optional override for Open Graph headline when distinct from SEO <title> */
+  openGraphTitle?: string;
+  /** Optional override for Open Graph social card summary */
+  openGraphDescription?: string;
+  /** Optional override for Twitter card headline */
+  twitterTitle?: string;
+  /** Optional override for Twitter card description */
+  twitterDescription?: string;
+  /** Optional precomputed structured data array replacing default schema builder */
+  precomputedStructuredData?: Array<Record<string, any>>;
   /** Optional children for arbitrary extra meta tags */
   children?: React.ReactNode;
 }
@@ -191,6 +206,11 @@ export function SEO({
   applicationCategory = 'BusinessApplication',
   breadcrumbs,
   customSchema,
+  openGraphTitle,
+  openGraphDescription,
+  twitterTitle,
+  twitterDescription,
+  precomputedStructuredData,
   children
 }: SEOProps) {
   const currentPathname = useSafePathname();
@@ -207,6 +227,10 @@ export function SEO({
 
   const fullImageUrl = useMemo(() => resolveImageUrl(imageUrl), [imageUrl]);
   const resolvedImageAlt = imageAlt || formattedTitle;
+  const resolvedOgTitle = openGraphTitle || formattedTitle;
+  const resolvedOgDescription = openGraphDescription || description;
+  const resolvedTwitterTitle = twitterTitle || resolvedOgTitle;
+  const resolvedTwitterDescription = twitterDescription || resolvedOgDescription;
 
   const formattedKeywords = useMemo(() => {
     if (!keywords) return undefined;
@@ -216,6 +240,9 @@ export function SEO({
 
   // Generate Schema.org JSON-LD Structured Data based on page context
   const structuredDataList = useMemo(() => {
+    if (precomputedStructuredData && precomputedStructuredData.length > 0) {
+      return precomputedStructuredData;
+    }
     const list: Record<string, any>[] = [];
 
     // 1. Article Schema
@@ -380,6 +407,7 @@ export function SEO({
 
     return list;
   }, [
+    precomputedStructuredData,
     type,
     title,
     description,
@@ -420,18 +448,20 @@ export function SEO({
   useEffect(() => {
     if (typeof document !== 'undefined' && formattedTitle) {
       document.title = formattedTitle;
+      removeStaticHeadDuplicates();
     }
-  }, [formattedTitle]);
+  }, [formattedTitle, fullCanonicalUrl, description, resolvedOgDescription]);
 
   return (
     <>
       {/* Primary Document Title & Meta Tags */}
-      <title>{formattedTitle}</title>
-      <meta name="title" content={formattedTitle} />
-      <meta name="description" content={description} />
-      {formattedKeywords && <meta name="keywords" content={formattedKeywords} />}
-      {authorName && <meta name="author" content={authorName} />}
+      <title data-react-seo="true">{formattedTitle}</title>
+      <meta data-react-seo="true" name="title" content={formattedTitle} />
+      <meta data-react-seo="true" name="description" content={description} />
+      {formattedKeywords && <meta data-react-seo="true" name="keywords" content={formattedKeywords} />}
+      {authorName && <meta data-react-seo="true" name="author" content={authorName} />}
       <meta
+        data-react-seo="true"
         name="robots"
         content={
           shouldNoIndex
@@ -441,50 +471,50 @@ export function SEO({
       />
 
       {/* Dynamic Canonical Link */}
-      <link rel="canonical" href={fullCanonicalUrl} />
+      <link data-react-seo="true" rel="canonical" href={fullCanonicalUrl} />
 
       {/* Open Graph / Facebook / LinkedIn / Slack / Discord */}
-      <meta property="og:type" content={ogType} />
-      <meta property="og:url" content={fullCanonicalUrl} />
-      <meta property="og:title" content={formattedTitle} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={fullImageUrl} />
-      <meta property="og:image:alt" content={resolvedImageAlt} />
-      {imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
-      {imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
-      <meta property="og:site_name" content={siteName} />
-      <meta property="og:locale" content={locale} />
+      <meta data-react-seo="true" property="og:type" content={ogType} />
+      <meta data-react-seo="true" property="og:url" content={fullCanonicalUrl} />
+      <meta data-react-seo="true" property="og:title" content={resolvedOgTitle} />
+      <meta data-react-seo="true" property="og:description" content={resolvedOgDescription} />
+      <meta data-react-seo="true" property="og:image" content={fullImageUrl} />
+      <meta data-react-seo="true" property="og:image:alt" content={resolvedImageAlt} />
+      {imageWidth && <meta data-react-seo="true" property="og:image:width" content={String(imageWidth)} />}
+      {imageHeight && <meta data-react-seo="true" property="og:image:height" content={String(imageHeight)} />}
+      <meta data-react-seo="true" property="og:site_name" content={siteName} />
+      <meta data-react-seo="true" property="og:locale" content={locale} />
 
       {/* Article Specific Open Graph Tags */}
       {type === 'article' && publishedTime && (
-        <meta property="article:published_time" content={publishedTime} />
+        <meta data-react-seo="true" property="article:published_time" content={publishedTime} />
       )}
       {type === 'article' && modifiedTime && (
-        <meta property="article:modified_time" content={modifiedTime} />
+        <meta data-react-seo="true" property="article:modified_time" content={modifiedTime} />
       )}
       {type === 'article' && authorName && (
-        <meta property="article:author" content={authorName} />
+        <meta data-react-seo="true" property="article:author" content={authorName} />
       )}
       {type === 'article' && section && (
-        <meta property="article:section" content={section} />
+        <meta data-react-seo="true" property="article:section" content={section} />
       )}
       {type === 'article' &&
         tags &&
-        tags.map((tag) => <meta key={tag} property="article:tag" content={tag} />)}
+        tags.map((tag) => <meta data-react-seo="true" key={tag} property="article:tag" content={tag} />)}
 
       {/* Twitter / X Cards */}
-      <meta name="twitter:card" content={twitterCard} />
-      <meta name="twitter:url" content={fullCanonicalUrl} />
-      <meta name="twitter:title" content={formattedTitle} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={fullImageUrl} />
-      <meta name="twitter:image:alt" content={resolvedImageAlt} />
-      {twitterHandle && <meta name="twitter:site" content={twitterHandle} />}
-      {twitterHandle && <meta name="twitter:creator" content={twitterHandle} />}
+      <meta data-react-seo="true" name="twitter:card" content={twitterCard} />
+      <meta data-react-seo="true" name="twitter:url" content={fullCanonicalUrl} />
+      <meta data-react-seo="true" name="twitter:title" content={resolvedTwitterTitle} />
+      <meta data-react-seo="true" name="twitter:description" content={resolvedTwitterDescription} />
+      <meta data-react-seo="true" name="twitter:image" content={fullImageUrl} />
+      <meta data-react-seo="true" name="twitter:image:alt" content={resolvedImageAlt} />
+      {twitterHandle && <meta data-react-seo="true" name="twitter:site" content={twitterHandle} />}
+      {twitterHandle && <meta data-react-seo="true" name="twitter:creator" content={twitterHandle} />}
 
       {/* Schema.org JSON-LD Structured Data */}
       {structuredDataList.map((data, idx) => (
-        <script key={idx} type="application/ld+json">
+        <script data-react-seo="true" key={idx} type="application/ld+json">
           {JSON.stringify(data)}
         </script>
       ))}
@@ -516,29 +546,41 @@ export function ArticleSEO({
   siteName,
   customSchema
 }: ArticleSEOProps) {
-  const resolvedCanonical = canonicalUrl || `/article/${article.id}`;
-  const displayTitle = article.metaTitle || article.title;
-  const displayDesc = article.metaDescription || article.excerpt;
+  const generated = useMemo(
+    () =>
+      generateArticleSeoMetadata(article, {
+        canonicalUrl,
+        siteName,
+        customSchema
+      }),
+    [article, canonicalUrl, siteName, customSchema]
+  );
 
   return (
     <SEO
-      title={displayTitle}
-      description={displayDesc}
-      canonicalUrl={resolvedCanonical}
+      title={generated.title}
+      appendSiteName={false}
+      description={generated.description}
+      canonicalUrl={generated.canonicalUrl}
       type="article"
-      imageUrl={article.imageUrl}
-      keywords={article.tags}
-      authorName={article.author.name}
-      publishedTime={article.publishedAt}
-      section={article.category}
-      tags={article.tags}
-      siteName={siteName}
-      breadcrumbs={[
-        { name: 'Home', url: '/' },
-        { name: article.category, url: `/category/${article.categoryId}` },
-        { name: article.title, url: resolvedCanonical }
-      ]}
-      customSchema={customSchema}
+      imageUrl={generated.openGraph.image.url}
+      imageAlt={generated.openGraph.image.alt}
+      imageWidth={generated.openGraph.image.width}
+      imageHeight={generated.openGraph.image.height}
+      keywords={generated.keywords}
+      authorName={generated.author}
+      publishedTime={generated.openGraph.articleMeta?.publishedTime}
+      modifiedTime={generated.openGraph.articleMeta?.modifiedTime}
+      section={generated.openGraph.articleMeta?.section}
+      tags={generated.openGraph.articleMeta?.tags}
+      siteName={generated.openGraph.siteName}
+      locale={generated.openGraph.locale}
+      openGraphTitle={generated.openGraph.title}
+      openGraphDescription={generated.openGraph.description}
+      twitterTitle={generated.twitter.title}
+      twitterDescription={generated.twitter.description}
+      breadcrumbs={generated.breadcrumbs}
+      precomputedStructuredData={generated.structuredData}
     />
   );
 }
@@ -600,10 +642,12 @@ export function ServiceSEO({
  * Dedicated Interactive Tool / Calculator SEO Helper Component (WebApplication Schema)
  */
 export interface ToolSEOProps {
+  toolId?: string;
   title: string;
-  description: string;
+  description?: string;
   canonicalUrl?: string;
   category?: string;
+  statutoryBasis?: string;
   imageUrl?: string;
   keywords?: string[] | string;
   breadcrumbs?: BreadcrumbItem[];
@@ -611,32 +655,56 @@ export interface ToolSEOProps {
 }
 
 export function ToolSEO({
+  toolId,
   title,
   description,
   canonicalUrl,
   category = 'FinanceApplication',
+  statutoryBasis,
   imageUrl,
   keywords,
   breadcrumbs,
   customSchema
 }: ToolSEOProps) {
+  const generated = useMemo(
+    () =>
+      generateToolSeoMetadata(
+        {
+          toolId,
+          title,
+          description,
+          canonicalUrl,
+          category,
+          statutoryBasis,
+          imageUrl,
+          keywords,
+          breadcrumbs,
+          applicationCategory: category
+        },
+        { canonicalUrl, customSchema }
+      ),
+    [toolId, title, description, canonicalUrl, category, statutoryBasis, imageUrl, keywords, breadcrumbs, customSchema]
+  );
+
   return (
     <SEO
-      title={title}
-      description={description}
-      canonicalUrl={canonicalUrl}
+      title={generated.title}
+      appendSiteName={false}
+      description={generated.description}
+      canonicalUrl={generated.canonicalUrl}
       type="webapp"
       applicationCategory={category}
-      imageUrl={imageUrl}
-      keywords={keywords}
-      breadcrumbs={
-        breadcrumbs || [
-          { name: 'Home', url: '/' },
-          { name: 'Tools Hub', url: '/tools' },
-          { name: title, url: canonicalUrl || '/tools' }
-        ]
-      }
-      customSchema={customSchema}
+      imageUrl={generated.openGraph.image.url}
+      imageAlt={generated.openGraph.image.alt}
+      keywords={generated.keywords}
+      siteName={generated.openGraph.siteName}
+      locale={generated.openGraph.locale}
+      openGraphTitle={generated.openGraph.title}
+      openGraphDescription={generated.openGraph.description}
+      twitterTitle={generated.twitter.title}
+      twitterDescription={generated.twitter.description}
+      breadcrumbs={generated.breadcrumbs}
+      precomputedStructuredData={generated.structuredData}
     />
   );
 }

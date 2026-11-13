@@ -543,7 +543,7 @@ export const SRO_TDS_2026: React.FC = () => {
           --border-color: #dce4ec;
           --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
           --radius: 10px;
-          width: 1527px;
+          width: 100%;
           max-width: 100%;
           margin: 0 auto;
           font-family: 'Hind Siliguri', 'SolaimanLipi', system-ui, -apple-system, sans-serif;
@@ -570,29 +570,36 @@ export const SRO_TDS_2026: React.FC = () => {
         }
 
         .sro-page-wrapper .gov-banner {
+          width: 100%;
+          box-sizing: border-box;
           background: linear-gradient(135deg, #0a2540 0%, var(--primary) 100%);
           color: #fff;
           text-align: center;
-          padding: 45px 20px 35px;
+          padding: clamp(28px, 4vw, 48px) clamp(16px, 3vw, 40px) clamp(24px, 3.5vw, 38px);
           border-bottom: 5px solid var(--secondary);
           position: relative;
         }
+        .sro-page-wrapper .gov-banner-inner {
+          width: 100%;
+          max-width: 1480px;
+          margin: 0 auto;
+        }
         .sro-page-wrapper .gov-banner h1 {
-          font-size: 2.2rem;
+          font-size: clamp(1.65rem, 2.8vw, 2.5rem);
           font-weight: 700;
           margin-bottom: 10px;
           letter-spacing: 0.5px;
           color: #fff;
         }
         .sro-page-wrapper .gov-banner .sub-title {
-          font-size: 1.15rem;
+          font-size: clamp(0.98rem, 1.3vw, 1.2rem);
           color: #cbd5e1;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
         }
         .sro-page-wrapper .badge-container {
           display: flex;
           justify-content: center;
-          gap: 15px;
+          gap: 12px;
           flex-wrap: wrap;
         }
         .sro-page-wrapper .gov-badge {
@@ -1130,115 +1137,117 @@ export const SRO_TDS_2026: React.FC = () => {
       )}
 
       <header className="gov-banner">
-        <div className="sub-title">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার • জাতীয় রাজস্ব বোর্ড (NBR)</div>
-        <h1>উৎসে কর বিধিমালা, ২০২৬</h1>
-        <div className="badge-container">
-          <span className="gov-badge">📜 এস.আর.ও. নং-২৭৩-আইন/আয়কর-৫/২০২৬</span>
-          <span className="gov-badge">📅 তারিখ: ২৪ আষাঢ়, ১৪৩৩ বঙ্গাব্দ / ০৮ জুলাই, ২০২৬ খ্রিষ্টাব্দ</span>
-          <span className="gov-badge">⚖️ আয়কর আইন, ২০২৩ এর ধারা ৩৪৩ এর ক্ষমতাবলে</span>
-        </div>
+        <div className="gov-banner-inner">
+          <div className="sub-title">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার • জাতীয় রাজস্ব বোর্ড (NBR)</div>
+          <h1>উৎসে কর বিধিমালা, ২০২৬</h1>
+          <div className="badge-container">
+            <span className="gov-badge">📜 এস.আর.ও. নং-২৭৩-আইন/আয়কর-৫/২০২৬</span>
+            <span className="gov-badge">📅 তারিখ: ২৪ আষাঢ়, ১৪৩৩ বঙ্গাব্দ / ০৮ জুলাই, ২০২৬ খ্রিষ্টাব্দ</span>
+            <span className="gov-badge">⚖️ আয়কর আইন, ২০২৩ এর ধারা ৩৪৩ এর ক্ষমতাবলে</span>
+          </div>
 
-        {/* Global Multi-Table Search & Quick Rate Chips */}
-        <div style={{ maxWidth: '820px', margin: '22px auto 0', padding: '0 10px' }}>
-          <div
-            style={{
-              display: 'flex',
-              gap: '10px',
-              background: 'rgba(255,255,255,0.12)',
-              padding: '8px',
-              borderRadius: '10px',
-              border: '1px solid rgba(255,255,255,0.25)',
-              backdropFilter: 'blur(8px)',
-              flexWrap: 'wrap',
-            }}
-          >
-            <input
-              type="text"
-              value={globalQuery}
-              onChange={(e) => handleGlobalSearchChange(e.target.value)}
-              placeholder="🔍 সকল তফসিল ও সারণীতে একসাথে খুঁজুন (যেমন: পরামর্শক, ভাড়া, সফটওয়্যার, কয়লা)..."
+          {/* Global Multi-Table Search & Quick Rate Chips */}
+          <div style={{ width: '100%', maxWidth: '1160px', margin: '22px auto 0' }}>
+            <div
               style={{
-                flex: 1,
-                minWidth: '220px',
-                padding: '10px 14px',
-                borderRadius: '7px',
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.95rem',
-                color: '#1e293b',
-                background: '#ffffff',
+                display: 'flex',
+                gap: '10px',
+                background: 'rgba(255,255,255,0.12)',
+                padding: '8px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255,255,255,0.25)',
+                backdropFilter: 'blur(8px)',
+                flexWrap: 'wrap',
               }}
-            />
-            {(globalQuery || activeQuickRate) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setGlobalQuery('');
-                  setActiveQuickRate('');
-                  applyGlobalFilterToAllTables('', '');
+            >
+              <input
+                type="text"
+                value={globalQuery}
+                onChange={(e) => handleGlobalSearchChange(e.target.value)}
+                placeholder="🔍 সকল তফসিল ও সারণীতে একসাথে খুঁজুন (যেমন: পরামর্শক, ভাড়া, সফটওয়্যার, কয়লা)..."
+                style={{
+                  flex: 1,
+                  minWidth: 'min(100%, 220px)',
+                  padding: '10px 14px',
+                  borderRadius: '7px',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '0.95rem',
+                  color: '#1e293b',
+                  background: '#ffffff',
                 }}
-                className="hero-btn hero-btn-secondary"
-                style={{ padding: '8px 14px' }}
-              >
-                ✖ ফিল্টার মুছুন
-              </button>
-            )}
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '6px',
-              flexWrap: 'wrap',
-              marginTop: '10px',
-            }}
-          >
-            <span style={{ fontSize: '0.82rem', color: '#cbd5e1', marginRight: '4px' }}>
-              ⚡ করহার অনুযায়ী ফিল্টার:
-            </span>
-            {['০.৫%', '১%', '১.৫%', '২%', '৩%', '৫%', '৮%', '১০%', '১৫%', '২০%'].map((chip) => {
-              const isSelected = activeQuickRate === chip;
-              return (
+              />
+              {(globalQuery || activeQuickRate) && (
                 <button
-                  key={chip}
                   type="button"
-                  onClick={() => handleQuickRateSelect(chip)}
-                  style={{
-                    padding: '3px 11px',
-                    borderRadius: '50px',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: isSelected ? '1px solid #fbbf24' : '1px solid rgba(255,255,255,0.28)',
-                    background: isSelected ? '#fbbf24' : 'rgba(255,255,255,0.1)',
-                    color: isSelected ? '#0f172a' : '#ffffff',
-                    transition: 'all 0.15s ease',
+                  onClick={() => {
+                    setGlobalQuery('');
+                    setActiveQuickRate('');
+                    applyGlobalFilterToAllTables('', '');
                   }}
+                  className="hero-btn hero-btn-secondary"
+                  style={{ padding: '8px 14px' }}
                 >
-                  {chip}
+                  ✖ ফিল্টার মুছুন
                 </button>
-              );
-            })}
-          </div>
-        </div>
+              )}
+            </div>
 
-        <div className="hero-actions">
-          <button
-            type="button"
-            onClick={handleExportAllFilteredCsv}
-            className="hero-btn hero-btn-primary"
-          >
-            📥 সকল ফিল্টারকৃত টেবিল CSV ডাউনলোড (Export All CSV)
-          </button>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="hero-btn hero-btn-secondary"
-          >
-            🖨️ প্রিন্ট / PDF সংরক্ষণ
-          </button>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '6px',
+                flexWrap: 'wrap',
+                marginTop: '10px',
+              }}
+            >
+              <span style={{ fontSize: '0.82rem', color: '#cbd5e1', marginRight: '4px' }}>
+                ⚡ করহার অনুযায়ী ফিল্টার:
+              </span>
+              {['০.৫%', '১%', '১.৫%', '২%', '৩%', '৫%', '৮%', '১০%', '১৫%', '২০%'].map((chip) => {
+                const isSelected = activeQuickRate === chip;
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => handleQuickRateSelect(chip)}
+                    style={{
+                      padding: '3px 11px',
+                      borderRadius: '50px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: isSelected ? '1px solid #fbbf24' : '1px solid rgba(255,255,255,0.28)',
+                      background: isSelected ? '#fbbf24' : 'rgba(255,255,255,0.1)',
+                      color: isSelected ? '#0f172a' : '#ffffff',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {chip}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hero-actions">
+            <button
+              type="button"
+              onClick={handleExportAllFilteredCsv}
+              className="hero-btn hero-btn-primary"
+            >
+              📥 সকল ফিল্টারকৃত টেবিল CSV ডাউনলোড (Export All CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="hero-btn hero-btn-secondary"
+            >
+              🖨️ প্রিন্ট / PDF সংরক্ষণ
+            </button>
+          </div>
         </div>
       </header>
 
