@@ -146,10 +146,10 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
         </div>
 
         {/* Main Content Layout with Related Tools Section */}
-        <div className="flex flex-col gap-10 items-center w-full">
+        <div className="flex flex-col gap-8 w-full min-w-0">
           
-          {/* Main Tool Content Container - 60% of full display on desktop */}
-          <div ref={toolContentRef} className="app-form-60 w-full lg:w-[60vw] mx-auto space-y-6">
+          {/* Main Tool Content Container */}
+          <div ref={toolContentRef} className="w-full min-w-0 space-y-6">
             {children}
           </div>
 
@@ -165,11 +165,11 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
             containerRef={toolContentRef}
           />
 
-          {/* Bottom Related Tools & Consultation - 60% of full display on desktop */}
-          <div className="app-form-60 w-full lg:w-[60vw] mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {/* Bottom Related Tools & Consultation */}
+          <div className="w-full min-w-0 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
             
             {/* Related Tools Card */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs space-y-4">
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-2xs space-y-4 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
@@ -180,7 +180,7 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
                 </Link>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 {relatedTools.map((rt) => {
                   return (
                     <Link
@@ -208,17 +208,19 @@ export const ToolPageLayout: React.FC<ToolPageLayoutProps> = ({
             </div>
 
             {/* Lawyer & Tax Expert Advisory Card */}
-            <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-sm space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <Building2 className="w-5 h-5 text-emerald-400" />
-                <span className="text-xs font-bold uppercase tracking-wider">Expert Representation</span>
+            <div className="bg-slate-900 text-white rounded-3xl p-5 shadow-sm gap-5 h-full flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <Building2 className="w-5 h-5 text-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Expert Representation</span>
+                </div>
+                <h4 className="text-sm font-extrabold text-white">
+                  Need Turnkey RJSC Filing or NBR Tax Assessment Support?
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Consult our Supreme Court Advocates, chartered tax practitioners, and RJSC consultants for 1-on-1 filing representation.
+                </p>
               </div>
-              <h4 className="text-sm font-extrabold text-white">
-                Need Turnkey RJSC Filing or NBR Tax Assessment Support?
-              </h4>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Consult our Supreme Court Advocates, chartered tax practitioners, and RJSC consultants for 1-on-1 filing representation.
-              </p>
               <a
                 href={buildAppointmentUrl({
                   service: `Legal & Tax Representation (${title})`,

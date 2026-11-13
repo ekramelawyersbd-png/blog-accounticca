@@ -51,7 +51,7 @@ export function Layout() {
       >
         {!hideNavs && <Navbar />}
         <main
-          className={`min-w-0 flex-1 w-full max-w-full ${
+          className={`min-w-0 flex-1 flex flex-col w-full max-w-full ${
             isLmsPortalView
               ? 'p-0 pb-16 lg:pb-0'
               : hideNavs

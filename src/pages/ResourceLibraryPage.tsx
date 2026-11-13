@@ -433,7 +433,7 @@ export function ResourceLibraryPage() {
 
       {/* Compact Institutional Top Header */}
       <div className="w-full max-w-[1527px] mx-auto bg-[#0A2A66] text-white border-b border-blue-900">
-        <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="w-full max-w-[1527px] mx-auto px-0 py-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1.5 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -522,7 +522,7 @@ export function ResourceLibraryPage() {
       </div>
 
       {/* Main Content Container */}
-      <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 pt-5">
+      <div className="w-full max-w-[1527px] mx-auto px-0 pt-5">
         {/* ================= FEATURED 2026-2027 STATUTORY SPOTLIGHT ================= */}
         {activeTab === 'regulatory' && pinnedDocs.length > 0 && (
           <section className="mb-5">
@@ -616,7 +616,7 @@ export function ResourceLibraryPage() {
         )}
 
         {/* ================= TOP CONTROLS & FILTER BAR ================= */}
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 mb-5 space-y-2.5 shadow-2xs">
+        <div className="w-[1437px] max-w-full mx-auto bg-white p-3.5 rounded-xl border border-slate-200 mb-5 space-y-2.5 shadow-2xs">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             {/* Left Time Filter Buttons, Date Input & Saved Toggle */}
             <div className="flex flex-wrap items-center gap-1.5">
@@ -1028,57 +1028,6 @@ export function ResourceLibraryPage() {
             {activeTab === 'regulatory' ? (
               /* ================= REGULATORY DOCUMENTS VIEW (TABLE OR CARDS) ================= */
               <div className="space-y-3">
-                {/* Active Filter Status Bar & Removable Filter Chips */}
-                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  <p className="text-xs font-semibold text-slate-600 tabular-nums">
-                    Showing <strong className="text-slate-900">{filteredRegulatoryDocs.length}</strong> of{' '}
-                    <strong className="text-slate-900">{docsList.length}</strong> statutory instruments
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {selectedAuthority !== 'All' && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAuthority('All')}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0A2A66] border border-blue-200 text-[11px] font-bold cursor-pointer hover:bg-blue-100"
-                      >
-                        <span>{selectedAuthority}</span>
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                    {selectedYear !== null && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedYear(null)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0A2A66] border border-blue-200 text-[11px] font-bold cursor-pointer hover:bg-blue-100"
-                      >
-                        <span>Year: {selectedYear}</span>
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                    {selectedDocCategory !== 'All' && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDocCategory('All')}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-[#0A2A66] border border-blue-200 text-[11px] font-bold cursor-pointer hover:bg-blue-100"
-                      >
-                        <span>Type: {selectedDocCategory}</span>
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                    {searchQuery.trim() !== '' && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-bold cursor-pointer hover:bg-amber-100"
-                      >
-                        <span>Query: &ldquo;{searchQuery}&rdquo;</span>
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 {viewMode === 'table' ? (
                   <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-2xs">
                     <table className="w-full text-left border-collapse">
