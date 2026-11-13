@@ -33,7 +33,6 @@ import { db } from '../lib/firebase';
 import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { AppointmentBookingForm } from '../components/AppointmentBookingForm';
-import { FloatingLiveChat } from '../components/FloatingLiveChat';
 import { OfficeLocationMap } from '../components/OfficeLocationMap';
 import { FormSuccessAnimation } from '../components/FormSuccessAnimation';
 import { ServiceSEO } from '../components/SEO';
@@ -1764,8 +1763,8 @@ export function Contact() {
         id="contact-form-section"
         className="mx-auto max-w-7xl scroll-mt-6 px-4 py-10 sm:px-6 lg:px-8"
       >
-        <div className="space-y-8">
-          <div className="app-form-60 w-full lg:w-[60vw] mx-auto">
+        <div className="w-full min-w-0 space-y-8">
+          <div className="w-full min-w-0">
             <div className="text-center max-w-3xl mx-auto">
               <p className="text-xs font-semibold text-emerald-800">Consultation &amp; Intake Desk</p>
               <h2 className="mt-2 text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl">
@@ -1819,7 +1818,7 @@ export function Contact() {
             </div>
           </div>
 
-          <div className="app-form-60 w-full lg:w-[60vw] mx-auto overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
+          <div className="w-full min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
             <div className="border-b border-slate-100 p-3 sm:p-4">
               <div
                 className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5"
@@ -2207,8 +2206,6 @@ export function Contact() {
           <OfficeLocationMap primaryPhone={PRIMARY_PHONE} rawTelNumber={RAW_PHONE} />
         </div>
       </section>
-
-      <FloatingLiveChat />
     </main>
   );
 }

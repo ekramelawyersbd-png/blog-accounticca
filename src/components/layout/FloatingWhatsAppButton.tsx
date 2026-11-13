@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import {
   MessageCircle,
   X,
@@ -64,10 +63,6 @@ export function FloatingWhatsAppButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string>(EXPERT_TOPICS[0].id);
   const [customMessage, setCustomMessage] = useState<string>('');
-  const location = useLocation();
-
-  // On /contact page, FloatingLiveChat sits at bottom-right; offset our button to bottom-left or higher so they never collide
-  const isContactPage = location.pathname.startsWith('/contact');
 
   const selectedTopic =
     EXPERT_TOPICS.find((t) => t.id === selectedTopicId) || EXPERT_TOPICS[0];
@@ -81,13 +76,7 @@ export function FloatingWhatsAppButton() {
   )}`;
 
   return (
-    <div
-      className={`fixed z-40 print:hidden ${
-        isContactPage
-          ? 'bottom-20 lg:bottom-6 left-4 sm:left-6'
-          : 'bottom-20 lg:bottom-6 right-4 sm:right-6'
-      }`}
-    >
+    <div className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-40 print:hidden">
       {/* Expandable WhatsApp Expert Support Card */}
       {isOpen && (
         <div
