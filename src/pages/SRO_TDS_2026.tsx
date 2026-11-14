@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SEO } from '@/components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
+import { FileSpreadsheet, Printer, Scale, Search, X } from 'lucide-react';
 
 const escapeCsvCell = (value: string): string => {
   const cleaned = value.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim();
@@ -532,21 +534,21 @@ export const SRO_TDS_2026: React.FC = () => {
       />
       <style>{`
         .sro-page-wrapper {
-          --primary: #0f4c81;
-          --primary-light: #e6f0fa;
-          --secondary: #008080;
-          --accent: #d9534f;
-          --bg-body: #f4f7f6;
+          --primary: #065f46;
+          --primary-light: #ecfdf5;
+          --secondary: #047857;
+          --accent: #b91c1c;
+          --bg-body: #f5f7f4;
           --bg-card: #ffffff;
-          --text-main: #2c3e50;
-          --text-muted: #596a7a;
-          --border-color: #dce4ec;
-          --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-          --radius: 10px;
+          --text-main: #0f172a;
+          --text-muted: #475569;
+          --border-color: #e2e8f0;
+          --shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+          --radius: 16px;
           width: 100%;
           max-width: 100%;
           margin: 0 auto;
-          font-family: 'Hind Siliguri', 'SolaimanLipi', system-ui, -apple-system, sans-serif;
+          font-family: 'Plus Jakarta Sans', 'Hind Siliguri', 'SolaimanLipi', system-ui, -apple-system, sans-serif;
           background-color: var(--bg-body);
           color: var(--text-main);
           line-height: 1.8;
@@ -1136,123 +1138,115 @@ export const SRO_TDS_2026: React.FC = () => {
         </div>
       )}
 
-      <header className="gov-banner">
-        <div className="gov-banner-inner">
-          <div className="sub-title">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার • জাতীয় রাজস্ব বোর্ড (NBR)</div>
-          <h1>উৎসে কর বিধিমালা, ২০২৬</h1>
-          <div className="badge-container">
-            <span className="gov-badge">📜 এস.আর.ও. নং-২৭৩-আইন/আয়কর-৫/২০২৬</span>
-            <span className="gov-badge">📅 তারিখ: ২৪ আষাঢ়, ১৪৩৩ বঙ্গাব্দ / ০৮ জুলাই, ২০২৬ খ্রিষ্টাব্দ</span>
-            <span className="gov-badge">⚖️ আয়কর আইন, ২০২৩ এর ধারা ৩৪৩ এর ক্ষমতাবলে</span>
-          </div>
-
-          {/* Global Multi-Table Search & Quick Rate Chips */}
-          <div style={{ width: '100%', maxWidth: '1160px', margin: '22px auto 0' }}>
-            <div
-              style={{
-                display: 'flex',
-                gap: '10px',
-                background: 'rgba(255,255,255,0.12)',
-                padding: '8px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255,255,255,0.25)',
-                backdropFilter: 'blur(8px)',
-                flexWrap: 'wrap',
-              }}
-            >
-              <input
-                type="text"
-                value={globalQuery}
-                onChange={(e) => handleGlobalSearchChange(e.target.value)}
-                placeholder="🔍 সকল তফসিল ও সারণীতে একসাথে খুঁজুন (যেমন: পরামর্শক, ভাড়া, সফটওয়্যার, কয়লা)..."
-                style={{
-                  flex: 1,
-                  minWidth: 'min(100%, 220px)',
-                  padding: '10px 14px',
-                  borderRadius: '7px',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '0.95rem',
-                  color: '#1e293b',
-                  background: '#ffffff',
-                }}
-              />
-              {(globalQuery || activeQuickRate) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGlobalQuery('');
-                    setActiveQuickRate('');
-                    applyGlobalFilterToAllTables('', '');
-                  }}
-                  className="hero-btn hero-btn-secondary"
-                  style={{ padding: '8px 14px' }}
-                >
-                  ✖ ফিল্টার মুছুন
-                </button>
-              )}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '6px',
-                flexWrap: 'wrap',
-                marginTop: '10px',
-              }}
-            >
-              <span style={{ fontSize: '0.82rem', color: '#cbd5e1', marginRight: '4px' }}>
-                ⚡ করহার অনুযায়ী ফিল্টার:
-              </span>
-              {['০.৫%', '১%', '১.৫%', '২%', '৩%', '৫%', '৮%', '১০%', '১৫%', '২০%'].map((chip) => {
-                const isSelected = activeQuickRate === chip;
-                return (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => handleQuickRateSelect(chip)}
-                    style={{
-                      padding: '3px 11px',
-                      borderRadius: '50px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: isSelected ? '1px solid #fbbf24' : '1px solid rgba(255,255,255,0.28)',
-                      background: isSelected ? '#fbbf24' : 'rgba(255,255,255,0.1)',
-                      color: isSelected ? '#0f172a' : '#ffffff',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {chip}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="hero-actions">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Regulatory Library', path: '/resource-library' },
+          { label: 'উৎসে কর বিধিমালা, ২০২৬ (SRO 273)' },
+        ]}
+        eyebrow="গণপ্রজাতন্ত্রী বাংলাদেশ সরকার • জাতীয় রাজস্ব বোর্ড (NBR)"
+        headline="উৎসে কর"
+        accentHeadline="বিধিমালা, ২০২৬"
+        description="এস.আর.ও. নং-২৭৩-আইন/আয়কর-৫/২০২৬ — আয়কর আইন, ২০২৩ এর ধারা ৩৪৩ এর ক্ষমতাবলে প্রণীত সম্পূর্ণ তফসিল, করহার সারণী ও গ্রস-আপ ক্যালকুলেটর।"
+        metaItems={[
+          'এস.আর.ও. নং-২৭৩-আইন/আয়কর-৫/২০২৬',
+          '০৮ জুলাই, ২০২৬ খ্রিষ্টাব্দ',
+          'ধারা ৩৪৩, আয়কর আইন ২০২৩',
+        ]}
+        actions={
+          <>
             <button
               type="button"
               onClick={handleExportAllFilteredCsv}
-              className="hero-btn hero-btn-primary"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
             >
-              📥 সকল ফিল্টারকৃত টেবিল CSV ডাউনলোড (Export All CSV)
+              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+              <span>সকল ফিল্টারকৃত টেবিল CSV ডাউনলোড</span>
             </button>
             <button
               type="button"
               onClick={() => window.print()}
-              className="hero-btn hero-btn-secondary"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer"
             >
-              🖨️ প্রিন্ট / PDF সংরক্ষণ
+              <Printer className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>প্রিন্ট / PDF সংরক্ষণ</span>
             </button>
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'গেজেট ও আইনগত ভিত্তি',
+          title: 'SRO 273-Law / IT-5 / 2026',
+          icon: <Scale className="h-5 w-5" aria-hidden="true" />,
+          description:
+            'যেকোনো টেবিলের করহারে ক্লিক করলে ডানপাশের Rule 12 ক্যালকুলেটরে স্বয়ংক্রিয়ভাবে হার সেট হয়ে যাবে।',
+          actions: [
+            {
+              label: 'TDS Database (EN)',
+              to: '/tds-guide',
+            },
+            {
+              label: 'Regulatory Library',
+              to: '/resource-library',
+              variant: 'neutral',
+            },
+          ],
+          footerText: 'প্রকাশকাল: ২৪ আষাঢ়, ১৪৩৩ বঙ্গাব্দ / ০৮ জুলাই, ২০২৬ খ্রিষ্টাব্দ',
+        }}
+      >
+        {/* Global Multi-Table Search & Quick Rate Chips Card */}
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs print:hidden">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+              <input
+                type="text"
+                value={globalQuery}
+                onChange={(e) => handleGlobalSearchChange(e.target.value)}
+                placeholder="সকল তফসিল ও সারণীতে একসাথে খুঁজুন (যেমন: পরামর্শক, ভাড়া, সফটওয়্যার, কয়লা)..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+            {(globalQuery || activeQuickRate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setGlobalQuery('');
+                  setActiveQuickRate('');
+                  applyGlobalFilterToAllTables('', '');
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>ফিল্টার মুছুন</span>
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-600 mr-1">
+              করহার অনুযায়ী ফিল্টার:
+            </span>
+            {['০.৫%', '১%', '১.৫%', '২%', '৩%', '৫%', '৮%', '১০%', '১৫%', '২০%'].map((chip) => {
+              const isSelected = activeQuickRate === chip;
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => handleQuickRateSelect(chip)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer border ${
+                    isSelected
+                      ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800'
+                  }`}
+                >
+                  {chip}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </header>
 
-      <div className="layout-wrapper">
-        <main className="main-content">
+      <div className="layout-wrapper" style={{ padding: '16px 0 0' }}>
+        <div className="main-content">
           {/* Real-Time Keyword Search Bar directly above the SRO_TDS_2026_Content tables */}
           <div className="sro-realtime-search-panel" role="search" aria-label="টেবিল কীওয়ার্ড অনুসন্ধান">
             <div className="sro-realtime-search-header">
@@ -2419,7 +2413,7 @@ export const SRO_TDS_2026: React.FC = () => {
               </div>
             </details>
           </section>
-        </main>
+        </div>
 
         {/* SIDEBAR (STICKY TOC + INSTANT TDS & GROSS-UP CALCULATOR) */}
         <aside className="sidebar">
@@ -2665,6 +2659,7 @@ export const SRO_TDS_2026: React.FC = () => {
           </div>
         </aside>
       </div>
+      </ContactPageShell>
     </div>
   );
 };

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
+import { Scale } from 'lucide-react';
 
 interface WhtRule {
   section: string;
@@ -73,7 +75,83 @@ export const WhtFinder: React.FC = () => {
   );
 
   return (
-    <>
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'Withholding Tax (TDS / WHT) Finder' },
+      ]}
+      eyebrow="Income Tax Act 2023 · Chapter VII · Deduction at Source"
+      headline="Withholding Tax"
+      accentHeadline="(TDS / WHT) Schedule"
+      description="Authoritative deduction at source rates and non-TIN surcharge thresholds for withholding entities in Bangladesh across supply, contracts, rent, and advisory services."
+      metaItems={[
+        'Chapter VII ITA 2023',
+        'With TIN vs. Without TIN',
+        'Sec 143 Form 52 Notice',
+      ]}
+      actions={
+        <CalculationEmailActionBarButton
+          options={{
+            toolId: 'wht-finder',
+            toolName: 'Statutory Withholding Tax (TDS / WHT) Schedule',
+            toolCategory: 'Taxation & Deduction at Source',
+            toolPath: '/tools/wht',
+            statutoryBasis: 'Income Tax Act 2023 · Chapter VII (Deduction at Source)',
+            customSnapshot: {
+              referenceId: `WHT-${Date.now().toString().slice(-6)}`,
+              generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
+              toolId: 'wht-finder',
+              toolName: 'Statutory Withholding Tax (TDS / WHT) Schedule',
+              toolCategory: 'Taxation & Deduction at Source',
+              toolPath: '/tools/wht',
+              statutoryBasis: 'Income Tax Act 2023 · Chapter VII (Deduction at Source)',
+              inputs: [
+                { label: 'Total Statutory TDS Sections', value: `${WHT_RULES.length} Key Categories` },
+                { label: 'Active Filter Query', value: search ? `"${search}"` : 'All Categories' },
+                { label: 'Non-TIN Higher Rate Rule', value: '50% higher deduction under Section 86' },
+              ],
+              summaryMetrics: [
+                { label: 'Matching TDS Rules', value: `${filtered.length} Sections` },
+                { label: 'Default Advisory Scope', value: 'National Board of Revenue (NBR)' },
+              ],
+              tables: [
+                {
+                  title: 'Statutory Withholding Tax Schedule',
+                  headers: ['Statutory Section', 'Payment Category', 'Base TDS Rate', 'Without TIN Rate'],
+                  rows: filtered.slice(0, 10).map(r => ({ cells: [r.section, r.category, r.baseRate, r.nonTinRate] })),
+                },
+              ],
+              legalNotes: [
+                'Income Tax Act 2023 (Act No. XII of 2023), Chapter VII: Deduction at Source.',
+                'Section 86 specifies penalties and 50% surcharge for failure to provide 12-digit e-TIN.',
+                'Section 143 mandates issuance of withholding certificate (Form 52) to payees.',
+              ],
+            },
+          }}
+          label="Send Calculation Report"
+          variant="primary"
+        />
+      }
+      summaryCard={{
+        eyebrow: 'Statutory Coverage',
+        title: `${filtered.length} Active Rules`,
+        icon: <Scale className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Compare base rates against Section 86 non-TIN / PSR penalties, or open the full Section 89/90/119 database.',
+        actions: [
+          {
+            label: 'Full TDS Database',
+            to: '/tds-guide',
+          },
+          {
+            label: 'SRO 273 Gazette',
+            to: '/SRO/TDS2026',
+            variant: 'neutral',
+          },
+        ],
+        footerText: 'Withholding certificates must be issued via Form 52 under Section 143.',
+      }}
+    >
       <ToolSEO
         toolId="wht-finder"
         title="Withholding Tax (TDS / WHT) Section Rate Finder"
@@ -87,69 +165,19 @@ export const WhtFinder: React.FC = () => {
         toolCategory="Taxation &amp; Deduction at Source"
         toolPath="/tools/wht"
       >
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="space-y-6">
+        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-bold px-2.5 py-1 bg-cyan-100 text-cyan-800 rounded-full border border-cyan-300">
-              Income Tax Act 2023 (Chapter VII)
-            </span>
-            <h1 className="text-2xl font-black text-slate-900 mt-2">
-              Statutory Withholding Tax (TDS / WHT) Schedule
-            </h1>
-            <p className="text-xs text-slate-600 mt-1">
-              Authoritative deduction at source rates for withholding entities in Bangladesh.
-            </p>
+            <h2 className="text-base font-bold text-slate-950">Filter Withholding Tax Sections</h2>
+            <p className="text-xs text-slate-600 mt-0.5">Search by section number, supplier category, or service type.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <div className="w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="Search section or payment type..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold"
-              />
-            </div>
-            <CalculationEmailActionBarButton
-              options={{
-                toolId: 'wht-finder',
-                toolName: 'Statutory Withholding Tax (TDS / WHT) Schedule',
-                toolCategory: 'Taxation & Deduction at Source',
-                toolPath: '/tools/wht',
-                statutoryBasis: 'Income Tax Act 2023 · Chapter VII (Deduction at Source)',
-                customSnapshot: {
-                  referenceId: `WHT-${Date.now().toString().slice(-6)}`,
-                  generatedAt: new Date().toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }),
-                  toolId: 'wht-finder',
-                  toolName: 'Statutory Withholding Tax (TDS / WHT) Schedule',
-                  toolCategory: 'Taxation & Deduction at Source',
-                  toolPath: '/tools/wht',
-                  statutoryBasis: 'Income Tax Act 2023 · Chapter VII (Deduction at Source)',
-                  inputs: [
-                    { label: 'Total Statutory TDS Sections', value: `${WHT_RULES.length} Key Categories` },
-                    { label: 'Active Filter Query', value: search ? `"${search}"` : 'All Categories' },
-                    { label: 'Non-TIN Higher Rate Rule', value: '50% higher deduction under Section 86' },
-                  ],
-                  summaryMetrics: [
-                    { label: 'Matching TDS Rules', value: `${filtered.length} Sections` },
-                    { label: 'Default Advisory Scope', value: 'National Board of Revenue (NBR)' },
-                  ],
-                  tables: [
-                    {
-                      title: 'Statutory Withholding Tax Schedule',
-                      headers: ['Statutory Section', 'Payment Category', 'Base TDS Rate', 'Without TIN Rate'],
-                      rows: filtered.slice(0, 10).map(r => ({ cells: [r.section, r.category, r.baseRate, r.nonTinRate] })),
-                    },
-                  ],
-                  legalNotes: [
-                    'Income Tax Act 2023 (Act No. XII of 2023), Chapter VII: Deduction at Source.',
-                    'Section 86 specifies penalties and 50% surcharge for failure to provide 12-digit e-TIN.',
-                    'Section 143 mandates issuance of withholding certificate (Form 52) to payees.',
-                  ],
-                },
-              }}
-              label="Send Calculation Report"
-              variant="primary"
+          <div className="w-full sm:w-80">
+            <input
+              type="text"
+              placeholder="Search section or payment type..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
           </div>
         </div>
@@ -183,6 +211,6 @@ export const WhtFinder: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
-    </>
+    </ContactPageShell>
   );
 };

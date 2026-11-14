@@ -18,6 +18,7 @@ import {
   Printer
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import {
   verifyUddoktaPayPayment,
   VerifyPaymentResponse,
@@ -393,25 +394,49 @@ export const PaymentVerifyPage: React.FC = () => {
     searchParams.get('status') === 'completed';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+    <>
       <SEO
         title="Payment Verification - UddoktaPay Gateway"
         description="Verify your automated payment status via UddoktaPay gateway for Accounticca & eLawyers services."
       />
 
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden">
-          {/* Header Bar */}
-          <div className="bg-gradient-to-r from-slate-900 via-[#0d2f44] to-[#0e433b] p-6 text-white text-center relative">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>UddoktaPay Gateway · /verify-payment Confirmed</span>
-            </div>
-            <h1 className="text-2xl font-black text-white">Automated Payment Settlement</h1>
-            <p className="text-xs text-slate-300 mt-1">bKash · Nagad · Rocket · Upay · Visa &amp; Mastercard</p>
-          </div>
-
-          <div className="p-6 sm:p-10">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Checkout', path: '/checkout' },
+          { label: 'Payment Verification' },
+        ]}
+        eyebrow="UddoktaPay Gateway · Automated Verification"
+        headline="Automated Payment"
+        accentHeadline="Verification & Receipt"
+        description="Real-time settlement verification across bKash, Nagad, Rocket, Upay, and card channels with instant PDF receipt issuance and portal entitlement activation."
+        metaItems={[
+          invoiceId ? `Invoice: ${invoiceId}` : 'Verification Portal',
+          isCompleted ? 'Status: Completed' : loading ? 'Status: Checking' : 'Status: Pending Review',
+        ]}
+        summaryCard={{
+          eyebrow: 'Settlement Portal Desk',
+          title: isCompleted ? 'Verified & Unlocked' : 'Transaction Lookup',
+          description: 'Need billing support or manual reconciliation? Contact our accounts desk or return to your client portal.',
+          icon: <ShieldCheck className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'Client Portal',
+              to: '/client-portal',
+              icon: <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Compliance Tools',
+              to: '/tools',
+              variant: 'neutral',
+              icon: <Receipt className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerText: 'Official NBR Audit-Ready PDF Receipts · Accounticca × E-Lawyers',
+        }}
+      >
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden">
+            <div className="p-6 sm:p-10">
             {loading ? (
               <div className="text-center py-12 space-y-4">
                 <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -681,10 +706,11 @@ export const PaymentVerifyPage: React.FC = () => {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </ContactPageShell>
+    </>
   );
 };
 

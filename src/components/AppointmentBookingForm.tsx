@@ -40,6 +40,7 @@ import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { workspaceCalendarApi } from '../services/workspaceService';
 import { ClientBookingDashboard } from './ClientBookingDashboard';
 import { dispatchFormSubmissionToast } from './ui/FormSubmissionToast';
+import { AppointmentSuccessModal } from './AppointmentSuccessModal';
 import {
   initiateUddoktaPayCheckout,
   verifyUddoktaPayPayment,
@@ -47,6 +48,7 @@ import {
 } from '../services/uddoktapayService';
 import { PatternFormat } from 'react-number-format';
 import { useDebounce } from '../hooks/useDebounce';
+import { EmailTemplateGenerator } from '../utils/emailGenerator';
 
 export interface ExpertiseItem {
   id: string;
@@ -630,8 +632,9 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSettlingRetainer, setIsSettlingRetainer] = useState(false);
-  const [bookingSettlementMode, setBookingSettlementMode] = useState<'uddoktapay_instant' | 'uddoktapay_hosted' | 'pay_at_chamber'>('uddoktapay_instant');
+  const [bookingSettlementMode] = useState<'uddoktapay_instant' | 'uddoktapay_hosted' | 'pay_at_chamber'>('pay_at_chamber');
   const [confirmedBooking, setConfirmedBooking] = useState<AppointmentRecord | null>(null);
+  const [isThankYouModalOpen, setIsThankYouModalOpen] = useState(false);
   const [bookingSheetSynced, setBookingSheetSynced] = useState(false);
   const [calendarSynced, setCalendarSynced] = useState(false);
   const [confirmationDispatched, setConfirmationDispatched] = useState(false);
@@ -981,32 +984,77 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
       console.warn('Note: Stored locally as offline backup or Firestore check:', err);
     }
 
-    // 3. Automated Instant Confirmation Email to Client & Providers (Lead Partner + ekram@elawyersbd.com)
+    // 3. Automated Instant Confirmation Email to Client with CC info@accounticca.com
     let emailDispatched = false;
     try {
-      const notifyRes = await fetch('/api/appointments/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          referenceId: newAppointment.referenceId,
-          appointmentId: firestoreDocId,
+      const appointmentTime = `${newAppointment.date} at ${newAppointment.timeSlot} (BST)`;
+      const bookingStatus =
+        newAppointment.paymentStatus === 'PAID'
+          ? `Confirmed & Paid (${newAppointment.transactionId})`
+          : 'Confirmed';
+
+      const generatedEmail = await EmailTemplateGenerator.generateFromAdminTemplate(
+        'booking_confirmation',
+        {
+          name: newAppointment.clientName,
           clientName: newAppointment.clientName,
-          email: newAppointment.email,
-          phone: newAppointment.phone,
-          companyName: newAppointment.companyName,
+          time: appointmentTime,
+          appointmentTime,
+          service: newAppointment.practiceArea,
+          serviceType: newAppointment.practiceArea,
           practiceArea: newAppointment.practiceArea,
-          mode: newAppointment.mode,
           date: newAppointment.date,
           timeSlot: newAppointment.timeSlot,
-          status: newAppointment.paymentStatus === 'PAID' ? `Confirmed & Paid (${newAppointment.transactionId})` : 'Confirmed',
-          leadPartnerName: newAppointment.assignedPartner.name,
-          leadPartnerEmail: 'ekram@elawyersbd.com',
-          calendarEventId
-        })
-      });
-      if (notifyRes.ok) {
-        emailDispatched = true;
-        newAppointment.confirmationSent = true;
+          referenceId: newAppointment.referenceId,
+          email: newAppointment.email,
+          clientEmail: newAppointment.email,
+          phone: newAppointment.phone,
+          clientPhone: newAppointment.phone,
+          companyName: newAppointment.companyName,
+          mode: newAppointment.mode,
+          notes: newAppointment.notes || '',
+          status: bookingStatus,
+          assignedCounsel: newAppointment.assignedPartner.name,
+          assignedLead: newAppointment.assignedPartner.name,
+          calendarEventId,
+        }
+      );
+
+      if (generatedEmail.enabled) {
+        const notifyRes = await fetch('/api/appointments/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            referenceId: newAppointment.referenceId,
+            appointmentId: firestoreDocId,
+            templateId: generatedEmail.templateId,
+            clientName: newAppointment.clientName,
+            email: newAppointment.email,
+            ccEmails: ['info@accounticca.com'],
+            phone: newAppointment.phone,
+            companyName: newAppointment.companyName,
+            practiceArea: newAppointment.practiceArea,
+            serviceType: newAppointment.practiceArea,
+            mode: newAppointment.mode,
+            date: newAppointment.date,
+            timeSlot: newAppointment.timeSlot,
+            appointmentTime,
+            notes: newAppointment.notes || '',
+            status: bookingStatus,
+            assignedLead: newAppointment.assignedPartner.name,
+            leadPartnerName: newAppointment.assignedPartner.name,
+            leadPartnerEmail: 'info@accounticca.com',
+            calendarEventId,
+            subject: generatedEmail.subject,
+            html: generatedEmail.html,
+            text: generatedEmail.text,
+          })
+        });
+        if (notifyRes.ok) {
+          const notifyData = await notifyRes.json().catch(() => ({}));
+          emailDispatched = Boolean(notifyData?.success ?? true);
+          newAppointment.confirmationSent = emailDispatched;
+        }
       }
     } catch (notifyErr) {
       console.warn('[Appointment Email Notification Notice]', notifyErr);
@@ -1075,32 +1123,73 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
 
     setBookingSheetSynced(syncedToSheet);
     setConfirmedBooking(newAppointment);
+    setIsThankYouModalOpen(true);
     setIsSubmitting(false);
 
     dispatchFormSubmissionToast({
-      title: newAppointment.paymentStatus === 'PAID'
-        ? 'Consultation Confirmed & Retainer Paid!'
-        : 'Consultation Appointment Confirmed!',
+      title: 'Appointment Submitted Successfully!',
       position: `${newAppointment.practiceArea} · ${newAppointment.date} (${newAppointment.timeSlot})`,
-      message: newAppointment.paymentStatus === 'PAID'
-        ? `Session with ${newAppointment.assignedPartner.name} confirmed. UddoktaPay TrxID: ${newAppointment.transactionId}`
-        : `Your session with ${newAppointment.assignedPartner.name} has been scheduled.`,
+      message: `Confirmation email sent to ${newAppointment.email} (CC: info@accounticca.com).`,
       referenceId: newAppointment.referenceId,
       recipientEmail: newAppointment.email,
       type: 'success',
     });
   };
 
+  // Handle Google Calendar Sync from Thank-You Pop-up Modal
+  const handleSyncCalendarFromModal = async (booking: AppointmentRecord) => {
+    try {
+      const workspaceAccessToken = getAccessToken();
+      if (workspaceAccessToken && !calendarSynced && !booking.calendarSynced) {
+        const startHourMatch = booking.timeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        let startHour = 10;
+        let startMin = 0;
+        if (startHourMatch) {
+          startHour = parseInt(startHourMatch[1], 10);
+          startMin = parseInt(startHourMatch[2], 10);
+          const meridian = startHourMatch[3].toUpperCase();
+          if (meridian === 'PM' && startHour < 12) startHour += 12;
+          if (meridian === 'AM' && startHour === 12) startHour = 0;
+        }
+        const [year, month, day] = booking.date.split('-').map(Number);
+        const startDate = new Date(Date.UTC(year, month - 1, day, startHour - 6, startMin));
+        const endDate = new Date(startDate.getTime() + 45 * 60 * 1000);
+
+        await workspaceCalendarApi.createEvent({
+          summary: `[Legal Consultation] ${booking.practiceArea} - ${booking.clientName}`,
+          description: `Docket Reference: ${booking.referenceId}\nClient: ${booking.clientName}\nPractice Area: ${booking.practiceArea}`,
+          location: booking.mode === 'virtual'
+            ? 'Virtual Consultation (Google Meet)'
+            : 'Suite G-5, BTI Centara Grand, 144 Green Road, Panthapath, Dhaka-1205',
+          start: { dateTime: startDate.toISOString() },
+          end: { dateTime: endDate.toISOString() }
+        }).catch(() => undefined);
+      }
+      setCalendarSynced(true);
+      const updatedBooking: AppointmentRecord = { ...booking, calendarSynced: true };
+      setConfirmedBooking(updatedBooking);
+      const updatedList = recentAppointments.map((a) =>
+        a.referenceId === booking.referenceId ? { ...a, calendarSynced: true } : a
+      );
+      setRecentAppointments(updatedList);
+      localStorage.setItem('accounticca_booked_appointments', JSON.stringify(updatedList));
+      window.dispatchEvent(new CustomEvent('accounticca:appointment-updated'));
+    } catch {
+      // Pre-filled Google Calendar link opens in new tab reliably as fallback
+    }
+  };
+
   // Helper to generate Google Calendar Link
   const getGoogleCalendarUrl = (booking: AppointmentRecord) => {
-    const startHourMatch = booking.timeSlot.match(/^(\d{2}):(\d{2})\s*(AM|PM)/);
+    const startHourMatch = booking.timeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     let startHour = 10;
     let startMin = 0;
     if (startHourMatch) {
       startHour = parseInt(startHourMatch[1], 10);
       startMin = parseInt(startHourMatch[2], 10);
-      if (startHourMatch[3] === 'PM' && startHour < 12) startHour += 12;
-      if (startHourMatch[3] === 'AM' && startHour === 12) startHour = 0;
+      const meridian = startHourMatch[3].toUpperCase();
+      if (meridian === 'PM' && startHour < 12) startHour += 12;
+      if (meridian === 'AM' && startHour === 12) startHour = 0;
     }
 
     // BST is UTC+6
@@ -1323,7 +1412,8 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
                   <span className="inline-flex items-center gap-1.5 font-medium text-emerald-800">
                     <Mail className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>
-                      Confirmation Sent: <strong>{confirmedBooking.email}</strong> (Copy to Lead Partner &amp; ekram@elawyersbd.com)
+                      {confirmationDispatched ? 'Confirmation Sent:' : 'Confirmation Prepared:'}{' '}
+                      <strong>{confirmedBooking.email}</strong> (CC: info@accounticca.com)
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -1881,7 +1971,7 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
             <div className="text-xs text-slate-600 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
-                Routing to <strong>{activePractice.leadPartner.name}</strong> • {bookingSettlementMode === 'pay_at_chamber' ? 'Slot reservation' : `UddoktaPay Retainer (BDT ${consultationFeeAmount.toLocaleString('en-IN')})`}.
+                Routing to <strong>{activePractice.leadPartner.name}</strong> • Confirmation sent to your email with CC to <strong>info@accounticca.com</strong>.
               </span>
             </div>
 
@@ -1893,15 +1983,11 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{bookingSettlementMode === 'pay_at_chamber' ? 'Securing Chamber Slot...' : 'Verifying UddoktaPay & Booking...'}</span>
+                  <span>Submitting Appointment...</span>
                 </>
               ) : (
                 <>
-                  <span>
-                    {bookingSettlementMode === 'pay_at_chamber'
-                      ? 'Confirm Consultation Booking'
-                      : `Confirm & Pay BDT ${consultationFeeAmount.toLocaleString('en-IN')} via UddoktaPay`}
-                  </span>
+                  <span>Submit Appointment</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -1909,6 +1995,34 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
           </div>
         </form>
       )}
+
+      {/* Reusable Accounticca Appointment Confirmation Modal */}
+      <AppointmentSuccessModal
+        isOpen={Boolean(isThankYouModalOpen && confirmedBooking)}
+        close={() => setIsThankYouModalOpen(false)}
+        syncToGoogle={() =>
+          confirmedBooking ? handleSyncCalendarFromModal(confirmedBooking) : Promise.resolve()
+        }
+        isCalendarSynced={calendarSynced}
+        appointment={
+          confirmedBooking
+            ? {
+                referenceId: confirmedBooking.referenceId,
+                practiceArea: confirmedBooking.practiceArea,
+                expertiseArea: confirmedBooking.expertiseArea,
+                partnerName: confirmedBooking.assignedPartner.name,
+                division: confirmedBooking.assignedPartner.division,
+                date: confirmedBooking.date,
+                timeSlot: confirmedBooking.timeSlot,
+                mode: confirmedBooking.mode,
+                clientName: confirmedBooking.clientName,
+                email: confirmedBooking.email,
+                ccEmail: 'info@accounticca.com',
+                googleCalendarUrl: getGoogleCalendarUrl(confirmedBooking),
+              }
+            : null
+        }
+      />
     </div>
   );
 }

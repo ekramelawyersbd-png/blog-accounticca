@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import { buildAppointmentUrl } from '../utils/appointmentRedirect';
 import {
   initiateUddoktaPayCheckout,
@@ -197,39 +197,72 @@ export const EnrollmentPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10">
+    <>
       <SEO 
         title={`Course Enrollment - ${courseTitle}`} 
         description="Register and reserve your seat for Bangladesh income tax compliance, TDS advisory, and corporate filing masterclasses." 
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        
-        {/* Navigation Breadcrumbs */}
-        <Breadcrumbs items={[{ label: 'Training Hub', path: '/training' }, { label: 'Course Enrollment' }]} />
-
-        {/* Top Banner */}
-        <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 shrink-0">
-              <GraduationCap className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white">Academy Course Enrollment &amp; Tuition Settlement</h1>
-              <p className="text-xs text-slate-400 font-medium mt-1">
-                Automated tuition checkout via UddoktaPay (`POST /checkout-v2`) with instant LMS dashboard access.
-              </p>
-            </div>
-          </div>
-
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Training Hub', path: '/training' },
+          { label: 'Course Enrollment' },
+        ]}
+        eyebrow="E-Lawyers & Accounticca Academy · Admissions & Settlement"
+        headline={isSubmitted ? 'Enrollment Seat' : 'Academy Course'}
+        accentHeadline={isSubmitted ? 'Confirmed & Recorded' : 'Enrollment & Settlement'}
+        description={`Register for ${courseTitle}. Complete automated tuition settlement via UddoktaPay with immediate LMS dashboard access or reserve a seat offline.`}
+        metaItems={[
+          coursePrice,
+          'Automated UddoktaPay Settlement',
+          'Instant LMS Dashboard Unlock',
+        ]}
+        actions={
           <Link
             to="/training"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-colors border border-slate-700 shrink-0"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4 text-emerald-700" aria-hidden="true" />
             <span>Back to Training Hub</span>
           </Link>
-        </div>
+        }
+        summaryCard={{
+          eyebrow: 'Selected Academy Program',
+          title: coursePrice,
+          description: courseTitle,
+          icon: <GraduationCap className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'Student LMS Portal',
+              to: '/student/dashboard',
+              icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Training Hub',
+              to: '/training',
+              variant: 'neutral',
+              icon: <ArrowLeft className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Verified Digital Receipt & Instant Cohort Access',
+        }}
+        trustItems={[
+          {
+            icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+            label: '256-bit encrypted UddoktaPay tuition processing',
+          },
+          {
+            icon: <BookOpen className="h-4 w-4" aria-hidden="true" />,
+            label: 'Immediate LMS dashboard activation after verification',
+          },
+          {
+            icon: <GraduationCap className="h-4 w-4" aria-hidden="true" />,
+            label: 'QR-verifiable certificate upon assessment completion',
+          },
+        ]}
+      >
+        <div className="max-w-4xl mx-auto">
 
         {/* Form or Confirmation */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-6">
@@ -424,8 +457,9 @@ export const EnrollmentPage: React.FC = () => {
           )}
         </div>
 
-      </div>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };
 

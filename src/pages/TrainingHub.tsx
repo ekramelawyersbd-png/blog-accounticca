@@ -29,6 +29,7 @@ import { usePurchases } from '../contexts/PurchaseContext';
 import { TrainingAdmissionModal } from '../components/training/TrainingAdmissionModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useShopAuth } from '../contexts/ShopAuthContext';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface LiveClassProgram {
   id: string;
@@ -138,80 +139,79 @@ export function TrainingHub() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+    <>
       <SEO
         title="Academy | Live Classes & Professional Legal, Tax, VAT & RJSC Training Programs"
         description="Join interactive Live Classes and practical legal, income tax, VAT, accounting, and RJSC corporate compliance training programs with verifiable certification."
         canonicalUrl="/training"
       />
 
-      {/* Page Hero Banner */}
-      <div className="bg-gradient-to-b from-white via-slate-50/60 to-emerald-50/20 rounded-3xl border border-slate-200/90 p-6 sm:p-10 lg:p-12 shadow-sm relative overflow-hidden">
-        {/* Subtle decorative glow accents */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
-
-        <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 text-emerald-950 border border-emerald-300/80 shadow-2xs backdrop-blur-md">
-            <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
-            <span>E-Lawyers &amp; Accounticca Academy • Learn Today, Lead Tomorrow</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
-            Professional Training &amp;{' '}
-            <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 bg-clip-text text-transparent drop-shadow-2xs">
-              Live Class Academy
-            </span>
-          </h1>
-
-          <p className="text-slate-600 text-sm sm:text-base lg:text-lg leading-relaxed max-w-2xl mx-auto">
-            Practical legal, income tax, VAT, accounting, and RJSC compliance live classes designed to build real-world statutory expertise for practitioners, students, and corporate leaders.
-          </p>
-
-          {/* Micro Feature Highlights Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold text-slate-700 pt-1">
-            <span className="px-3 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Verifiable QR Certificates</span>
-            </span>
-            <span className="px-3 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-blue-600" />
-              <span>Live Interactive Q&amp;A Cohorts</span>
-            </span>
-            <span className="px-3 py-1 rounded-lg bg-white/90 border border-slate-200 shadow-2xs flex items-center gap-1.5">
-              <MonitorPlay className="w-3.5 h-3.5 text-purple-600" />
-              <span>24/7 LMS Portal Access</span>
-            </span>
-          </div>
-
-          {/* Action Buttons Wrapper with Glass Container */}
-          <div className="pt-2">
-            <div className="p-2 sm:p-2.5 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs inline-flex flex-wrap items-center justify-center gap-3">
-              <a
-                href="#live-classes-section"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap shrink-0"
-              >
-                <Video className="w-4 h-4 text-emerald-100" />
-                <span>Live Classes</span>
-              </a>
-              <Link
-                to="/student/dashboard?tab=live"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-950 hover:bg-slate-800 text-white shadow-md shadow-slate-950/20 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap shrink-0"
-              >
-                <MonitorPlay className="w-4 h-4 text-emerald-400" />
-                <span>Open Student Learning Portal (LMS)</span>
-              </Link>
-              <Link
-                to="/verify-certificate"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-emerald-300 shadow-2xs hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap shrink-0"
-              >
-                <Award className="w-4 h-4 text-emerald-600" />
-                <span>Public Certificate Verification</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Academy & Training' }]}
+        eyebrow="E-Lawyers & Accounticca Academy · Dhaka, Bangladesh"
+        headline="Professional Training &"
+        accentHeadline="Live Class Academy"
+        description="Practical legal, income tax, VAT, accounting, and RJSC compliance live classes designed to build real-world statutory expertise for practitioners, students, and corporate leaders."
+        metaItems={[
+          'Verifiable QR Certificates',
+          'Live Interactive Q&A Cohorts',
+          '24/7 LMS Portal Access',
+        ]}
+        actions={
+          <>
+            <a
+              href="#live-classes-section"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+            >
+              <Video className="h-4 w-4" aria-hidden="true" />
+              <span>Explore Live Classes</span>
+            </a>
+            <Link
+              to="/student/dashboard?tab=live"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              <MonitorPlay className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>Open Student LMS Portal</span>
+            </Link>
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'Academy Desk & Verification',
+          title: 'Cohort Enrollment & QR Registry',
+          description: 'Manage live class admissions, access course recordings, or verify issued training credentials online.',
+          icon: <GraduationCap className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'Student Portal (LMS)',
+              to: '/student/dashboard?tab=live',
+              icon: <MonitorPlay className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Verify Certificate',
+              to: '/verify-certificate',
+              variant: 'neutral',
+              icon: <Award className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'NBR Tax, VAT & RJSC Practitioner Curriculum · Public QR Credentials',
+        }}
+        trustItems={[
+          {
+            icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+            label: 'Verifiable QR certificates recorded in our public registry',
+          },
+          {
+            icon: <Users className="h-4 w-4" aria-hidden="true" />,
+            label: 'Live interactive Q&A cohorts led by practicing advisors',
+          },
+          {
+            icon: <MonitorPlay className="h-4 w-4" aria-hidden="true" />,
+            label: '24/7 LMS portal access for lessons, notes & assessments',
+          },
+        ]}
+      >
+        <div className="space-y-12">
 
       <div className="p-2.5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg flex flex-col items-center w-full max-w-[580px] mx-auto overflow-hidden">
         <iframe
@@ -605,6 +605,8 @@ export function TrainingHub() {
           courseId={certCourse.id}
         />
       )}
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 }

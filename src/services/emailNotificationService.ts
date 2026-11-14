@@ -14,6 +14,7 @@ import {
   generateAppointmentReminderEmailHtml, 
   AppointmentEmailPayload 
 } from '../utils/appointmentEmailTemplate';
+import { EmailTemplateGenerator } from '../utils/emailGenerator';
 import { Appointment } from './appointmentService';
 
 export interface EmailNotificationAudit {
@@ -64,7 +65,41 @@ export async function dispatchAppointmentStatusNotification(
     meetingLink: appointment.meetingLink
   };
 
-  const { subject, html, text } = generateAppointmentEmailHtml(payload);
+  const appointmentTime = `${payload.date} at ${payload.timeSlot} (BST)`;
+  const targetTemplateId =
+    newStatus === 'Cancelled' ? 'booking_cancellation' : 'booking_confirmation';
+
+  let generatedEmail: { subject: string; html: string; text: string; enabled?: boolean; templateId?: string };
+  try {
+    generatedEmail = await EmailTemplateGenerator.generateFromAdminTemplate(targetTemplateId, {
+      name: payload.clientName,
+      clientName: payload.clientName,
+      time: appointmentTime,
+      appointmentTime,
+      service: payload.practiceArea,
+      serviceType: payload.practiceArea,
+      practiceArea: payload.practiceArea,
+      date: payload.date,
+      timeSlot: payload.timeSlot,
+      referenceId: payload.referenceId,
+      email: recipientEmail,
+      clientEmail: recipientEmail,
+      phone: payload.phone,
+      clientPhone: payload.phone,
+      companyName: payload.companyName,
+      mode: payload.mode,
+      status: newStatus,
+      notes: appointment.notes,
+      meetingLink: payload.meetingLink,
+      cancellationReason: payload.cancellationReason,
+      assignedCounsel: appointment.assignedPartner?.name,
+      assignedLead: appointment.assignedPartner?.name,
+    });
+  } catch {
+    generatedEmail = generateAppointmentEmailHtml(payload);
+  }
+
+  const { subject, html, text } = generatedEmail;
   const sentAt = new Date().toISOString();
   const messageId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -88,27 +123,32 @@ export async function dispatchAppointmentStatusNotification(
     cancellationReason: payload.cancellationReason
   };
 
-  // 1. Dispatch through server notification route (which runs nodemailer & serverless bridge)
-  try {
-    const res = await fetch('/api/appointments/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        appointmentId: appointment.id,
-        html,
-        text,
-        subject
-      })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.notification?.messageId) {
-        auditRecord.messageId = data.notification.messageId;
+  // 1. Dispatch through server notification route (passes EmailTemplateGenerator-compiled HTML to Brevo relay)
+  if (generatedEmail.enabled !== false) {
+    try {
+      const res = await fetch('/api/appointments/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          templateId: generatedEmail.templateId || targetTemplateId,
+          serviceType: payload.practiceArea,
+          appointmentTime,
+          appointmentId: appointment.id,
+          subject,
+          html,
+          text,
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.notification?.messageId) {
+          auditRecord.messageId = data.notification.messageId;
+        }
       }
+    } catch (err) {
+      console.warn('[Email Notification] Server route dispatch note:', err);
     }
-  } catch (err) {
-    console.warn('[Email Notification] Server route dispatch note:', err);
   }
 
   // 2. Persist audit record in Firestore collection `emailNotifications`

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { saveItem, removeItem, isItemSaved } from '../utils/readingList';
-import { Search, BookOpen, AlertCircle, FileText, Loader2, Bookmark, Calendar, ArrowRight } from 'lucide-react';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { Search, BookOpen, AlertCircle, FileText, Loader2, Bookmark, Calendar, ArrowRight, Scale } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export function TaxPolicyAnalysis() {
   
@@ -83,7 +83,35 @@ export function TaxPolicyAnalysis() {
 
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <ContactPageShell
+      breadcrumbs={[{ label: 'Tools', path: '/tools' }, { label: 'Tax Policy Analysis' }]}
+      eyebrow="Bangladesh Fiscal & Statutory Intelligence · AY 2026–2027"
+      headline="Tax Policy"
+      accentHeadline="Analysis & Briefings"
+      description="Get structured statutory insights, commentary, and historical comparisons on Bangladesh Finance Act updates, Income Tax Act 2023 provisions, and NBR SROs."
+      metaItems={['Income Tax Act 2023', 'VAT Act 2012', 'NBR Statutory Updates']}
+      summaryCard={{
+        eyebrow: 'Statutory Advisory Desk',
+        title: 'Formal Legal Opinion',
+        icon: <Scale className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Need a written statutory memorandum or tailored corporate tax structuring opinion from our Chambers?',
+        actions: [
+          {
+            label: 'Book Consultation',
+            to: '/contact?tab=appointment',
+            icon: <Calendar className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Regulatory Library',
+            to: '/resource-library',
+            variant: 'neutral',
+            icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+        ],
+        footerText: 'Suite G-5, BTI Centara Grand, Green Road, Dhaka–1205',
+      }}
+    >
       <ToolSEO
         title={
           lastQuery
@@ -93,19 +121,6 @@ export function TaxPolicyAnalysis() {
         description="Analyze Bangladesh Finance Act updates, Income Tax Act 2023 statutory provisions, NBR SROs, and historical fiscal policy trends."
         canonicalUrl="/policy-analysis"
       />
-      <Breadcrumbs items={[{ label: 'Tools' }, { label: 'Tax Policy Analysis' }]} />
-      
-      <div className="mb-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-700">
-            <BookOpen className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Tax Policy Analysis</h1>
-        </div>
-        <p className="text-slate-600 text-lg max-w-3xl">
-          Get real-time insights, expert commentary, and historical trends on Bangladesh Finance Act updates using AI-powered search.
-        </p>
-      </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
@@ -204,6 +219,6 @@ export function TaxPolicyAnalysis() {
           </div>
         </div>
       )}
-    </div>
+    </ContactPageShell>
   );
 }

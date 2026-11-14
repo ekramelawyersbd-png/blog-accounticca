@@ -125,12 +125,14 @@ interface FAQProps {
   initialOpenCount?: number;
   showCategoryFilters?: boolean;
   showSearchBar?: boolean;
+  hideHeader?: boolean;
   className?: string;
 }
 
 export function FAQ({
   showCategoryFilters = true,
   showSearchBar = true,
+  hideHeader = false,
   className = ''
 }: FAQProps) {
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
@@ -241,22 +243,22 @@ export function FAQ({
       aria-labelledby="faq-main-heading"
     >
       <div className="max-w-5xl mx-auto">
-        {/* Header Block */}
-        <div className="text-center max-w-3xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 bg-emerald-100/80 text-emerald-800 text-xs font-extrabold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4 border border-emerald-200/60">
-            <HelpCircle className="w-4 h-4 text-emerald-600" aria-hidden="true" />
-            <span>Knowledge Base & FAQs</span>
+        {!hideHeader && (
+          <div className="text-center max-w-3xl mx-auto mb-10">
+            <p className="text-xs font-semibold text-emerald-800 mb-2">
+              Knowledge Base &amp; FAQs
+            </p>
+            <h2
+              id="faq-main-heading"
+              className="text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight leading-tight"
+            >
+              Frequently Asked Legal &amp; Tax Questions
+            </h2>
+            <p className="text-slate-600 text-base sm:text-lg mt-3 leading-7">
+              Clear, authoritative answers to statutory questions regarding Bangladesh Income Tax Act 2023, VAT, company registration, and business compliance.
+            </p>
           </div>
-          <h2 
-            id="faq-main-heading" 
-            className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight"
-          >
-            Frequently Asked Legal & Tax Questions
-          </h2>
-          <p className="text-slate-600 text-base sm:text-lg mt-3 font-medium">
-            Clear, authoritative answers to statutory questions regarding Bangladesh Income Tax Act 2023, VAT, company registration, and business compliance.
-          </p>
-        </div>
+        )}
 
         {/* Interactive Filter & Search Controls */}
         <div className="space-y-4 mb-8">
@@ -516,18 +518,19 @@ export function FAQ({
         </div>
 
         {/* Need Personal Consultation Banner */}
-        <div className="mt-12 bg-gradient-to-br from-emerald-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl border border-emerald-800/40">
+        <div className="mt-12 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/30 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
           <div className="space-y-1.5 text-center sm:text-left">
-            <h3 className="text-xl font-bold text-white tracking-tight">
+            <p className="text-xs font-semibold text-emerald-800">Direct Chambers Support</p>
+            <h3 className="text-xl font-bold text-slate-950 tracking-tight">
               Have a specific question not covered here?
             </h3>
-            <p className="text-sm text-emerald-200/80 max-w-xl">
+            <p className="text-sm text-slate-600 max-w-xl leading-6">
               Get personalized legal advice or tax filing support tailored to your unique corporate or individual requirements.
             </p>
           </div>
           <Link
-            to="/contact"
-            className="inline-flex items-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-6 py-3.5 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 shrink-0 transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+            to="/contact?tab=appointment"
+            className="inline-flex min-h-12 items-center gap-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-3 rounded-xl transition shadow-sm shrink-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/20"
           >
             <span>Book Consultation</span>
             <ArrowRight className="w-4 h-4" aria-hidden="true" />

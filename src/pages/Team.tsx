@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { teamMembers, TeamMember } from '../data/teamData';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import {
   Linkedin,
   Facebook,
@@ -125,7 +125,7 @@ export function Team() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+    <>
       <SEO
         title={
           selectedMember
@@ -144,55 +144,66 @@ export function Team() {
           { name: 'Our Team', url: '/team' }
         ]}
       />
-      <Breadcrumbs items={[{ label: 'Our Team' }]} />
 
-      {/* 1. Header & Interactive Directory Controls (div:nth-of-type(1)) */}
-      <div className="mb-10">
-        <section className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-10 shadow-xs">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold tracking-wide text-emerald-700 mb-2">
-              E-Lawyers & Accounticca · Multidisciplinary Advisory Practice
-            </p>
-            <h1 className="text-3xl sm:text-4xl lg:text-[2.5rem] font-bold text-slate-900 tracking-tight leading-tight mb-4">
-              Our Professional Team
-            </h1>
-            <p className="text-slate-600 text-base sm:text-lg leading-relaxed mb-6">
-              Meet the dedicated advocates, ACCA-qualified accountants, tax practitioners, and corporate compliance specialists committed to guiding businesses and individuals across Bangladesh. Hover over or click any advisor card to reveal their full professional biography and LinkedIn profile.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-slate-500 mb-7 pb-6 border-b border-slate-100">
-              <span className="font-semibold text-slate-800">{teamMembers.length} Advisory Professionals</span>
-              <span aria-hidden="true">·</span>
-              <span>Corporate & Commercial Law</span>
-              <span aria-hidden="true">·</span>
-              <span>NBR Income Tax & VAT</span>
-              <span aria-hidden="true">·</span>
-              <span>ACCA Audit & Financial Reporting</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <a
-                href={APPOINTMENT_BASE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-xs transition-all"
-              >
-                <Calendar className="w-4 h-4 text-emerald-100" />
-                <span>Book Consultation with Legal & Tax Team</span>
-                <ExternalLink className="w-4 h-4 text-emerald-200" />
-              </a>
-              <Link
-                to="/contact"
-                className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 text-slate-800 font-semibold text-sm px-5 py-3 rounded-xl transition-colors"
-              >
-                <span>Submit Case Brief</span>
-                <ArrowRight className="w-4 h-4 text-slate-500" />
-              </Link>
-            </div>
-          </div>
-
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Our Team' }]}
+        eyebrow="E-Lawyers & Accounticca · Multidisciplinary Advisory Practice"
+        headline="Our Professional"
+        accentHeadline="Legal & Financial Team"
+        description="Meet the dedicated Supreme Court advocates, ACCA-qualified accountants, income tax practitioners, and corporate compliance specialists guiding businesses and individuals across Bangladesh."
+        metaItems={[
+          `${teamMembers.length} Advisory Professionals`,
+          'Corporate & Commercial Law',
+          'NBR Income Tax & VAT',
+          'ACCA Audit & Financial Reporting',
+        ]}
+        actions={
+          <>
+            <a
+              href={APPOINTMENT_BASE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+            >
+              <Calendar className="h-4 w-4" aria-hidden="true" />
+              <span>Book Chamber Consultation</span>
+              <ExternalLink className="h-4 w-4 opacity-80" aria-hidden="true" />
+            </a>
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              <span>Submit Case Brief</span>
+              <ArrowRight className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            </Link>
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'Chamber Leadership & Routing',
+          title: `${teamMembers.length} Specialist Advisors`,
+          description: 'Filter advisors by division or practice area below, or open any profile to copy direct credentials and book an appointment.',
+          icon: <UserCheck className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'Schedule Appointment',
+              href: APPOINTMENT_BASE_URL,
+              external: true,
+              icon: <Calendar className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Contact Chamber',
+              to: '/contact',
+              variant: 'neutral',
+              icon: <Mail className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerText: 'Suite G-5, BTI Centara Grand, Panthapath, Dhaka–1205',
+        }}
+      >
+        {/* 1. Interactive Directory Controls */}
+        <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6">
           {/* Search & Department Filter Bar */}
-          <div className="mt-8 pt-6 border-t border-slate-200/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             {/* Segmented Department Tabs */}
             <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
               {(
@@ -274,7 +285,6 @@ export function Team() {
             </div>
           )}
         </section>
-      </div>
 
       {/* 2. Interactive Team Member Grid (div:nth-of-type(2)) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 items-start">
@@ -757,6 +767,7 @@ export function Team() {
           </article>
         </section>
       )}
-    </div>
+      </ContactPageShell>
+    </>
   );
 }

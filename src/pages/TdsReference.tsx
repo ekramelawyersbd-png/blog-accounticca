@@ -8,6 +8,7 @@ import { TdsSearchableSelect } from '../components/tds/TdsSearchableSelect';
 import { HighlightText } from '../components/tds/HighlightText';
 import { QuickTdsCalculator } from '../components/tds/QuickTdsCalculator';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export type TdsViewMode = 'database' | 'comparator' | 'calculator' | 'treaty';
 
@@ -269,7 +270,51 @@ export function TdsReference() {
   const sections: SectionType[] = ['All', 'Section 89 (Supply)', 'Section 90 (Services)', 'Section 119 (Non-Resident)'];
 
   return (
-    <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 transition-all ${pinnedItemIds.length > 0 ? 'pb-40 md:pb-48' : ''}`}>
+    <ContactPageShell
+      breadcrumbs={[{ label: 'Tools', path: '/tools' }, { label: 'TDS Reference Guide' }]}
+      eyebrow="Income Tax Act, 2023 · Sections 89, 90 & 119 · Bangladesh"
+      headline="TDS Reference"
+      accentHeadline="Guide & Rates"
+      description="A comprehensive database of Tax Deducted at Source (TDS) rates covering supply contracts, corporate services, and non-resident remittances under the Income Tax Act 2023."
+      metaItems={['Sections 89, 90 & 119', 'DTAA Treaty Lookup', 'Gross-Up Calculator']}
+      contentClassName={pinnedItemIds.length > 0 ? 'pb-40 md:pb-48' : ''}
+      actions={
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode('calculator');
+            const el = document.getElementById('quick-tds-calculator');
+            el?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          id="hero-quick-calc-cta"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+        >
+          <Calculator className="h-4 w-4" aria-hidden="true" />
+          <span>Open Quick TDS Calculator</span>
+        </button>
+      }
+      summaryCard={{
+        eyebrow: 'Withholding Tax & Treaty Desk',
+        title: `${tdsData.length} Statutory Rate Entries`,
+        icon: <Percent className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Compare resident vs. non-resident deduction slabs side-by-side or inspect bilateral DTAA withholding ceilings.',
+        actions: [
+          {
+            label: 'SRO 273 Gazette (2026)',
+            to: '/SRO/TDS2026',
+            icon: <FileText className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'DTAA Treaty Rates',
+            onClick: () => setViewMode('treaty'),
+            variant: 'neutral',
+            icon: <Globe className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+        ],
+        footerText: 'Covers Income Tax Act 2023 & SRO 273-Law/Income Tax-5/2026',
+      }}
+    >
       <ToolSEO
         title={
           viewMode === 'calculator'
@@ -282,31 +327,6 @@ export function TdsReference() {
         canonicalUrl="/tds-guide"
         keywords={['Bangladesh TDS Rates', 'Section 89 TDS', 'Section 90 TDS', 'Section 119 Non-Resident Tax', 'ITA 2023 TDS']}
       />
-      
-      <div className="text-center max-w-3xl mx-auto mb-12">
-        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-6">
-          TDS Reference <span className="text-emerald-600">Guide</span>
-        </h1>
-        <p className="text-lg text-slate-600 leading-relaxed">
-          A comprehensive database of Tax Deducted at Source (TDS) rates covering supply contracts, corporate services, and non-resident remittances under the Income Tax Act 2023.
-        </p>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('calculator');
-              const el = document.getElementById('quick-tds-calculator');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            id="hero-quick-calc-cta"
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold transition-all shadow-2xs group cursor-pointer"
-          >
-            <Calculator className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
-            <span>Need to calculate tax deduction on an invoice? Open Quick TDS Calculator</span>
-            <span className="text-emerald-600 font-black">→</span>
-          </button>
-        </div>
-      </div>
 
       {/* Tabs */}
       <div className="flex justify-center mb-8">
@@ -930,6 +950,6 @@ export function TdsReference() {
         onExpandDetails={(item) => setSelectedItemForDetails(item)}
       />
 
-    </div>
+    </ContactPageShell>
   );
 }

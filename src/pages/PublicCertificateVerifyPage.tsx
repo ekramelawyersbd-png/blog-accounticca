@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLms, PublicCertificateVerificationResult } from '../contexts/LmsContext';
 import { ServiceSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export const PublicCertificateVerifyPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,7 +53,7 @@ export const PublicCertificateVerifyPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+    <>
       <ServiceSEO
         title="Certificate Verification | Public Credential Registry"
         description="Verify the authenticity of a certificate issued by E-Lawyers Academy & Accounticca Professional Institute."
@@ -60,34 +61,36 @@ export const PublicCertificateVerifyPage: React.FC = () => {
         canonicalUrl="/verify-certificate"
       />
 
-      <div className="max-w-3xl mx-auto space-y-8">
-        {/* Top Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <Link
-            to="/student/dashboard"
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Student Learning Portal</span>
-          </Link>
-          <span className="text-xs text-slate-500 flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Public Credential Registry (No Login Required)</span>
-          </span>
-        </div>
-
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
-            Certificate Verification
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600">
-            Verify the authenticity of a certificate issued by our learning platform.
-          </p>
-        </div>
-
-        {/* Search Form Card */}
-        <div className="app-form-60 w-full lg:w-[60vw] mx-auto bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-6">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Training Academy', path: '/training' },
+          { label: 'Certificate Verification' }
+        ]}
+        eyebrow="Public Credential Registry"
+        headline="Certificate"
+        accentHeadline="Verification"
+        description="Verify the authenticity of a certificate issued by E-Lawyers Academy & Accounticca Professional Institute."
+        metaItems={[
+          'No Login Required',
+          'Privacy-Protected Lookup',
+          'Instant Registry Check'
+        ]}
+        summaryCard={{
+          eyebrow: 'Credential Authenticity',
+          title: 'Official Academy Registry',
+          description: 'Enter a Certificate ID to inspect issuance status, recipient name, course title, and signatory.',
+          icon: <Award className="w-5 h-5" />,
+          actions: [
+            { label: 'Explore Training Academy', to: '/training', variant: 'emerald' },
+            { label: 'Student Portal', to: '/student/dashboard', icon: <ArrowLeft className="w-4 h-4" />, variant: 'neutral' }
+          ],
+          footerIcon: <ShieldCheck className="w-4 h-4 text-emerald-700" />,
+          footerText: 'Public Credential Verification'
+        }}
+      >
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Search Form Card */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6">
           <form onSubmit={handleVerifySubmit} className="w-full space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -275,7 +278,8 @@ export const PublicCertificateVerifyPage: React.FC = () => {
             )}
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };

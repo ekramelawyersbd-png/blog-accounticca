@@ -19,7 +19,11 @@ import {
   Trash2,
   FileCode2,
   Columns2,
-  CalendarClock
+  CalendarClock,
+  LayoutTemplate,
+  Monitor,
+  Smartphone,
+  Sparkles
 } from 'lucide-react';
 import {
   DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES,
@@ -29,6 +33,13 @@ import {
   type TransactionalEmailCategory,
   type EmailPlaceholderDefinition
 } from '../../utils/transactionalEmailTemplates';
+import {
+  compileBuilderConfigToEmailTemplates,
+  createDefaultBuilderConfigForTemplate,
+  type DynamicEmailBuilderConfig
+} from '../../utils/emailTemplateBuilder';
+import { cacheAdminEmailTemplates } from '../../utils/emailGenerator';
+import { DynamicEmailBuilder, type ActiveBuilderInsertionTarget } from './DynamicEmailBuilder';
 import { EmailTemplatePreviewModal } from './EmailTemplatePreviewModal';
 import { ScheduledEmailQueuePanel } from './ScheduledEmailQueuePanel';
 
@@ -74,7 +85,8 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
   );
   const [selectedCategory, setSelectedCategory] = useState<TransactionalEmailCategory | 'all'>('all');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES[0].id
+    DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES.find((t) => t.id === 'booking_confirmation')?.id ||
+      DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES[0].id
   );
   const [brevoRelay, setBrevoRelay] = useState<BrevoRelaySummary>({
     host: 'smtp-relay.brevo.com',
@@ -95,6 +107,10 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
   const [ccAdminInput, setCcAdminInput] = useState(true);
   const [placeholdersList, setPlaceholdersList] = useState<EmailPlaceholderDefinition[]>([]);
   const [sampleValues, setSampleValues] = useState<Record<string, string>>({});
+  const [builderConfigInput, setBuilderConfigInput] = useState<DynamicEmailBuilderConfig>(
+    () => createDefaultBuilderConfigForTemplate('booking_confirmation')
+  );
+  const [hasManualHtmlEdits, setHasManualHtmlEdits] = useState(false);
 
   // Custom placeholder creation state
   const [newPhKey, setNewPhKey] = useState('');
@@ -103,9 +119,12 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
   const [showAddPlaceholder, setShowAddPlaceholder] = useState(false);
 
   // View & interaction state
-  const [editorViewMode, setEditorViewMode] = useState<'split' | 'code' | 'preview'>('split');
+  const [editorViewMode, setEditorViewMode] = useState<'builder' | 'split' | 'code' | 'preview'>('builder');
   const [activeCodeTab, setActiveCodeTab] = useState<'html' | 'text' | 'placeholders'>('html');
-  const [lastFocusedField, setLastFocusedField] = useState<'subject' | 'html' | 'text'>('html');
+  const [previewDeviceMode, setPreviewDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [showInlineSampleTester, setShowInlineSampleTester] = useState(true);
+  const [lastFocusedField, setLastFocusedField] = useState<'subject' | 'html' | 'text' | 'builder'>('builder');
+  const [activeBuilderFieldLabel, setActiveBuilderFieldLabel] = useState<string>('Confirmation Message');
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [testRecipient, setTestRecipient] = useState('ekram@elawyersbd.com');
 
@@ -124,6 +143,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
   const subjectRef = useRef<HTMLInputElement | null>(null);
   const htmlTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const textTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const builderInsertionTargetRef = useRef<ActiveBuilderInsertionTarget | null>(null);
 
   const loadTemplatesFromServer = async () => {
     setIsLoading(true);
@@ -133,6 +153,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
         const data = await res.json();
         if (Array.isArray(data.templates) && data.templates.length > 0) {
           setTemplates(data.templates);
+          cacheAdminEmailTemplates(data.templates);
         }
         if (data.brevoRelay) {
           setBrevoRelay(data.brevoRelay);
@@ -172,6 +193,11 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
     setEnabledInput(activeTemplate.enabled);
     setCcAdminInput(activeTemplate.ccAdmin);
     setPlaceholdersList(activeTemplate.placeholders || []);
+    setBuilderConfigInput(
+      activeTemplate.builderConfig || createDefaultBuilderConfigForTemplate(activeTemplate.id)
+    );
+    setHasManualHtmlEdits(false);
+    builderInsertionTargetRef.current = null;
 
     const initialSamples: Record<string, string> = {};
     for (const ph of activeTemplate.placeholders || []) {
@@ -179,6 +205,18 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
     }
     setSampleValues(initialSamples);
   }, [activeTemplate?.id]);
+
+  // Apply Visual Builder changes and compile HTML + Plain-Text automatically
+  const handleBuilderConfigChange = (nextConfig: DynamicEmailBuilderConfig) => {
+    setBuilderConfigInput(nextConfig);
+    const compiled = compileBuilderConfigToEmailTemplates(
+      nextConfig,
+      nameInput || activeTemplate?.name || 'Confirmation Email'
+    );
+    setHtmlInput(compiled.htmlTemplate);
+    setTextInput(compiled.textTemplate);
+    setHasManualHtmlEdits(false);
+  };
 
   // Auto-detect any {{token}} typed in subject/html/text that isn't yet in placeholdersList
   const detectedTokensInCode = useMemo(() => {
@@ -218,6 +256,24 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
       return;
     }
 
+    if (
+      (lastFocusedField === 'builder' || editorViewMode === 'builder') &&
+      builderInsertionTargetRef.current
+    ) {
+      builderInsertionTargetRef.current.insert(token);
+      return;
+    }
+
+    if (editorViewMode === 'builder') {
+      handleBuilderConfigChange({
+        ...builderConfigInput,
+        introParagraph: `${builderConfigInput.introParagraph}${
+          builderConfigInput.introParagraph.endsWith(' ') ? '' : ' '
+        }${token}`
+      });
+      return;
+    }
+
     if (lastFocusedField === 'text' && textTextareaRef.current && activeCodeTab === 'text') {
       const el = textTextareaRef.current;
       const start = el.selectionStart ?? textInput.length;
@@ -240,6 +296,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
       const end = el.selectionEnd ?? htmlInput.length;
       const next = htmlInput.slice(0, start) + token + htmlInput.slice(end);
       setHtmlInput(next);
+      setHasManualHtmlEdits(true);
       setTimeout(() => {
         el.focus();
         el.setSelectionRange(start + token.length, start + token.length);
@@ -308,7 +365,8 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
           subjectTemplate: subjectInput,
           htmlTemplate: htmlInput,
           textTemplate: textInput,
-          placeholders: updatedPlaceholders
+          placeholders: updatedPlaceholders,
+          builderConfig: builderConfigInput
         })
       });
 
@@ -318,7 +376,11 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
       }
 
       const savedTpl: TransactionalEmailTemplate = data.template;
-      setTemplates((prev) => prev.map((t) => (t.id === savedTpl.id ? savedTpl : t)));
+      setTemplates((prev) => {
+        const next = prev.map((t) => (t.id === savedTpl.id ? savedTpl : t));
+        cacheAdminEmailTemplates(next);
+        return next;
+      });
       setPlaceholdersList(savedTpl.placeholders);
       setFeedback({
         type: 'success',
@@ -361,6 +423,10 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
           setEnabledInput(current.enabled);
           setCcAdminInput(current.ccAdmin);
           setPlaceholdersList(current.placeholders);
+          setBuilderConfigInput(
+            current.builderConfig || createDefaultBuilderConfigForTemplate(current.id)
+          );
+          setHasManualHtmlEdits(false);
         }
       } else if (data.template) {
         const resetTpl: TransactionalEmailTemplate = data.template;
@@ -372,6 +438,10 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
         setEnabledInput(resetTpl.enabled);
         setCcAdminInput(resetTpl.ccAdmin);
         setPlaceholdersList(resetTpl.placeholders);
+        setBuilderConfigInput(
+          resetTpl.builderConfig || createDefaultBuilderConfigForTemplate(resetTpl.id)
+        );
+        setHasManualHtmlEdits(false);
         const initialSamples: Record<string, string> = {};
         for (const ph of resetTpl.placeholders || []) {
           initialSamples[ph.key] = ph.sampleValue;
@@ -582,7 +652,22 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
         </div>
 
         {/* View Mode Switcher */}
-        <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => {
+              setEditorViewMode('builder');
+              setLastFocusedField('builder');
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${
+              editorViewMode === 'builder'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <LayoutTemplate className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Visual Builder</span>
+          </button>
           <button
             type="button"
             onClick={() => setEditorViewMode('split')}
@@ -593,7 +678,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
             }`}
           >
             <Columns2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Split Editor &amp; Preview</span>
+            <span>Split HTML</span>
           </button>
           <button
             type="button"
@@ -605,7 +690,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
             }`}
           >
             <Code2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>HTML Editor</span>
+            <span>HTML Code</span>
           </button>
           <button
             type="button"
@@ -772,17 +857,27 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                     </span>
                     <span className="text-[11px] text-slate-500">
                       — Click a placeholder to insert into{' '}
-                      <strong className="text-emerald-700 uppercase">{lastFocusedField}</strong> &amp; copy
+                      <strong className="text-emerald-700 uppercase">
+                        {lastFocusedField === 'builder' ? activeBuilderFieldLabel : lastFocusedField}
+                      </strong>{' '}
+                      &amp; copy
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setActiveCodeTab(activeCodeTab === 'placeholders' ? 'html' : 'placeholders')}
+                      onClick={() => {
+                        if (editorViewMode === 'builder') {
+                          setEditorViewMode('split');
+                        }
+                        setActiveCodeTab(activeCodeTab === 'placeholders' ? 'html' : 'placeholders');
+                      }}
                       className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
                     >
-                      {activeCodeTab === 'placeholders' ? 'Back to HTML Editor' : 'Edit Sample Test Values'}
+                      {activeCodeTab === 'placeholders' && editorViewMode !== 'builder'
+                        ? 'Back to HTML Editor'
+                        : 'Edit All Test Values'}
                     </button>
                     <button
                       type="button"
@@ -790,7 +885,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                       className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
-                      <span>Add Custom Placeholder</span>
+                      <span>Add Custom Variable</span>
                     </button>
                   </div>
                 </div>
@@ -891,11 +986,26 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
             {/* Editor & Live Preview Split Container */}
             <div
               className={`grid grid-cols-1 ${
-                editorViewMode === 'split' ? 'xl:grid-cols-2' : ''
+                editorViewMode === 'split' || editorViewMode === 'builder' ? 'xl:grid-cols-2' : ''
               } gap-6 items-start`}
             >
-              {/* Left Column: HTML / Plain-Text / Sample Values Editor */}
-              {editorViewMode !== 'preview' && (
+              {/* Left Column: Visual Dynamic Builder OR HTML/Text Code Editor */}
+              {editorViewMode === 'builder' && (
+                <DynamicEmailBuilder
+                  config={builderConfigInput}
+                  placeholders={placeholdersList}
+                  onChange={handleBuilderConfigChange}
+                  hasManualHtmlEdits={hasManualHtmlEdits}
+                  onSyncBuilderToHtml={() => handleBuilderConfigChange(builderConfigInput)}
+                  onRegisterInsertionTarget={(target) => {
+                    builderInsertionTargetRef.current = target;
+                    setActiveBuilderFieldLabel(target.fieldLabel);
+                    setLastFocusedField('builder');
+                  }}
+                />
+              )}
+
+              {(editorViewMode === 'split' || editorViewMode === 'code') && (
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs flex flex-col">
                   {/* Editor Sub-Tabs */}
                   <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-2 border-b border-slate-800">
@@ -950,7 +1060,10 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                         ref={htmlTextareaRef}
                         value={htmlInput}
                         onFocus={() => setLastFocusedField('html')}
-                        onChange={(e) => setHtmlInput(e.target.value)}
+                        onChange={(e) => {
+                          setHtmlInput(e.target.value);
+                          setHasManualHtmlEdits(true);
+                        }}
                         rows={24}
                         spellCheck={false}
                         className="w-full p-4 font-mono text-xs leading-relaxed bg-slate-950 text-emerald-100 focus:outline-none resize-y min-h-[480px]"
@@ -966,7 +1079,10 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                         ref={textTextareaRef}
                         value={textInput}
                         onFocus={() => setLastFocusedField('text')}
-                        onChange={(e) => setTextInput(e.target.value)}
+                        onChange={(e) => {
+                          setTextInput(e.target.value);
+                          setHasManualHtmlEdits(true);
+                        }}
                         rows={20}
                         spellCheck={false}
                         className="w-full p-4 font-mono text-xs leading-relaxed bg-slate-950 text-slate-100 focus:outline-none resize-y min-h-[480px]"
@@ -1027,19 +1143,93 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                 </div>
               )}
 
-              {/* Right Column: Live Rendered HTML Email Preview */}
+              {/* Right Column: Live Rendered HTML Email Preview + Inline Variable Test Panel */}
               {editorViewMode !== 'code' && (
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs flex flex-col">
-                  <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 space-y-1.5">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                         <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Live Brevo Rendered Preview</span>
+                        <span>Live Client Email Preview</span>
                       </span>
-                      <span className="text-[11px] font-mono text-emerald-700 font-semibold">
-                        Real-Time Placeholder Interpolation
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewDeviceMode('desktop')}
+                            className={`px-2 py-1 rounded-md text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
+                              previewDeviceMode === 'desktop'
+                                ? 'bg-slate-900 text-white'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Monitor className="w-3 h-3" />
+                            <span>Desktop</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewDeviceMode('mobile')}
+                            className={`px-2 py-1 rounded-md text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
+                              previewDeviceMode === 'mobile'
+                                ? 'bg-slate-900 text-white'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            <Smartphone className="w-3 h-3" />
+                            <span>Mobile</span>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowInlineSampleTester((prev) => !prev)}
+                          className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
+                            showInlineSampleTester
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : 'bg-white border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>Test Variables</span>
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Inline Test Sample Variable Editor for instant live confirmation preview */}
+                    {showInlineSampleTester && placeholdersList.length > 0 && (
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                            Simulate Live Client Variables
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            Updates preview instantaneously
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                          {placeholdersList.slice(0, 8).map((ph) => (
+                            <div key={`live-var-${ph.key}`}>
+                              <label className="flex items-center justify-between text-[10px] font-bold text-slate-600 mb-0.5">
+                                <span className="truncate">{ph.label}</span>
+                                <code className="font-mono text-emerald-700">{ph.token}</code>
+                              </label>
+                              <input
+                                type="text"
+                                value={sampleValues[ph.key] ?? ph.sampleValue}
+                                onChange={(e) =>
+                                  setSampleValues((prev) => ({
+                                    ...prev,
+                                    [ph.key]: e.target.value
+                                  }))
+                                }
+                                className="w-full px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-600"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="text-xs bg-white p-2.5 rounded-xl border border-slate-200 space-y-1">
                       <div className="flex items-center gap-2 text-[11px]">
                         <span className="text-slate-400 font-bold w-14 shrink-0">From:</span>
@@ -1054,13 +1244,19 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-200/50 p-3 flex-1">
-                    <iframe
-                      title={`Preview-${activeTemplate.id}`}
-                      srcDoc={liveRendered.html}
-                      className="w-full min-h-[480px] bg-white rounded-xl border border-slate-200"
-                      sandbox="allow-same-origin"
-                    />
+                  <div className="bg-slate-200/50 p-3 flex-1 flex justify-center">
+                    <div
+                      className={`transition-all duration-200 ${
+                        previewDeviceMode === 'mobile' ? 'w-[375px]' : 'w-full'
+                      }`}
+                    >
+                      <iframe
+                        title={`Preview-${activeTemplate.id}`}
+                        srcDoc={liveRendered.html}
+                        className="w-full min-h-[540px] bg-white rounded-xl border border-slate-200 shadow-2xs"
+                        sandbox="allow-same-origin"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

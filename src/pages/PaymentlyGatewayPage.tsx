@@ -32,7 +32,7 @@ import { z } from 'zod';
 import { PatternFormat } from 'react-number-format';
 import { useDebounce, useDebouncedZodValidation } from '../hooks/useDebounce';
 import { SEO } from '../components/SEO';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import { useCart } from '../contexts/CartContext';
 import { usePurchases } from '../contexts/PurchaseContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -927,66 +927,46 @@ export function PaymentlyGatewayPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 text-slate-900">
+    <>
       <SEO
         title="Paymently BDT Gateway | Accounticca & E-Lawyers Chambers"
         description="Official Paymently Bangladeshi Taka (BDT) settlement link for verified legal, tax, and compliance toolkit procurement."
         canonicalUrl="/paymently"
       />
 
-      <div className="max-w-6xl mx-auto space-y-8">
-        <Breadcrumbs
-          items={[
-            { label: 'Tools', path: '/tools' },
-            { label: 'Checkout', path: '/checkout' },
-            { label: 'Paymently Gateway' }
-          ]}
-        />
-
-        {/* Branded Header */}
-        <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-md shadow-emerald-500/20 shrink-0">
-              <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center text-emerald-400">
-                <Lock className="w-7 h-7" />
-              </div>
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800">
-                  Paymently BDT Link
-                </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  Gateway: elawyers.paymently.io
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Paymently Settlement Portal
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl leading-relaxed">
-                Pre-filled settlement link for Accounticca &amp; E-Lawyers Chambers. All inputs auto-sync with your order and customer profile.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl px-4 py-2.5 text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                Payable Amount
-              </span>
-              <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
-                BDT {amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <Link
-              to="/checkout"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition-colors border border-slate-700"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Checkout</span>
-            </Link>
-          </div>
-        </div>
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Tools', path: '/tools' },
+          { label: 'Checkout', path: '/checkout' },
+          { label: 'Paymently Gateway' }
+        ]}
+        eyebrow="Paymently BDT Link"
+        headline="Paymently Settlement"
+        accentHeadline="Portal"
+        description="Pre-filled settlement link for Accounticca & E-Lawyers Chambers. All inputs auto-sync with your order and customer profile."
+        metaItems={[
+          'Gateway: elawyers.paymently.io',
+          'bKash · Nagad · Cards',
+          'Instant Verification'
+        ]}
+        summaryCard={{
+          eyebrow: 'Payable Amount',
+          title: `BDT ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          description: 'Official Bangladeshi Taka (BDT) settlement channel for compliance toolkits.',
+          icon: <Lock className="w-5 h-5" />,
+          actions: [
+            {
+              label: 'Back to Checkout',
+              to: '/checkout',
+              icon: <ArrowLeft className="w-4 h-4" />,
+              variant: 'neutral'
+            }
+          ],
+          footerIcon: <ShieldCheck className="w-4 h-4 text-emerald-700" />,
+          footerText: 'Encrypted Settlement Link'
+        }}
+      >
+        <div className="max-w-6xl mx-auto space-y-8 text-slate-900">
 
         {/* Feedback alert */}
         {errorMessage && (
@@ -2415,8 +2395,9 @@ export function PaymentlyGatewayPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 }
 

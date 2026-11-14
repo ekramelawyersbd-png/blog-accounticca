@@ -11,9 +11,9 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { Calculator, Info, DollarSign, Lightbulb, TrendingDown, ArrowRight, Building2, CheckCircle2, ExternalLink, ShieldCheck, AlertTriangle, BarChart3, ArrowRightLeft } from 'lucide-react';
-import { Breadcrumbs } from '../components/Breadcrumbs';
 import { ServiceSEO } from '../components/SEO';
 import { CorporateTaxRateCalculator } from '../components/tax/CorporateTaxRateCalculator';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 type CompanyCategory = 
   | 'public_10' 
@@ -217,7 +217,40 @@ export function CorporateTaxPlanner() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'Corporate Tax Planner 2026' },
+      ]}
+      eyebrow="Income Tax Act 2023 · Corporate Assessment · AY 2026–2027"
+      headline="Corporate Tax"
+      accentHeadline="Planner & Slabs"
+      description="Analyze corporate tax slabs (20%, 25%, 27.5%), test formal banking channel compliance (+2.5% penalty), and project long-term capital market listing savings for Assessment Year 2026–27."
+      metaItems={[
+        'Private & Listed Entities',
+        'CapEx Depreciation Modeler',
+        'Early Filing 5% Rebate',
+      ]}
+      summaryCard={{
+        eyebrow: 'Corporate Advisory Desk',
+        title: `Effective Rate: ${(analysis.applicableRate * 100).toFixed(1)}%`,
+        icon: <Building2 className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Model cashless compliance under Section 55 or compare private vs. IPO-listed tax slabs over multi-year projections.',
+        actions: [
+          {
+            label: 'Corporate Retainer Desk',
+            to: '/contact?tab=appointment',
+          },
+          {
+            label: 'Min Turnover Tax',
+            to: '/tools/minimum-turnover-tax',
+            variant: 'neutral',
+          },
+        ],
+        footerText: `Selected Entity: ${TAX_RATES[category].label}`,
+      }}
+    >
       <ServiceSEO
         title="Corporate Tax Planner 2026-27 | Assessment Year Strategy | Compliance Hub"
         description="Analyze financial projections and implement strategic deductions to optimize corporate income tax liability for listed and private companies in Bangladesh."
@@ -230,19 +263,6 @@ export function CorporateTaxPlanner() {
           { name: 'Corporate Tax Planner', url: '/corporate-planner' }
         ]}
       />
-      <Breadcrumbs items={[{ label: 'Tools' }, { label: 'Corporate Tax Planner 2026' }]} />
-      
-      <div className="mb-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-700">
-            <Building2 className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Corporate Tax Planner & Slabs 2026-27</h1>
-        </div>
-        <p className="text-slate-600 text-lg max-w-3xl">
-          Analyze corporate tax slabs (20%, 25%, 27.5%), test banking channel compliance (+2.5% penalty), and project long-term capital market listing savings for the Assessment Year 2026–27.
-        </p>
-      </div>
 
       {/* Interactive Slabs & Capital Market Comparison Calculator */}
       <div className="w-full mb-12">
@@ -616,6 +636,6 @@ export function CorporateTaxPlanner() {
           </div>
         </div>
       </div>
-    </div>
+    </ContactPageShell>
   );
 }

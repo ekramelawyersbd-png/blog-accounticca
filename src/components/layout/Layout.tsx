@@ -33,7 +33,10 @@ export function Layout() {
     location.pathname === '/student' ||
     location.pathname.startsWith('/student/') ||
     location.pathname === '/lms';
-  const isAuthView = location.pathname === '/auth' || location.pathname === '/login';
+  const isAuthView =
+    location.pathname === '/auth' ||
+    location.pathname === '/login' ||
+    location.pathname === '/signin';
   const hideNavs = (isFocusMode && isArticleView) || isLmsPortalView || isAuthView;
 
   const bgThemeClass = !hideNavs || isLmsPortalView
@@ -52,8 +55,8 @@ export function Layout() {
         {!hideNavs && <Navbar />}
         <main
           className={`min-w-0 flex-1 flex flex-col w-full max-w-full ${
-            isLmsPortalView
-              ? 'p-0 pb-16 lg:pb-0'
+            isLmsPortalView || isAuthView
+              ? 'p-0'
               : hideNavs
               ? 'pb-8 pt-0'
               : 'pb-16 lg:pb-0'

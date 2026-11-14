@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Breadcrumbs } from '../components/Breadcrumbs';
 import { FileText, Calendar, CheckCircle2, AlertTriangle, Scale, Share2, Clock, ShieldCheck, BookOpen, ArrowRight } from 'lucide-react';
 import { BookmarkButton } from '../components/BookmarkButton';
 import { ReadProgress } from '../components/ReadProgress';
@@ -10,6 +9,7 @@ import { RelatedArticles } from '../components/RelatedArticles';
 import { CommentSection } from '../components/CommentSection';
 import { VatApportionmentCalculator } from '../components/tax/VatApportionmentCalculator';
 import { corporateVatComplianceBangladeshArticle } from '../data/corporateVatComplianceBangladeshArticle';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export function VatGuide() {
   return (
@@ -42,75 +42,72 @@ export function VatGuide() {
         variant="floating-rail"
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <Breadcrumbs
-            items={[
-              { label: 'Home', path: '/' },
-              { label: 'VAT & Customs', path: '/category/vat' },
-              { label: 'Corporate VAT Compliance & Monthly Return Protocol in Bangladesh', path: '/vat-guide' }
-            ]}
-          />
-        </div>
-
-        {/* Hero Section */}
-        <section className="bg-emerald-900 rounded-3xl p-8 md:p-16 mb-8 relative overflow-hidden text-white border border-emerald-800 shadow-md">
-          <div className="absolute inset-0 z-0 bg-gradient-to-r from-emerald-900 via-emerald-800/90 to-emerald-900/40" />
-          <div className="relative z-10 max-w-4xl">
-            <div className="flex items-center gap-3 mb-6 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-900 bg-emerald-100 px-3 py-1.5 rounded-md">
-                VAT & SD Act 2012 • Rules 2016
-              </span>
-              <span className="text-emerald-100/80 text-sm font-medium">Updated: Oct 2026</span>
-              <EstimatedReadingTime content={corporateVatComplianceBangladeshArticle.content} variant="hero" />
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-4">
-              <h1 className="text-3xl md:text-5xl font-bold leading-tight">
-                Corporate VAT Compliance & Monthly Return Protocol in Bangladesh
-              </h1>
-              <BookmarkButton
-                id="corporate-vat-compliance-monthly-return-protocol-bangladesh"
-                title="Corporate VAT Compliance & Monthly Return Protocol in Bangladesh"
-                url="/article/corporate-vat-compliance-monthly-return-protocol-bangladesh"
-                className="p-3 rounded-full bg-emerald-800/50 hover:bg-emerald-700/80 text-emerald-100 hover:text-white border border-emerald-700/50 transition-colors shrink-0 sm:mt-2 self-start"
-              />
-            </div>
-            <div className="mb-6 flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-800/50 border border-emerald-700/60 text-xs text-emerald-100">
-                <Clock className="w-3.5 h-3.5 text-emerald-300" />
-                <span className="font-semibold">Reading Time:</span>
-                <span className="font-bold text-white bg-emerald-900/80 px-2 py-0.5 rounded">~12 min read</span>
-              </div>
-              <Link
-                to="/article/input-tax-rebate-bangladesh-vat-guide"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-xs font-semibold text-white transition-colors"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-emerald-300" />
-                Input Tax Rebate Guide (উপকরণ কর রেয়াত • Sec 46)
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-              <Link
-                to="/article/bin-registration-in-bangladesh"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white transition-colors"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-emerald-300" />
-                Pre-Registration Guide: BIN Registration in Bangladesh
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-            <p className="text-lg md:text-xl text-emerald-50/90 leading-relaxed max-w-3xl">
-              Master post-registration e-BIN obligations, statutory VAT books (Mushak 6.1, 6.2, 6.3), the 5-stage monthly Mushak 9.1 filing workflow, VDS withholding (Mushak 6.6), NBR software mandates, and high-exposure audit defense.
-            </p>
-          </div>
-        </section>
-
-        {/* Top Social Sharing Bar */}
-        <div className="mb-10">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Tax & VAT Guides', path: '/category/vat' },
+          { label: 'Corporate VAT Compliance & Monthly Return Protocol' },
+        ]}
+        eyebrow="VAT & SD Act 2012 · Rules 2016 · Corporate Compliance"
+        headline="Corporate VAT Compliance & Monthly Return Protocol."
+        accentHeadline="Mushak 6.1–6.3, 9.1 & VDS defense."
+        description="Master post-registration e-BIN obligations, statutory VAT books (Mushak 6.1, 6.2, 6.3), the 5-stage monthly Mushak 9.1 filing workflow, VDS withholding (Mushak 6.6), NBR software mandates, and high-exposure audit defense."
+        metaItems={[
+          'Updated Oct 2026',
+          '~12 min statutory read',
+          'VAT & SD Act 2012',
+        ]}
+        actions={
+          <>
+            <Link
+              to="/tools/vat-apportionment-calculator"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800"
+            >
+              <span>VAT Apportionment Tool (Sec 47)</span>
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <Link
+              to="/article/input-tax-rebate-bangladesh-vat-guide"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50/50"
+            >
+              <BookOpen className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>Input Tax Rebate Guide</span>
+            </Link>
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'Key Statutory Deadlines',
+          title: '15th of Every Month',
+          icon: <Calendar className="h-5 w-5" aria-hidden="true" />,
+          description:
+            'Monthly Mushak 9.1 filing (including Nil returns) is strictly due by the 15th of the following month on vat.gov.bd.',
+          actions: [
+            {
+              label: 'BIN Registration Guide',
+              to: '/article/bin-registration-in-bangladesh',
+              icon: <FileText className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'VAT Consultation',
+              to: '/contact?tab=appointment&area=VAT%20%26%20Customs',
+              variant: 'neutral',
+            },
+          ],
+          footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Covers Mushak 2.3, 6.1, 6.2, 6.3, 6.6 & Sec 61 retention rules.',
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
           <SocialShareButtons
             url="/vat-guide"
             title="Corporate VAT Compliance & Monthly Return Protocol in Bangladesh"
             summary="Comprehensive guide to post-registration BIN obligations, Mushak 6.1/6.2/6.3 registers, monthly Mushak 9.1 return workflow, VDS (Mushak 6.6), and NBR audit defense."
             variant="top-bar"
+          />
+          <BookmarkButton
+            id="corporate-vat-compliance-monthly-return-protocol-bangladesh"
+            title="Corporate VAT Compliance & Monthly Return Protocol in Bangladesh"
+            url="/article/corporate-vat-compliance-monthly-return-protocol-bangladesh"
+            className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors shrink-0"
           />
         </div>
 
@@ -599,14 +596,15 @@ export function VatGuide() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 rounded-3xl p-8 text-white text-center">
-                <h3 className="font-bold text-xl mb-4">Need Corporate VAT Support?</h3>
-                <p className="text-slate-300 text-sm mb-6 leading-relaxed">
+              <div className="rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/30 p-7 text-center shadow-xs">
+                <p className="text-xs font-semibold text-emerald-800">Direct VAT Chambers</p>
+                <h3 className="mt-1 font-bold text-xl text-slate-950 mb-3">Need Corporate VAT Support?</h3>
+                <p className="text-slate-600 text-sm mb-6 leading-6">
                   Our Chartered Accountants and VAT Counsel manage monthly Mushak 9.1 filings, VDS reconciliations, and NBR audit defense.
                 </p>
                 <Link
                   to="/contact?tab=appointment&area=VAT%20%26%20Customs"
-                  className="inline-block bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold px-6 py-3 rounded-xl transition-colors w-full"
+                  className="inline-flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-3 rounded-xl transition-colors w-full shadow-sm text-sm"
                 >
                   Book VAT Consultation
                 </Link>
@@ -614,10 +612,12 @@ export function VatGuide() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Related Articles Section */}
-      <RelatedArticles currentArticle={corporateVatComplianceBangladeshArticle} maxItems={3} />
+        {/* Related Articles Section */}
+        <div className="pt-4">
+          <RelatedArticles currentArticle={corporateVatComplianceBangladeshArticle} maxItems={3} />
+        </div>
+      </ContactPageShell>
     </>
   );
 }

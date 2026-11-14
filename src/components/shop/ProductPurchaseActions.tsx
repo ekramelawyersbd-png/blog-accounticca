@@ -23,6 +23,7 @@ interface ProductPurchaseActionsProps {
   onBuyNow: (e: React.MouseEvent, product?: ShopProduct) => void;
   variant?: 'card' | 'course' | 'compact' | 'detail';
   viewProductHref?: string;
+  redirectTo?: string;
   onViewProductClick?: () => void;
 }
 
@@ -36,6 +37,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
   onBuyNow,
   variant = 'card',
   viewProductHref,
+  redirectTo,
   onViewProductClick
 }) => {
   const { getProductAccessState } = usePurchases();
@@ -44,7 +46,8 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
   const addedFlag = isAdded || isAddedToCart;
   const pType = product ? product.productType || inferProductType(product) : 'Calculator & Excel';
   const accessState = getProductAccessState(resolvedId);
-  const resolvedViewHref = viewProductHref || (resolvedSlug ? `/shop/${resolvedSlug}` : '/tools');
+  const resolvedViewHref = redirectTo || viewProductHref || (resolvedSlug ? `/shop/${resolvedSlug}` : '/tools');
+  const resolvedDashboardHref = redirectTo || '/client-portal';
 
   // SCENARIO B: User Has Already Purchased & Verified the Product
   if (accessState === 'completed') {
@@ -145,7 +148,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
         </Link>
 
         <Link
-          to="/client-portal"
+          to={resolvedDashboardHref}
           onClick={(e) => e.stopPropagation()}
           className="w-full py-2.5 px-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1 hover:shadow-md"
         >
@@ -189,7 +192,7 @@ export const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
           <span className="truncate">Pending Verification</span>
         </div>
         <Link
-          to="/client-portal"
+          to={resolvedDashboardHref}
           onClick={(e) => e.stopPropagation()}
           className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
         >

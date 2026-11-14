@@ -9,6 +9,7 @@ import {
 import { EnrollmentModal } from '../components/training/EnrollmentModal';
 import { teamMembers } from '../data/teamData';
 import { CourseSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export function PersonalIncomeTaxCourse() {
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
@@ -278,7 +279,7 @@ export function PersonalIncomeTaxCourse() {
   );
 
   return (
-    <div className="bg-white text-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-800">
+    <>
       <CourseSEO
         title="Practical Personal Income Tax Assessment & Return Filing Course (ITA 2023) | E-Lawyers Academy"
         description="Master personal income tax computation, investment tax rebates, and online e-Return filing under the Income Tax Act 2023 across 10 live interactive classes."
@@ -290,152 +291,106 @@ export function PersonalIncomeTaxCourse() {
           { name: 'Personal Income Tax Course', url: '/course/personal-income-tax' }
         ]}
       />
-      
-      {/* Announcement Bar */}
-      <div className="bg-emerald-50/90 text-emerald-950 text-xs py-2.5 px-4 text-center font-semibold border-b border-emerald-200/80 flex items-center justify-center gap-2">
-        <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-        <span>E-Lawyers Academy • 10 Live Interactive Classes Schedule: Nov 24, 27, 30, 31, 2026 & Dec 3, 6, 7, 10, 13, 14, 2026</span>
-      </div>
 
-      {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-white via-[#fdfaf3] to-emerald-50/50 text-slate-900 border-b border-slate-200/90 py-10 sm:py-14">
-        {/* Subtle background glow effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-emerald-400/15 blur-[120px] pointer-events-none rounded-full" />
-        <div className="absolute top-1/3 right-10 w-[400px] h-[250px] bg-amber-300/20 blur-[100px] pointer-events-none rounded-full" />
-        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
-        
-        <div className="max-w-7xl mx-auto px-[50px] relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            
-            {/* Hero Content */}
-            <div className="lg:col-span-7 space-y-8 text-left">
-              
-              {/* Brand Tag / Rating Badge */}
-              <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full text-xs font-bold bg-white text-slate-800 border border-slate-200/90 shadow-2xs">
-                <div className="flex items-center gap-1 text-amber-500">
-                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
-                </div>
-                <span className="text-slate-700">4.9/5 Rating by Tax Professionals & Accountants</span>
+      <ContactPageShell
+        fullBleedSections
+        breadcrumbs={[
+          { label: 'Academy & Training', path: '/training' },
+          { label: 'Personal Income Tax Course' },
+        ]}
+        eyebrow="E-Lawyers Academy · 10 Live Interactive Classes"
+        headline="Master Personal"
+        accentHeadline="Income Tax Return Filing"
+        description="Learn Bangladesh Income Tax Law (ITA 2023), multi-head tax computation, investment rebates, wealth statements, and step-by-step NBR e-Return filing through 10 live interactive classes."
+        metaItems={[
+          '4.9/5 Rating · 1,200+ Alumni',
+          'Schedule: Nov 24 – Dec 14, 2026',
+          'Verifiable PDF Certificate',
+        ]}
+        actions={
+          <>
+            <Link
+              to="/student/course/personal-income-tax"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+            >
+              <span>Enter Student Learning Portal</span>
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsEnrollModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 cursor-pointer"
+            >
+              <span>Enroll Now</span>
+            </button>
+            <Link
+              to="/verify-certificate"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+            >
+              <Award className="h-4 w-4" aria-hidden="true" />
+              <span>Verify Certificate</span>
+            </Link>
+          </>
+        }
+        rightCard={
+          <div className="space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div>
+                <p className="text-xs font-semibold text-emerald-800">E-Lawyers Academy · Flagship Cohort</p>
+                <h2 className="mt-1 text-xl font-bold text-slate-950">Personal Income Tax Mastery</h2>
               </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <FileText className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.08]">
-                Master Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-600">Income Tax Return Filing</span>
-              </h1>
+            <div className="space-y-2.5 text-sm">
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-700" /> Format</span>
+                <strong className="text-slate-900">10 Live Interactive Classes</strong>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-emerald-700" /> Statutory Standard</span>
+                <strong className="text-slate-900">Income Tax Act 2023</strong>
+              </div>
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="flex items-center gap-2"><Award className="h-4 w-4 text-emerald-700" /> Certification</span>
+                <strong className="text-emerald-700">Verifiable PDF Certificate</strong>
+              </div>
+            </div>
 
-              <p className="text-lg sm:text-xl text-slate-600 font-normal leading-relaxed max-w-2xl">
-                Learn Bangladesh Income Tax Law, tax calculation, rebate, wealth statements and NBR e-Return filing through 10 Live Interactive Classes by <strong className="text-slate-900">E-Lawyers Academy</strong>.
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/70 p-3.5 text-xs">
+              <p className="font-semibold text-emerald-900">Live Class Dates (2026)</p>
+              <p className="mt-1 font-medium text-slate-700">
+                Nov 24, 27, 30, 31 &amp; Dec 3, 6, 7, 10, 13, 14, 2026
               </p>
-
-              {/* Feature Pills */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                {[
-                  { icon: <Video className="w-4 h-4 text-emerald-600" />, label: "10 Live Classes" },
-                  { icon: <MonitorPlay className="w-4 h-4 text-emerald-600" />, label: "Interactive Training" },
-                  { icon: <Sparkles className="w-4 h-4 text-amber-600" />, label: "Practical Case Studies" },
-                  { icon: <Award className="w-4 h-4 text-emerald-600" />, label: "Verifiable Certificate" }
-                ].map((pill, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200/90 text-xs font-bold text-slate-800 shadow-2xs">
-                    {pill.icon}
-                    <span className="line-clamp-1">{pill.label}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4 pt-2">
-                <Link
-                  to="/student/course/personal-income-tax"
-                  className="px-8 py-4 rounded-2xl font-black text-base bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white transition-all shadow-lg flex items-center justify-center gap-3 cursor-pointer"
-                >
-                  <span>Enter Student Learning Portal</span>
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <button
-                  onClick={() => setIsEnrollModalOpen(true)}
-                  className="px-7 py-4 rounded-2xl font-bold text-sm bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 shadow-2xs transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>Enroll Now</span>
-                </button>
-                <Link
-                  to="/verify-certificate"
-                  className="px-6 py-4 rounded-2xl font-bold text-sm bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200 transition-all text-center flex items-center justify-center gap-2"
-                >
-                  <Award className="w-4 h-4 text-emerald-600" />
-                  <span>Verify Certificate</span>
-                </Link>
-              </div>
-
-              {/* Trust Line */}
-              <div className="pt-2 flex items-center gap-3 text-xs text-slate-600 font-medium">
-                <div className="flex -space-x-2">
-                  <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-2xs">EA</div>
-                  <div className="w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-2xs">TP</div>
-                  <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-2xs">AC</div>
-                </div>
-                <span>Joined by 1,200+ Students, Accountants & Tax Practitioners across Bangladesh</span>
-              </div>
             </div>
 
-            {/* Hero Card / Dashboard Visual */}
-            <div className="lg:col-span-5">
-              <div className="bg-white p-8 sm:p-10 rounded-3xl border-2 border-slate-200/90 shadow-xl relative">
-                <div className="absolute -top-3.5 right-6 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-[11px] uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5">
-                  <span>★ Bestseller Course</span>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-5">
-                    <div>
-                      <span className="text-[11px] font-mono uppercase tracking-widest text-emerald-700 font-extrabold block">E-Lawyers Academy</span>
-                      <h3 className="text-xl font-black text-slate-900 mt-0.5">Personal Income Tax Mastery</h3>
-                    </div>
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs">
-                      <FileText className="w-7 h-7" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3.5 text-sm">
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-600" /> Format:</span>
-                      <strong className="text-slate-900">10 Live Interactive Classes</strong>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-600" /> Standard:</span>
-                      <strong className="text-slate-900">Income Tax Act 2023</strong>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="flex items-center gap-2"><Award className="w-4 h-4 text-amber-600" /> Certification:</span>
-                      <strong className="text-emerald-700">Verifiable PDF Certificate</strong>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-emerald-50/80 rounded-2xl border border-emerald-200 space-y-1.5">
-                    <div className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-800 flex items-center gap-1.5 font-mono">
-                      <span>📅 Live Class Dates (2026):</span>
-                    </div>
-                    <div className="text-xs text-slate-900 font-bold leading-relaxed">
-                      Nov 24, 27, 30, 31 & Dec 3, 6, 7, 10, 13, 14, 2026
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setIsEnrollModalOpen(true)}
-                    className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-black text-base transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
-                  >
-                    <span>Enroll Now</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-
-                  <p className="text-[11px] text-center text-slate-500 font-medium">
-                    Instant lifetime access to video lectures, notes & worksheets.
-                  </p>
-                </div>
-              </div>
-            </div>
-
+            <button
+              type="button"
+              onClick={() => setIsEnrollModalOpen(true)}
+              className="w-full rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Enroll in Cohort</span>
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
-        </div>
-      </section>
+        }
+        trustItems={[
+          {
+            icon: <Video className="h-4 w-4" aria-hidden="true" />,
+            label: '10 Live interactive classes with lifetime video replay access',
+          },
+          {
+            icon: <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />,
+            label: 'Practical case studies, Excel worksheets & sample returns',
+          },
+          {
+            icon: <Award className="h-4 w-4" aria-hidden="true" />,
+            label: 'QR-verifiable certificate of completion via E-Lawyers Academy',
+          },
+        ]}
+      >
 
       {/* 2. COURSE OVERVIEW & LEARNING JOURNEY */}
       <section className="py-20 bg-slate-50 border-b border-slate-200">
@@ -957,7 +912,7 @@ export function PersonalIncomeTaxCourse() {
       </section>
 
       {/* 13. FINAL CTA SECTION */}
-      <section style={{ paddingTop: '80px' }} className="py-20 bg-slate-50 text-slate-900 text-center relative overflow-hidden border-t border-slate-200">
+      <section className="py-16 bg-white text-slate-900 text-center relative overflow-hidden border-t border-slate-200">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
         
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-6">
@@ -1000,6 +955,7 @@ export function PersonalIncomeTaxCourse() {
         price="BDT 10,000 - 20,000"
       />
 
-    </div>
+      </ContactPageShell>
+    </>
   );
 }

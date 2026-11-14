@@ -232,16 +232,16 @@ export function Testimonials({
       <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-100/35 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-100/25 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
 
-      <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 relative z-10">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 relative z-10">
         
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold uppercase tracking-wider mb-3">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              Verified Client Outcomes
-            </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <p className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide text-emerald-800 mb-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-700" aria-hidden="true" />
+              <span>Verified Client Outcomes</span>
+            </p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight text-balance">
               {title}
             </h2>
             <p className="mt-2 text-base text-slate-600 max-w-2xl leading-relaxed">
@@ -283,7 +283,7 @@ export function Testimonials({
             <button
               id="submit-testimonial-btn"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 hover:text-emerald-700 hover:border-emerald-400 font-semibold text-sm transition-all shadow-sm hover:shadow"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 hover:text-emerald-700 hover:border-emerald-400 font-semibold text-sm transition-all shadow-xs hover:shadow whitespace-nowrap"
             >
               <MessageSquarePlus className="w-4 h-4 text-emerald-600" />
               <span>Share Your Story</span>
@@ -292,7 +292,7 @@ export function Testimonials({
             <Link
               id="book-consultancy-cta-btn"
               to="/contact"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 font-semibold text-sm transition-all shadow-md hover:shadow-emerald-600/20"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 font-semibold text-sm transition-all shadow-sm whitespace-nowrap"
             >
               <span>Consult an Expert</span>
             </Link>
@@ -336,7 +336,7 @@ export function Testimonials({
             {/* Top Auto-Play Status & Controls */}
             <div className="flex items-center justify-between mb-4 px-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-500">
+                <span className="text-xs font-semibold text-slate-500 tabular-nums">
                   Story <span className="text-emerald-700 font-bold">{safeIndex + 1}</span> of {displayList.length}
                 </span>
                 <span className="text-slate-300">•</span>
@@ -419,7 +419,7 @@ export function Testimonials({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200/80">
+                          <span className="text-xs font-bold text-emerald-800 tracking-wide">
                             {currentStory.serviceCategory}
                           </span>
                         </div>
@@ -450,7 +450,9 @@ export function Testimonials({
                         <div className="flex items-center gap-4">
                           <img 
                             src={currentStory.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStory.clientName)}&background=059669&color=fff`} 
-                            alt={currentStory.clientName} 
+                            alt={currentStory.clientName}
+                            referrerPolicy="no-referrer"
+                            decoding="async"
                             className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-sm shrink-0"
                           />
                           <div>
@@ -520,7 +522,7 @@ export function Testimonials({
                         <Star key={i} className="w-4 h-4 fill-amber-400" />
                       ))}
                     </div>
-                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                    <span className="text-[11px] font-bold text-emerald-800 tracking-wide">
                       {item.serviceCategory}
                     </span>
                   </div>
@@ -545,7 +547,9 @@ export function Testimonials({
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                     <img 
                       src={item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.clientName)}&background=059669&color=fff`} 
-                      alt={item.clientName} 
+                      alt={item.clientName}
+                      referrerPolicy="no-referrer"
+                      decoding="async"
                       className="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0" 
                     />
                     <div className="min-w-0">

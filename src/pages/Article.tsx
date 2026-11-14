@@ -4,7 +4,7 @@ import { mockArticles, categories } from '../data/mockData';
 import { format } from 'date-fns';
 import { calculateReadingTime } from '../utils/readingTime';
 import { Bookmark, Clock, MessageCircle, Share2, ThumbsUp, Printer, Award, Facebook, Twitter, Linkedin, Link as LinkIcon, Search, ChevronRight, ChevronDown, ChevronUp, User, Calendar, Briefcase, FileText, ExternalLink, Loader2, ImageOff, Check, ShieldCheck, Maximize2, Minimize2, Sparkles, Columns3 } from 'lucide-react';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -246,13 +246,28 @@ export function Article() {
 
   if (!article) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <h2 className="text-3xl font-bold text-slate-900 mb-4">Article Not Found</h2>
-        <p className="text-slate-600 mb-8">The legal article or guide you are looking for does not exist or has been removed.</p>
-        <Link to="/" className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-500 transition-colors">
-          Return to Homepage
-        </Link>
-      </div>
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Knowledge Hub', path: '/search' },
+          { label: 'Article Not Found' },
+        ]}
+        eyebrow="Knowledge Repository · Accounticca × E-Lawyers"
+        headline="Article not found."
+        accentHeadline="Explore active legal & tax guides."
+        description="The legal article or guide you are looking for does not exist or has been removed."
+        actions={
+          <Link
+            to="/search"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            Browse All Articles
+          </Link>
+        }
+      >
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-12 text-center shadow-xs">
+          <p className="text-slate-600">Return to the Knowledge Hub or Homepage to search across our compliance archive.</p>
+        </div>
+      </ContactPageShell>
     );
   }
 
@@ -785,48 +800,8 @@ export function Article() {
     return undefined;
   }, [article.id]);
 
-  return (
+  const articleReaderContent = (
     <>
-      <BlogSEO 
-        article={article} 
-        canonicalUrl={canonicalUrl}
-        customSchema={articleCustomSchema} 
-      />
-      {!isFocusMode && !isLongForm && <ReadProgress />}
-
-      {/* Dedicated Focus Mode Reading Bar at Top of Viewport */}
-      {isFocusMode && (
-        <FocusModeReaderBar 
-          articleTitle={article.title}
-          category={article.category}
-          readTime={readingTimeMinutes}
-          progressPercent={scrollProgress}
-          content={localizedContent}
-          isSaved={isSaved}
-          onToggleSave={toggleSave}
-        />
-      )}
-
-      {/* Floating Left Social Share Rail for Desktop (Hidden in Focus Mode) */}
-      {!isFocusMode && (
-        <SocialShareButtons 
-          url={`/article/${article.id}`}
-          title={article.title} 
-          summary={article.excerpt} 
-          variant="floating-rail" 
-        />
-      )}
-
-      <div className={isFocusMode ? "max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 transition-all duration-300" : "max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 xl:pl-16 xl:pr-8 2xl:pl-20 2xl:pr-10 py-6 md:py-9"}>
-        {!isFocusMode && (
-          <Breadcrumbs 
-            items={[
-              { label: 'Knowledge Hub', path: '/search' },
-              { label: article.category, path: `/category/${article.categoryId}` },
-              { label: article.title }
-            ]} 
-          />
-        )}
 
         {isFocusMode && (
           <div className="mb-8 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-xs animate-in fade-in">
@@ -1600,10 +1575,88 @@ export function Article() {
           )}
 
         </div>
-      </div>
+    </>
+  );
 
-      {/* 9. Related Articles (Hidden in Focus Mode) */}
-      {!isFocusMode && <RelatedArticles currentArticle={article} maxItems={4} />}
+  return (
+    <>
+      <BlogSEO
+        article={article}
+        canonicalUrl={canonicalUrl}
+        customSchema={articleCustomSchema}
+      />
+      {!isFocusMode && !isLongForm && <ReadProgress />}
+
+      {/* Dedicated Focus Mode Reading Bar at Top of Viewport */}
+      {isFocusMode && (
+        <FocusModeReaderBar
+          articleTitle={article.title}
+          category={article.category}
+          readTime={readingTimeMinutes}
+          progressPercent={scrollProgress}
+          content={localizedContent}
+          isSaved={isSaved}
+          onToggleSave={toggleSave}
+        />
+      )}
+
+      {/* Floating Left Social Share Rail for Desktop (Hidden in Focus Mode) */}
+      {!isFocusMode && (
+        <SocialShareButtons
+          url={`/article/${article.id}`}
+          title={article.title}
+          summary={article.excerpt}
+          variant="floating-rail"
+        />
+      )}
+
+      {isFocusMode ? (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 transition-all duration-300">
+          {articleReaderContent}
+        </div>
+      ) : (
+        <ContactPageShell
+          breadcrumbs={[
+            { label: 'Knowledge Hub', path: '/search' },
+            { label: article.category, path: `/category/${article.categoryId}` },
+            { label: article.title },
+          ]}
+          eyebrow={`${article.category} · Statutory Guide & Analysis`}
+          headline={article.title}
+          description={article.excerpt}
+          metaItems={[
+            article.author.name,
+            format(new Date(article.publishedAt), 'MMM d, yyyy'),
+            `${readingTimeMinutes} min read`,
+          ]}
+          summaryCard={{
+            eyebrow: 'Publication Briefing',
+            title: `${readingTimeMinutes} Min Statutory Read`,
+            icon: <FileText className="h-5 w-5" aria-hidden="true" />,
+            description: `Prepared by ${article.author.name} for Accounticca × E-Lawyers readers. Save this brief or enable Focus Mode for uninterrupted reading.`,
+            actions: [
+              {
+                label: 'Consult Counsel',
+                to: `/contact?tab=appointment&area=${encodeURIComponent(article.category)}`,
+                icon: <Calendar className="h-3.5 w-3.5" aria-hidden="true" />,
+              },
+              {
+                label: 'More in Category',
+                to: `/category/${article.categoryId}`,
+                variant: 'neutral',
+              },
+            ],
+            footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+            footerText: 'Verified against Bangladesh Income Tax, VAT & RJSC compliance rules.',
+          }}
+        >
+          <div className="w-full">{articleReaderContent}</div>
+          {/* 9. Related Articles (Inside ContactPageShell canvas) */}
+          <div className="pt-4">
+            <RelatedArticles currentArticle={article} maxItems={4} />
+          </div>
+        </ContactPageShell>
+      )}
 
       {/* Statutory Term Detail Modal triggered from Glossary Tooltip or Bar */}
       <TermDetailModal

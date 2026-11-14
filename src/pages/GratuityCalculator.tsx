@@ -3,6 +3,7 @@ import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Briefcase, RefreshCw } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export const GratuityCalculator: React.FC = () => {
   const [basicSalary, setBasicSalary] = useState<number>(50000); // Last drawn basic salary
@@ -70,7 +71,66 @@ export const GratuityCalculator: React.FC = () => {
   }), [basicSalary, serviceYears, separationType, gratuityDaysPerYear, isEligible, totalGratuity, noticeDays, noticePay]);
 
   return (
-    <>
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'Gratuity & Severance Pay' },
+      ]}
+      eyebrow="Bangladesh Labour Act 2006 · Sections 2(10), 26 & 27"
+      headline="Statutory Gratuity &"
+      accentHeadline="Settlement Calculator"
+      description="Computes end-of-service gratuity and notice pay under Sections 2(10), 26, and 27: 30 days basic wages (5–10 yrs) and 45 days basic wages (>10 yrs)."
+      metaItems={[
+        'Labour Act 2006 Compliant',
+        'Notice Pay Sec 26',
+        '30 / 45 Days Formula',
+      ]}
+      actions={
+        <>
+          <CalculationEmailActionBarButton
+            options={{
+              toolId: 'gratuity-calculator',
+              toolName: 'Gratuity & Severance Pay Calculator',
+              toolCategory: 'Labour Law & Employment',
+              toolPath: '/tools/gratuity',
+              statutoryBasis: 'Bangladesh Labour Act 2006 · Sections 2(10), 26 & 27',
+              customSnapshot: calculationSnapshot,
+            }}
+            label="Send Calculation Report"
+            variant="primary"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setBasicSalary(50000);
+              setServiceYears(7);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
+            <span>Reset</span>
+          </button>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Terminal Settlement Summary',
+        title: `৳ ${Math.round(totalGratuity + noticePay).toLocaleString()}`,
+        icon: <Briefcase className="h-5 w-5" aria-hidden="true" />,
+        description: `Gratuity accrued ৳ ${Math.round(totalGratuity).toLocaleString()} · Statutory notice pay ৳ ${Math.round(noticePay).toLocaleString()} (${serviceYears} yrs service).`,
+        actions: [
+          {
+            label: 'Labour Law Advisory',
+            to: '/contact?tab=appointment',
+          },
+          {
+            label: 'HR Legal Templates',
+            to: '/resource-library',
+            variant: 'neutral',
+          },
+        ],
+        footerText: 'Excludes unavailed annual leave encashment (Section 117) and earned wages.',
+      }}
+    >
       <ToolSEO
         toolId="gratuity-calculator"
         title="Bangladesh Labour Act Gratuity & Notice Pay Calculator"
@@ -84,41 +144,7 @@ export const GratuityCalculator: React.FC = () => {
         toolCategory="Labour Law &amp; Employment"
         toolPath="/tools/gratuity"
       >
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold px-2.5 py-1 bg-rose-100 text-rose-800 rounded-full border border-rose-300">
-              Bangladesh Labour Act 2006 (Act XLII of 2006)
-            </span>
-            <h1 className="text-2xl font-black text-slate-900 mt-2">
-              Statutory Gratuity &amp; End of Service Settlement Calculator
-            </h1>
-            <p className="text-xs text-slate-600 mt-1">
-              Section 2(10) and Section 27 calculation rules: 30 days basic (5-10 yrs) and 45 days basic (&gt;10 yrs).
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => { setBasicSalary(50000); setServiceYears(7); }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Reset
-            </button>
-            <CalculationEmailActionBarButton
-              options={{
-                toolId: 'gratuity-calculator',
-                toolName: 'Gratuity & Severance Pay Calculator',
-                toolCategory: 'Labour Law & Employment',
-                toolPath: '/tools/gratuity',
-                statutoryBasis: 'Bangladesh Labour Act 2006 · Sections 2(10), 26 & 27',
-                customSnapshot: calculationSnapshot,
-              }}
-              label="Send Calculation Report"
-              variant="primary"
-            />
-          </div>
-        </div>
+      <div className="space-y-6">
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
@@ -230,6 +256,6 @@ export const GratuityCalculator: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
-    </>
+    </ContactPageShell>
   );
 };

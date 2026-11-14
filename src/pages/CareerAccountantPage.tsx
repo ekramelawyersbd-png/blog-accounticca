@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import type { CareerApplicationData } from '../utils/careerEmailTemplate';
 import { submitCareerApplicationToApi } from '../utils/careerStorage';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface FileMeta {
   fileName: string;
@@ -1008,7 +1009,7 @@ export const CareerAccountantPage: React.FC = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#f2f5f8] text-[#243446] text-[15px] leading-[1.55] pb-16 print:bg-white print:pb-0">
+    <>
       <ServiceSEO
         title="We’re Hiring! Accountant (Accounts Division) | E-Lawyers Careers"
         description="Build your accounting career with E-Lawyers Legal & Business Consultancy Firm. Full-Time Accountant positions (2 vacancies) in Panthapath, Dhaka. Fresh graduates welcome. Deadline: October 31, 2026."
@@ -1016,138 +1017,79 @@ export const CareerAccountantPage: React.FC = () => {
         canonicalUrl="/Careers/accountant"
       />
 
-      {/* Hero Header - Light Corporate Theme */}
-      <header className="bg-gradient-to-b from-white via-[#f8fafc] to-[#f1f5f9] text-slate-800 pt-10 pb-20 px-5 border-b border-slate-200 relative overflow-hidden print:py-5 print:bg-white">
-        {/* Subtle ultra-light background accents */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-200/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-200/15 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20"></div>
-
-        <div className="max-w-[960px] mx-auto relative z-10">
-          <div
-            className="flex items-center justify-between gap-4 mb-6"
-            aria-label="E-Lawyers"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="grid place-items-center w-[46px] h-[46px] shrink-0 border-2 border-teal-600/25 rounded-xl bg-white text-[#167d83] font-extrabold tracking-tight text-[17px] shadow-xs">
-                E-L
-              </div>
-              <div>
-                <div className="text-[17px] font-bold tracking-wide text-[#10243a]">
-                  E-Lawyers
-                </div>
-                <div className="text-slate-500 text-[11px] tracking-[0.15em] uppercase font-semibold">
-                  Legal &amp; Business Consultancy Firm
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap print:hidden">
-              <Link
-                to="/Careers/mto"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all whitespace-nowrap shrink-0"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>MTO Opening</span>
-              </Link>
-              <Link
-                to="/Careers/sales-marketing"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 hover:text-emerald-800 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all whitespace-nowrap shrink-0"
-              >
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Sales &amp; Marketing</span>
-              </Link>
-              <Link
-                to="/Careers/customer-care"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all whitespace-nowrap shrink-0"
-              >
-                <span>Customer Care (2)</span>
-              </Link>
-              <Link
-                to="/Careers"
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>All Openings</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold mb-3 shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-amber-700" /> WE’RE HIRING! · ACCOUNTS DIVISION
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-[43px] font-black leading-[1.13] tracking-tight text-[#10243a]">
-            Accountant
-            <br />
-            Job Announcement &amp; Application
-          </h1>
-          <p className="max-w-[720px] text-slate-600 mt-3.5 text-[15px] sm:text-base leading-relaxed">
-            <strong className="text-slate-800">Build Your Accounting Career. Gain Practical Experience. Grow with E-Lawyers.</strong>
-            <br />
-            E-Lawyers Legal &amp; Business Consultancy Firm is expanding its Accounts Division and inviting applications from talented, dedicated, and motivated individuals for the position of Accountant. Fresh graduates are highly encouraged to apply.
-          </p>
-
-          {/* Unboxed Metadata Strip */}
-          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 mt-6 text-xs font-semibold text-slate-700">
-            <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
-              <Briefcase className="w-3.5 h-3.5 text-[#167d83]" />
-              <span>Full-Time · Accounts Division</span>
-            </span>
-            <span aria-hidden="true" className="text-slate-300">
-              ·
-            </span>
-            <span className="inline-flex items-center gap-1.5 font-mono tabular-nums bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
-              <Users className="w-3.5 h-3.5 text-[#167d83]" />
-              <span>2 Vacancies</span>
-            </span>
-            <span aria-hidden="true" className="text-slate-300">
-              ·
-            </span>
-            <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
-              <MapPin className="w-3.5 h-3.5 text-[#167d83]" />
-              <span>Panthapath, Dhaka</span>
-            </span>
-            <span aria-hidden="true" className="text-slate-300">
-              ·
-            </span>
-            <span className="inline-flex items-center gap-1.5 font-mono tabular-nums text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 shadow-2xs">
-              <Calendar className="w-3.5 h-3.5 text-amber-700" />
-              <span>Deadline: October 31, 2026</span>
-            </span>
-          </div>
-
-          {/* Top Quick Action Button Bar */}
-          <div className="flex flex-wrap items-center gap-3 mt-7 print:hidden">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Careers', path: '/Careers' },
+          { label: 'Accountant (Accounts Division)' },
+        ]}
+        eyebrow="E-Lawyers Legal & Business Consultancy Firm · Accounts Division"
+        headline="Accountant"
+        accentHeadline="Job Announcement & Application"
+        description="Build Your Accounting Career. Gain Practical Experience. Grow with E-Lawyers. Our expanding Accounts Division invites dedicated applicants and fresh graduates for 2 full-time Accountant positions in Dhaka."
+        metaItems={[
+          'Full-Time · Accounts Division',
+          '2 Vacancies',
+          'Panthapath, Dhaka',
+          'Deadline: October 31, 2026',
+        ]}
+        actions={
+          <>
             <button
               type="button"
               onClick={() => switchTab('apply')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 cursor-pointer transition-all whitespace-nowrap shrink-0 shadow-xs ${
-                activeTab === 'apply'
-                  ? 'bg-[#167d83] text-white shadow-md'
-                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
-              }`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
             >
-              <FileText className="w-4 h-4 text-emerald-300" />
+              <FileText className="h-4 w-4" aria-hidden="true" />
               <span>Apply for This Position</span>
             </button>
-
             <button
               type="button"
               onClick={() => switchTab('circular')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all whitespace-nowrap shrink-0 ${
-                activeTab === 'circular'
-                  ? 'bg-white text-[#10243a] border-2 border-slate-300 shadow-xs'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs'
-              }`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 cursor-pointer"
             >
-              <BookOpen className="w-4 h-4 text-[#167d83]" />
+              <BookOpen className="h-4 w-4 text-emerald-700" aria-hidden="true" />
               <span>Read Full Job Circular</span>
             </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Wrap */}
-      <main className="relative z-20 max-w-[960px] mx-auto px-4 sm:px-6 -mt-10 print:mt-2 print:px-0">
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'Accounts Division · Panthapath, Dhaka',
+          title: '2 Full-Time Vacancies',
+          description: 'Open to Accounting & Finance graduates with practical bookkeeping, NBR tax, and VAT reporting interest.',
+          icon: <Briefcase className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'MTO Opening',
+              to: '/Careers/mto',
+              icon: <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'All Openings',
+              to: '/Careers',
+              variant: 'neutral',
+              icon: <ArrowLeft className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerIcon: <Calendar className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Application Deadline: October 31, 2026 · Fresh Graduates Welcome',
+        }}
+        trustItems={[
+          {
+            icon: <Building2 className="h-4 w-4" aria-hidden="true" />,
+            label: 'Hands-on B2B corporate accounting, VAT & tax compliance work',
+          },
+          {
+            icon: <GraduationCap className="h-4 w-4" aria-hidden="true" />,
+            label: 'Fresh Accounting & Finance graduates strongly encouraged',
+          },
+          {
+            icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+            label: 'Instant reference ID & structured HR review within 7 days',
+          },
+        ]}
+      >
+        {/* Main Content Wrap */}
+        <div className="relative z-20 max-w-[960px] mx-auto print:mt-2 print:px-0">
         {/* View Switcher Tabs (Job Circular vs Online Application) */}
         <div className="bg-white border border-[#dfe6ec] rounded-2xl shadow-sm p-1.5 mb-5 flex items-center justify-between gap-2 print:hidden">
           <div className="flex items-center gap-1">
@@ -2979,7 +2921,8 @@ export const CareerAccountantPage: React.FC = () => {
           <br />
           G-5, BTI Centara Grand, 144-144/1 Green Road, Panthapath, Dhaka-1205, Bangladesh
         </footer>
-      </main>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };

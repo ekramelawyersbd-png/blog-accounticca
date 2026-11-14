@@ -68,7 +68,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useProducts } from '../hooks/useProducts';
 import { SHOP_PRODUCTS, ShopProduct, inferProductType } from '../data/shopProducts';
 import { SEO } from '../components/SEO';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredShopSheetId, appendShopOrderToSheet } from '../services/shopSheetsSync';
 import {
@@ -802,59 +802,57 @@ Contact & Advisory: https://blog.accounticca.com/contact
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10">
-      <SEO 
-        title="Checkout & Digital Procurement | Accounticca" 
-        description="Complete your order for statutory tax calculators, legal contract templates, and corporate compliance toolkits." 
+    <>
+      <SEO
+        title="Checkout & Digital Procurement | Accounticca"
+        description="Complete your order for statutory tax calculators, legal contract templates, and corporate compliance toolkits."
       />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        
-        {/* Navigation Breadcrumbs */}
-        <Breadcrumbs items={[{ label: 'Home', path: '/' }, { label: 'Checkout & Procurement' }]} />
-
-        {/* Top Header */}
-        <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 shrink-0">
-              <ShieldCheck className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white">
-                {isOrderComplete ? 'Order Procurement Complete' : 'Digital Checkout & Procurement Page'}
-              </h1>
-              <p className="text-xs text-slate-400 font-medium mt-1">
-                {isOrderComplete 
-                  ? `Order #${completedOrderNumber} verified. Assets ready for instant download.` 
-                  : 'Separate dedicated page for order processing, option selection, and instant file dispatch.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <Link
-              to="/tools"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-colors border border-slate-700"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Tools</span>
-            </Link>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/60 px-3.5 py-2 rounded-xl border border-emerald-800 font-semibold">
-              <Lock className="w-3.5 h-3.5" />
-              <span>256-Bit SSL Encrypted</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Body View */}
-        {isOrderComplete ? (
-          /* Success Screen */
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-6">
-            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-2xl p-6 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 shadow-inner">
-                  <Sparkles className="w-6 h-6 animate-pulse" />
-                </div>
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Tools', path: '/tools' },
+          { label: 'Checkout & Procurement' }
+        ]}
+        eyebrow="Secure Digital Procurement"
+        headline={isOrderComplete ? 'Order Procurement' : 'Digital Checkout &'}
+        accentHeadline={isOrderComplete ? 'Complete' : 'Procurement'}
+        description={
+          isOrderComplete
+            ? `Order #${completedOrderNumber} verified. Assets are ready for instant download and access.`
+            : 'Complete your order for statutory tax calculators, legal contract templates, and corporate compliance toolkits.'
+        }
+        metaItems={[
+          '256-Bit SSL Encrypted',
+          'Instant Digital Dispatch',
+          'UddoktaPay & Paymently BDT'
+        ]}
+        summaryCard={{
+          eyebrow: isOrderComplete ? 'Verified Order' : 'Order Summary',
+          title: isFree ? 'Free Access' : `BDT ${orderTotal.toLocaleString('en-IN')}`,
+          description: `${checkoutItems.length} item${checkoutItems.length === 1 ? '' : 's'} selected for compliance procurement.`,
+          icon: <Lock className="w-5 h-5" />,
+          actions: [
+            {
+              label: 'Back to Tools',
+              to: '/tools',
+              icon: <ArrowLeft className="w-4 h-4" />,
+              variant: 'neutral'
+            }
+          ],
+          footerIcon: <ShieldCheck className="w-4 h-4 text-emerald-700" />,
+          footerText: '256-Bit SSL Encrypted Settlement'
+        }}
+      >
+        <div className="max-w-5xl mx-auto space-y-8">
+          {/* Body View */}
+          {isOrderComplete ? (
+            /* Success Screen */
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 space-y-6">
+              <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
                 <div>
                   <h3 className="font-extrabold text-lg">Checkout Successful &amp; Unlocked!</h3>
                   <p className="text-xs text-emerald-100 mt-1 leading-relaxed">
@@ -1828,7 +1826,8 @@ Contact & Advisory: https://blog.accounticca.com/contact
           </form>
         )}
 
-      </div>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };

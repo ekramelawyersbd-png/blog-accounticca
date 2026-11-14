@@ -20,6 +20,7 @@ import {
   renderTransactionalTemplate,
   type TransactionalEmailTemplate,
 } from './src/utils/transactionalEmailTemplates';
+import { EmailTemplateGenerator } from './src/utils/emailGenerator';
 import {
   resolveSeoMetadataForPath,
   generateAllBlogArticlesSeoMetadata,
@@ -110,7 +111,21 @@ function loadEmailTemplates(): TransactionalEmailTemplate[] {
     return DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES;
   }
   const byId = new Map(saved.map((t) => [t.id, t]));
-  const merged = DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES.map((def) => byId.get(def.id) || def);
+  const merged = DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES.map((def) => {
+    const savedTpl = byId.get(def.id);
+    if (!savedTpl) return def;
+    const existingKeys = new Set((savedTpl.placeholders || []).map((p) => p.key));
+    const mergedPlaceholders = [
+      ...(savedTpl.placeholders || []),
+      ...def.placeholders.filter((p) => !existingKeys.has(p.key)),
+    ];
+    return {
+      ...def,
+      ...savedTpl,
+      placeholders: mergedPlaceholders,
+      builderConfig: savedTpl.builderConfig || def.builderConfig,
+    };
+  });
   return merged;
 }
 
@@ -751,6 +766,8 @@ app.put('/api/email/templates/:id', (req, res) => {
     textTemplate:
       body.textTemplate !== undefined ? String(body.textTemplate) : templates[idx].textTemplate,
     placeholders: Array.isArray(body.placeholders) ? body.placeholders : templates[idx].placeholders,
+    builderConfig:
+      body.builderConfig !== undefined ? body.builderConfig : templates[idx].builderConfig,
     updatedAt: new Date().toISOString(),
   };
 
@@ -1694,36 +1711,58 @@ app.post('/api/appointments/notify', async (req, res) => {
           html: String(payload.html),
           text: String(payload.text || payload.subject),
         }
-      : renderTransactionalTemplate(
+      : EmailTemplateGenerator.generate(
           tpl,
           {
+            name: clientName,
             clientName,
             clientEmail: recipientEmail,
             clientPhone: payload.phone || '+880 1613-242524',
+            companyName: payload.companyName || '',
             referenceId,
+            service: String(payload.service || payload.serviceType || practiceArea).trim(),
+            serviceType: String(payload.serviceType || payload.service || practiceArea).trim(),
             practiceArea,
+            time: String(
+              payload.appointmentTime || payload.time || `${date} at ${timeSlot} (BST)`
+            ).trim(),
+            appointmentTime: String(
+              payload.appointmentTime || payload.time || `${date} at ${timeSlot} (BST)`
+            ).trim(),
+            date,
             appointmentDate: date,
             timeSlot,
-            consultationMode: mode.toLowerCase().includes('virtual')
-              ? 'Virtual Consultation (Google Meet)'
-              : 'In-Person Chamber Consultation',
-            assignedCounsel: payload.assignedLead || 'Adv. Md. Ekramul Haque (Managing Partner)',
-            meetingOrLocationInfo:
-              payload.meetingLink ||
-              'Suite G-5, BTI Centara Grand, 144–144/1 Green Road, Panthapath, Dhaka–1205',
+            status,
+            mode,
+            assignedCounsel:
+              payload.assignedLead ||
+              payload.leadPartnerName ||
+              'Adv. Md. Ekramul Haque (Managing Partner)',
+            notes:
+              String(payload.notes || payload.messageOrNotes || '').trim() ||
+              'Scheduled tax & legal consultation briefing.',
+            calendarEventId: payload.calendarEventId,
+            meetingLink: payload.meetingLink,
             cancellationReason: payload.cancellationReason || 'Rescheduled at client request',
-            bookingPortalUrl: 'https://blog.accounticca.com/bookings',
-            rebookUrl: 'https://blog.accounticca.com/bookings',
-            firmName: 'ACCOUNTICCA x E-Lawyers',
-            firmDeskEmail: 'ekram@elawyersbd.com',
-            firmPhone: '+880 1613-242524',
-            officeAddress: 'Suite G-5, BTI Centara Grand, 144–144/1 Green Road, Panthapath, Dhaka–1205',
           },
-          true
+          { useSampleFallback: true }
         );
 
   const relay = getBrevoRelayConfig();
-  const ccEmails = tpl.ccAdmin ? [relay.senderEmail] : [];
+  const requestedCcEmails = Array.isArray(payload.ccEmails)
+    ? payload.ccEmails
+        .map((e: unknown) => String(e || '').trim().toLowerCase())
+        .filter((e: string) => e.includes('@'))
+    : [];
+  const ccSet = new Set<string>(requestedCcEmails);
+  if (tplId === 'booking_confirmation') {
+    ccSet.add('info@accounticca.com');
+  }
+  if (tpl.ccAdmin && relay.senderEmail && relay.senderEmail.includes('@')) {
+    ccSet.add(relay.senderEmail.trim().toLowerCase());
+  }
+  const ccEmails = Array.from(ccSet);
+
   const sent = recipientEmail.includes('@')
     ? await dispatchBrevoEmail({
         recipientEmail,
@@ -1750,6 +1789,7 @@ app.post('/api/appointments/notify', async (req, res) => {
     referenceId,
     appointmentId: payload.appointmentId,
     recipientEmail,
+    ccEmails,
     clientName,
     practiceArea,
     mode,

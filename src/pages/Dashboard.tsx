@@ -68,6 +68,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useBookmarks } from '../contexts/BookmarkContext';
 import { usePurchases } from '../contexts/PurchaseContext';
 import { useLms } from '../contexts/LmsContext';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 type SortOption = 'recent' | 'title' | 'readTime';
 
@@ -394,13 +395,65 @@ export function Dashboard() {
   }, [user]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-20 flex flex-col md:flex-row items-start gap-8">
+    <ContactPageShell
+      breadcrumbs={[{ label: 'Compliance Dashboard' }]}
+      eyebrow="Client Workspace · Accounticca × E-Lawyers Chambers"
+      headline={`Welcome back${user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.`}
+      accentHeadline="Your compliance & learning workspace."
+      description="Track statutory deadlines, saved legal guides, academy courses, payment history, and active filings from one unified workspace."
+      metaItems={[
+        user ? 'Synced Cloud Account' : 'Guest Local Session',
+        `${savedItems.length} Saved Article${savedItems.length === 1 ? '' : 's'}`,
+        `${pendingInvoicesCount} Pending Reminder${pendingInvoicesCount === 1 ? '' : 's'}`,
+      ]}
+      actions={
+        <>
+          <Link
+            to={continueLearningTarget.routeUrl}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            <GraduationCap className="h-4 w-4" aria-hidden="true" />
+            <span>Continue Learning ({continueLearningTarget.className})</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowExportModal(true)}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <span>Export Compliance CSV</span>
+          </button>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Workspace Snapshot',
+        title: `৳${pendingInvoicesTotal.toLocaleString()} Pending`,
+        icon: <ShieldCheck className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Manage compliance deadlines, statutory notifications, and downloaded forms across sessions.',
+        actions: [
+          {
+            label: 'Deadlines Calendar',
+            onClick: () => switchTab('deadlines'),
+            icon: <Calendar className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Student LMS Portal',
+            to: '/student/dashboard',
+            variant: 'neutral',
+          },
+        ],
+        footerIcon: <BellRing className="h-4 w-4" aria-hidden="true" />,
+        footerText: 'Next statutory VAT Mushak 9.1 filing: 15th of the month.',
+      }}
+    >
       <SEO
         title="Client & Compliance Dashboard – Deadlines, Bookmarks & Filings | Accounticca"
         description="Manage your statutory compliance calendar, saved tax scenarios, bookmarked legal guides, and filing reminders on your Accounticca Dashboard."
         canonicalUrl="/dashboard"
         type="webapp"
       />
+      <div className="flex flex-col md:flex-row items-start gap-8">
       {/* Sidebar */}
       <aside className="w-full md:w-64 shrink-0 md:sticky md:top-24">
         <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm mb-6">
@@ -664,7 +717,7 @@ export function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 w-full space-y-8">
+      <div className="flex-1 min-w-0 w-full space-y-8">
         {/* Dashboard Title & Quick Actions Header */}
         <div className="hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">
           <div>
@@ -1402,13 +1455,14 @@ export function Dashboard() {
         )}
           </div>
         )}
-      </main>
+      </div>
+      </div>
 
       {/* Export Data Modal */}
       <ExportDataModal 
         isOpen={showExportModal} 
         onClose={() => setShowExportModal(false)} 
       />
-    </div>
+    </ContactPageShell>
   );
 }

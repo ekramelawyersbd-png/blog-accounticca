@@ -4,6 +4,8 @@ export {
   DynamicBreadcrumbBar,
   BreadcrumbProvider,
   resolveDynamicBreadcrumbs,
+  useSuppressGlobalBreadcrumb,
+  useResolvedBreadcrumbs,
   type BreadcrumbItem,
   type BreadcrumbsProps,
 } from './Breadcrumbs';

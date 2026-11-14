@@ -51,6 +51,7 @@ import { ExpertApplicationModal } from '../components/community/ExpertApplicatio
 import { PublishArticleModal } from '../components/community/PublishArticleModal';
 import { buildAppointmentUrl, APPOINTMENT_BASE_URL } from '../utils/appointmentRedirect';
 import { SEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface CommunityProps {
   initialTab?: 'experts' | 'discussions';
@@ -224,7 +225,76 @@ export function Community({ initialTab }: CommunityProps) {
     });
 
   return (
-    <div className="bg-slate-50 min-h-screen">
+    <ContactPageShell
+      breadcrumbs={
+        initialTab === 'experts'
+          ? [{ label: 'Community & Q&A', path: '/community' }, { label: 'Verified Panel Experts' }]
+          : initialTab === 'discussions'
+          ? [{ label: 'Community & Q&A', path: '/community' }, { label: 'Peer Discussions' }]
+          : [{ label: 'Community & Expert Q&A' }]
+      }
+      eyebrow="Accounticca Verified Professional Network · Bangladesh"
+      headline="Professional Network for Legal, Tax & Business Experts."
+      accentHeadline="Share knowledge & resolve compliance briefs."
+      description="Connect with advocates, chartered accountants, tax consultants, and entrepreneurs across Bangladesh. Discuss statutory questions and build verified credibility."
+      metaItems={[
+        '10,000+ Professionals',
+        '2,500+ Discussions',
+        '500+ Expert Contributors',
+      ]}
+      actions={
+        <>
+          <button
+            type="button"
+            onClick={() => setIsApplicationModalOpen(true)}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+          >
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            <span>Join Community</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => expertsSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer"
+          >
+            <Users className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <span>Explore Experts</span>
+          </button>
+          <Link
+            to="/Careers"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white/80 hover:text-emerald-800"
+          >
+            <Briefcase className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <span>Careers &amp; Openings</span>
+          </Link>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Network Highlights',
+        title: '50+ Statutory Domains',
+        icon: <Users className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Ask technical tax or RJSC questions, follow verified High Court advocates and ACCA fellows, or apply to publish peer-reviewed articles.',
+        actions: [
+          {
+            label: 'Ask a Question',
+            onClick: () => {
+              setTargetedExpertForAsk(undefined);
+              setIsAskModalOpen(true);
+            },
+            icon: <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Publish Article',
+            onClick: () => setIsPublishModalOpen(true),
+            icon: <PenTool className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            variant: 'neutral',
+          },
+        ],
+        footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+        footerText: 'Verified panel synced with E-Lawyers & Accounticca Chambers.',
+      }}
+    >
       <SEO
         title={
           initialTab === 'experts'
@@ -242,81 +312,9 @@ export function Community({ initialTab }: CommunityProps) {
             : '/community'
         }
       />
-      {/* 1. Hero Section (Community Landing) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-emerald-50/40 to-slate-100/70 text-slate-900 pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80">
-        {/* Subtle decorative mesh background */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.12),rgba(255,255,255,0))] pointer-events-none" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-5xl mx-auto px-[50px] text-center relative z-10">
-          {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/80 border border-emerald-300 text-emerald-800 text-xs sm:text-sm font-bold mb-6 shadow-2xs">
-            <Sparkles className="w-4 h-4 text-emerald-600" />
-            <span>Accounticca Verified Professional Network</span>
-          </div>
-
-          {/* New Hero Copy */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 leading-[1.15]">
-            Bangladesh's Professional Network for Legal, Tax & Business Experts
-          </h1>
-          <p className="text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
-            Connect with lawyers, accountants, tax consultants, and entrepreneurs. Share knowledge, solve problems, and build your professional reputation.
-          </p>
-
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <button
-              onClick={() => setIsApplicationModalOpen(true)}
-              className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-sm sm:text-base transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <UserPlus className="w-5 h-5 text-white" />
-              <span>Join Community</span>
-            </button>
-            <button
-              onClick={() => expertsSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="w-full sm:w-auto px-8 py-3.5 bg-white hover:bg-slate-50 text-slate-800 hover:text-slate-950 border border-slate-300 rounded-2xl font-bold text-sm sm:text-base transition-all shadow-2xs hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Users className="w-5 h-5 text-emerald-600" />
-              <span>Explore Experts</span>
-            </button>
-          </div>
-
-          <div className="mb-16">
-            <Link
-              to="/community/career"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-900 text-emerald-300 hover:text-white border border-slate-800 hover:bg-slate-800 text-xs sm:text-sm font-bold shadow-sm transition-all"
-            >
-              <Briefcase className="w-4 h-4 text-emerald-400" />
-              <span>Explore E-Lawyers Career &amp; Job Openings</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Community Statistics Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 pt-8 border-t border-slate-200">
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs text-center hover:border-emerald-300 transition-colors">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-emerald-600 mb-1">10,000+</div>
-              <div className="text-xs sm:text-sm font-semibold text-slate-600">Professionals</div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs text-center hover:border-emerald-300 transition-colors">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-teal-600 mb-1">2,500+</div>
-              <div className="text-xs sm:text-sm font-semibold text-slate-600">Discussions</div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs text-center hover:border-emerald-300 transition-colors">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-amber-600 mb-1">500+</div>
-              <div className="text-xs sm:text-sm font-semibold text-slate-600">Expert Contributors</div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs text-center hover:border-emerald-300 transition-colors">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-blue-600 mb-1">50+</div>
-              <div className="text-xs sm:text-sm font-semibold text-slate-600">Industry Topics</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+      <div className="space-y-14">
         
         {/* 2. Feature Cards Improvement (Action-Focused) */}
         <section>
@@ -1171,36 +1169,33 @@ export function Community({ initialTab }: CommunityProps) {
           </div>
         </section>
 
-        {/* 8. Improved Final CTA Section */}
-        <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-emerald-950 via-slate-950 to-emerald-950 p-8 sm:p-12 text-white border border-emerald-800/40 text-center shadow-2xl">
-          {/* Subtle background glow */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-emerald-500/30">
-              <Users className="w-7 h-7" />
+        {/* 8. Final CTA Section */}
+        <section className="rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/30 p-8 sm:p-12 text-center shadow-xs">
+          <div className="mx-auto max-w-2xl">
+            <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100/80 text-emerald-800">
+              <Users className="h-6 w-6" />
             </div>
 
-            {/* New CTA Copy */}
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-4 text-white">
+            <p className="text-xs font-semibold text-emerald-800">Practitioner Network</p>
+            <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-slate-950">
               Become a Trusted Professional Voice in Bangladesh
             </h2>
-            <p className="text-emerald-100/80 text-sm sm:text-base leading-relaxed mb-8 font-normal">
+            <p className="text-slate-600 text-sm sm:text-base leading-7 mb-7">
               Publish articles, answer industry questions, and connect with thousands of professionals.
             </p>
 
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
+                type="button"
                 onClick={() => setIsApplicationModalOpen(true)}
-                className="w-full sm:w-auto px-7 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-extrabold text-sm transition-all shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold text-sm transition shadow-sm cursor-pointer"
               >
                 Create Expert Profile
               </button>
               <button
+                type="button"
                 onClick={() => discussionsSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full sm:w-auto px-7 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-emerald-50/50 text-slate-800 border border-slate-300 rounded-xl font-semibold text-sm transition cursor-pointer"
               >
                 Join Discussions
               </button>
@@ -1254,6 +1249,6 @@ export function Community({ initialTab }: CommunityProps) {
         isOpen={isPublishModalOpen}
         onClose={() => setIsPublishModalOpen(false)}
       />
-    </div>
+    </ContactPageShell>
   );
 }

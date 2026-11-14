@@ -43,6 +43,7 @@ import {
 import { generateTemplatePDF } from '../utils/resourcePdfGenerator';
 import { useShopAuth, getStoredAdminToken } from '../contexts/ShopAuthContext';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 type TimeFilterOption = 'All' | 'This Month' | 'Last 6 Months' | 'Last Year';
 type MainTabOption = 'regulatory' | 'templates';
@@ -418,7 +419,95 @@ export function ResourceLibraryPage() {
     (searchQuery.trim() ? 1 : 0);
 
   return (
-    <div className="w-full min-h-screen bg-[#F8FAFC] text-slate-900 pb-20 font-sans">
+    <ContactPageShell
+      breadcrumbs={[{ label: 'Regulatory Library' }]}
+      eyebrow="Bangladesh Statutory Gazette · AY 2026–2027"
+      headline="Regulatory"
+      accentHeadline="Library & Templates"
+      description="Indexed NBR SROs, Bangladesh Bank circulars, RJSC directives, and vetted corporate & employment legal templates."
+      metaItems={[
+        `${docsList.length} Gazette Instruments`,
+        `${templatesList.length} Legal Templates`,
+        'AY 2026–2027 Edition',
+      ]}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('regulatory')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap tabular-nums ${
+                activeTab === 'regulatory'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              Circulars &amp; SROs ({docsList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('templates')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap tabular-nums ${
+                activeTab === 'templates'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              Legal Templates ({templatesList.length})
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer whitespace-nowrap"
+            title="Export filtered regulatory table to CSV"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-700" aria-hidden="true" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer whitespace-nowrap"
+            title="Print current regulatory index"
+          >
+            <Printer className="w-4 h-4 text-emerald-700" aria-hidden="true" />
+            <span className="hidden sm:inline">Print</span>
+          </button>
+          {isAdminLoggedIn && (
+            <Link
+              to="/admin/regulatory-library"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-3.5 py-2.5 text-xs font-bold text-slate-950 shadow-xs transition hover:bg-amber-300 whitespace-nowrap"
+              title="Manage Regulatory Library (Admin CRUD)"
+            >
+              <Settings className="w-4 h-4" aria-hidden="true" />
+              <span>Admin Desk</span>
+            </Link>
+          )}
+        </div>
+      }
+      summaryCard={{
+        eyebrow: 'Statutory & Corporate Archive',
+        title: `${docsList.length} Gazette Records`,
+        icon: <Scale className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Verify authority citations from NBR, Bangladesh Bank, RJSC, BIDA, and BSEC or export draft corporate templates.',
+        actions: [
+          {
+            label: 'SRO 273 TDS Rules',
+            to: '/SRO/TDS2026',
+            icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Request Legal Review',
+            to: '/contact?tab=appointment',
+            variant: 'neutral',
+            icon: <Calendar className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+        ],
+        footerText: `${templatesList.length} downloadable legal & corporate templates`,
+      }}
+    >
       <ToolSEO
         toolId="resource-library"
         title="Bangladesh Regulatory Library, SRO Circulars & Legal Templates"
@@ -428,104 +517,14 @@ export function ResourceLibraryPage() {
       />
       {/* Toast Notification */}
       {statusMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#0A2A66] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-blue-400/40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-950 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-700/60 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <Check className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="text-sm font-semibold">{statusMessage}</span>
         </div>
       )}
 
-      {/* Compact Institutional Top Header */}
-      <div className="w-full h-[242.5px] bg-[#0A2A66] text-white border-b border-blue-900">
-        <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider text-amber-300 bg-blue-950/80 border border-blue-800 px-2.5 py-0.5 rounded-md">
-                  <Scale className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Bangladesh Statutory Gazette • AY 2026–2027</span>
-                </span>
-                <span className="text-[11px] font-mono text-blue-200 bg-blue-900/50 border border-blue-800/80 px-2.5 py-0.5 rounded-md tabular-nums">
-                  {docsList.length} Gazette Instruments
-                </span>
-                <span className="text-[11px] font-mono text-emerald-300 bg-blue-900/50 border border-blue-800/80 px-2.5 py-0.5 rounded-md tabular-nums">
-                  {templatesList.length} Legal Templates
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                  Regulatory Library
-                </h1>
-                <span className="text-xs sm:text-sm font-medium text-blue-200">
-                  NBR SROs, Bangladesh Bank Circulars, RJSC Directives &amp; Corporate Templates
-                </span>
-              </div>
-            </div>
-
-            {/* Primary View Switcher & Utility Actions */}
-            <div className="flex flex-wrap items-center gap-2 max-w-full">
-              <div className="flex flex-wrap items-center gap-1 bg-blue-950/90 p-1 rounded-xl border border-blue-800 max-w-full">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('regulatory')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap tabular-nums ${
-                    activeTab === 'regulatory'
-                      ? 'bg-white text-[#0A2A66] shadow-xs'
-                      : 'text-blue-100 hover:text-white'
-                  }`}
-                >
-                  Circulars &amp; SROs ({docsList.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('templates')}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap tabular-nums ${
-                    activeTab === 'templates'
-                      ? 'bg-white text-[#0A2A66] shadow-xs'
-                      : 'text-blue-100 hover:text-white'
-                  }`}
-                >
-                  Legal Templates ({templatesList.length})
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-                title="Export filtered regulatory table to CSV"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
-                <span>Export CSV</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/15 transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-                title="Print current regulatory index"
-              >
-                <Printer className="w-3.5 h-3.5 text-blue-200" />
-                <span className="hidden sm:inline">Print</span>
-              </button>
-
-              {isAdminLoggedIn && (
-                <Link
-                  to="/admin/regulatory-library"
-                  className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-                  title="Manage Regulatory Library (Admin CRUD)"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>Admin Desk</span>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content Container */}
-      <div style={{ width: '1154.2px', maxWidth: '100%' }} className="mx-auto px-0 pt-5">
+      <div className="w-full pt-1">
         {/* ================= FEATURED 2026-2027 STATUTORY SPOTLIGHT ================= */}
         {activeTab === 'regulatory' && pinnedDocs.length > 0 && (
           <section className="mb-5">
@@ -1027,7 +1026,7 @@ export function ResourceLibraryPage() {
           </aside>
 
           {/* RIGHT DATA AREA */}
-          <main className="min-w-0">
+          <div className="min-w-0">
             {activeTab === 'regulatory' ? (
               /* ================= REGULATORY DOCUMENTS VIEW (TABLE OR CARDS) ================= */
               <div className="space-y-3">
@@ -1514,7 +1513,7 @@ export function ResourceLibraryPage() {
                 )}
               </div>
             )}
-          </main>
+          </div>
         </div>
       </div>
 
@@ -1731,7 +1730,7 @@ export function ResourceLibraryPage() {
           </div>
         </div>
       )}
-    </div>
+    </ContactPageShell>
   );
 }
 

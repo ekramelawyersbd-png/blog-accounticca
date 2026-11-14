@@ -23,6 +23,7 @@ import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { dispatchFormSubmissionToast, FormSuccessNotification } from './ui/FormSubmissionToast';
 import { PatternFormat } from 'react-number-format';
+import { EmailTemplateGenerator } from '../utils/emailGenerator';
 
 const PRIMARY_PHONE = '+880 1335-230170';
 const RAW_PHONE = '+8801335230170';
@@ -182,6 +183,60 @@ export function QuickContactSection() {
       console.warn('Firestore appointment save error:', err);
     }
 
+    if (apptEmail.trim().includes('@')) {
+      try {
+        const appointmentTime = `${apptDate} at ${apptTimeSlot} (BST)`;
+        const generatedEmail = await EmailTemplateGenerator.generateFromAdminTemplate(
+          'booking_confirmation',
+          {
+            name: apptName.trim(),
+            clientName: apptName.trim(),
+            time: appointmentTime,
+            appointmentTime,
+            service: apptPractice,
+            serviceType: apptPractice,
+            practiceArea: apptPractice,
+            date: apptDate,
+            timeSlot: apptTimeSlot,
+            referenceId,
+            email: apptEmail.trim(),
+            clientEmail: apptEmail.trim(),
+            phone: apptPhone.trim(),
+            clientPhone: apptPhone.trim(),
+            mode: apptMode === 'chamber' ? 'chamber' : 'virtual',
+            status: 'Confirmed',
+          }
+        );
+
+        if (generatedEmail.enabled) {
+          await fetch('/api/appointments/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              referenceId,
+              templateId: generatedEmail.templateId,
+              clientName: apptName.trim(),
+              email: apptEmail.trim(),
+              phone: apptPhone.trim(),
+              practiceArea: apptPractice,
+              serviceType: apptPractice,
+              mode: apptMode === 'chamber' ? 'chamber' : 'virtual',
+              date: apptDate,
+              timeSlot: apptTimeSlot,
+              appointmentTime,
+              status: 'Confirmed',
+              ccEmails: ['info@accounticca.com'],
+              subject: generatedEmail.subject,
+              html: generatedEmail.html,
+              text: generatedEmail.text,
+            }),
+          });
+        }
+      } catch {
+        // Non-blocking email notification fallback
+      }
+    }
+
     setIsSubmittingAppt(false);
     setSubmittedApptRef(referenceId);
 
@@ -197,8 +252,8 @@ export function QuickContactSection() {
 
   return (
     <section 
-      id="contact-form-section" 
-      className="w-full scroll-mt-8 py-12 sm:py-16 px-4 sm:px-6 lg:px-10 xl:px-12 bg-white border-t border-[#fffefe]"
+      id="footer-contact-form-section" 
+      className="w-full scroll-mt-8 py-12 sm:py-16 px-4 sm:px-6 lg:px-10 xl:px-12 bg-white border-t border-slate-200/80"
     >
       <div className="w-full max-w-full mx-auto">
         {/* Section Header */}
@@ -227,77 +282,84 @@ export function QuickContactSection() {
           </div>
         </div>
 
-        {/* Centered 60% Display-Width Form Architecture */}
-        <div className="space-y-8">
-          {/* Top Chambers Summary & Direct Hotline Strip (Centered 60% on Desktop) */}
-          <div className="app-form-60 w-full lg:w-[60vw] mx-auto">
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-xs">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2 max-w-xl">
-                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-emerald-700" />
-                    <span>Panthapath Chambers, Dhaka</span>
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    BTI Centara Grand, 144 Green Road, Panthapath, Dhaka 1205. Available Sunday to Thursday (10:00 AM – 7:00 PM) for in-person consultations &amp; online appointments.
-                  </p>
-                </div>
-
-                {/* Direct Hotline */}
-                <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200/70 shrink-0">
-                  <div className="flex items-center justify-between gap-3 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Direct Advisory Hotline</span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">
-                      Live Desk
-                    </span>
-                  </div>
-                  <a
-                    href={`tel:${RAW_PHONE}`}
-                    className="text-xl sm:text-2xl font-black text-slate-900 hover:text-emerald-700 transition-colors flex items-center gap-2 tabular-nums"
-                  >
-                    <Phone className="w-5 h-5 text-emerald-600" />
-                    <span>{PRIMARY_PHONE}</span>
-                  </a>
-                  <div className="mt-3 flex items-center gap-2">
-                    <a
-                      href="https://wa.me/8801335230170"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      <span>WhatsApp Chat</span>
-                    </a>
-                    <a
-                      href={`mailto:${ACCOUNTICCA_EMAIL}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 transition"
-                    >
-                      <span>Email Dispatch</span>
-                    </a>
-                  </div>
-                </div>
+        {/* Two-Column Chambers Hotline / Info + Tabbed Intake Form */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Direct Advisory Hotline Card + Chambers Location & Trust List */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Direct Advisory Hotline Card */}
+            <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/60 p-5">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                  Direct Advisory Hotline
+                </span>
+                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  Live Desk
+                </span>
               </div>
 
-              {/* Trust Badges */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-5 mt-5 border-t border-slate-100 text-xs text-slate-600">
-                <div className="flex items-start gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Dual Coordinated Review:</strong> Legal counsel &amp; Chartered Accountants assess each matter together.</span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <Clock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Priority Turnaround:</strong> Standard response within 24–48 hours; expedited for statutory deadlines.</span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <Scale className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span><strong>Official Reference:</strong> Every inquiry or booking receives a tracked docket reference number.</span>
-                </div>
+              <a
+                href={`tel:${RAW_PHONE}`}
+                className="text-2xl font-black tracking-tight text-slate-950 hover:text-emerald-700 transition-colors flex items-center gap-2.5 tabular-nums"
+              >
+                <Phone className="w-5 h-5 text-emerald-700 shrink-0" />
+                <span>{PRIMARY_PHONE}</span>
+              </a>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                <a
+                  href="https://wa.me/8801335230170"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>WhatsApp Chat</span>
+                </a>
+                <a
+                  href={`mailto:${ACCOUNTICCA_EMAIL}`}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold border border-slate-300/90 transition-colors"
+                >
+                  <span>Email Dispatch</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Panthapath Chambers Info */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span>Panthapath Chambers, Dhaka</span>
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                BTI Centara Grand, 144 Green Road, Panthapath, Dhaka 1205. Available Sunday to Thursday (10:00 AM – 7:00 PM) for in-person consultations &amp; online appointments.
+              </p>
+            </div>
+
+            {/* Trust Pillars List */}
+            <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-slate-900">Dual Coordinated Review:</strong> Legal counsel &amp; Chartered Accountants assess each matter together.
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Clock className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-slate-900">Priority Turnaround:</strong> Standard response within 24–48 hours; expedited for statutory deadlines.
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Scale className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-slate-900">Official Reference:</strong> Every inquiry or booking receives a tracked docket reference number.
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Centered 60% Display-Width Interactive Quick Form with Tabs */}
-          <div className="app-form-60 w-full lg:w-[60vw] mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-lg overflow-hidden">
+          {/* Right Column: Interactive Quick Form Card with Tabs */}
+          <div className="lg:col-span-8 w-full bg-white rounded-3xl border border-slate-200/90 shadow-lg overflow-hidden">
             {/* Tabs Header */}
             <div className="border-b border-slate-200/80 bg-slate-50/70 p-2 sm:p-3">
               <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-200/60 p-1">
@@ -430,7 +492,7 @@ export function QuickContactSection() {
                           <select
                             value={inquiryService}
                             onChange={(e) => setInquiryService(e.target.value)}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 text-sm text-slate-900 outline-none transition bg-white"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 text-sm text-slate-900 outline-none transition bg-slate-50/70"
                           >
                             {SERVICES.map((srv) => (
                               <option key={srv} value={srv}>
@@ -457,7 +519,7 @@ export function QuickContactSection() {
                       </div>
 
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center justify-between mb-1.5 gap-2">
                           <label className="block text-xs font-bold text-slate-700">
                             Matter Description <span className="text-rose-500">*</span>
                           </label>
@@ -466,7 +528,7 @@ export function QuickContactSection() {
                             <select
                               value={inquiryUrgency}
                               onChange={(e) => setInquiryUrgency(e.target.value)}
-                              className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-0.5 outline-none cursor-pointer"
+                              className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1 outline-none cursor-pointer"
                             >
                               <option value="Standard (24–48h)">Standard (24–48h)</option>
                               <option value="Approaching Deadline (< 7 Days)">Approaching Deadline (&lt; 7 Days)</option>

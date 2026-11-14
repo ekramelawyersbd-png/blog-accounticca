@@ -1,3 +1,6 @@
+import type { DynamicEmailBuilderConfig } from './emailTemplateBuilder';
+import { DEFAULT_BUILDER_CONFIGS, compileBuilderConfigToEmailTemplates } from './emailTemplateBuilder';
+
 export type TransactionalEmailCategory = 'registration' | 'booking' | 'payment';
 
 export interface EmailPlaceholderDefinition {
@@ -21,6 +24,7 @@ export interface TransactionalEmailTemplate {
   htmlTemplate: string;
   textTemplate: string;
   placeholders: EmailPlaceholderDefinition[];
+  builderConfig?: DynamicEmailBuilderConfig;
   updatedAt: string;
   updatedBy?: string;
 }
@@ -288,129 +292,35 @@ Access your Student LMS Dashboard: {{dashboardUrl}}
     triggerEvent: 'Appointment Confirmed (/api/appointments/notify)',
     enabled: true,
     ccAdmin: true,
-    subjectTemplate: '[{{referenceId}}] Consultation Confirmed: {{practiceArea}} on {{date}} at {{timeSlot}}',
-    htmlTemplate: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Consultation Booking Confirmation</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #0f172a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06);">
-          
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #065f46 0%, #0f172a 100%); padding: 30px 32px; color: #ffffff;">
-              <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #34d399; margin-bottom: 6px;">
-                {{firmName}} • Chambers Scheduling Desk
-              </div>
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #ffffff;">
-                Consultation Appointment {{status}}
-              </h1>
-              <p style="margin: 6px 0 0 0; font-size: 13px; color: #cbd5e1;">
-                Booking Reference: <strong style="color: #6ee7b7; font-family: monospace;">{{referenceId}}</strong>
-              </p>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 32px;">
-              <p style="margin: 0 0 16px 0; font-size: 15px; color: #334155;">
-                Dear <strong>{{clientName}}</strong>,
-              </p>
-              <p style="margin: 0 0 22px 0; font-size: 14px; line-height: 1.6; color: #475569;">
-                Your consultation with <strong>{{firmName}}</strong> is officially <strong>{{status}}</strong>. Please review your scheduled session details below:
-              </p>
-
-              <!-- Schedule Card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px; color: #1e293b;">
-                      <tr>
-                        <td style="padding: 7px 0; color: #64748b; width: 38%;">Booking Reference:</td>
-                        <td style="padding: 7px 0; font-weight: 800; font-family: monospace; color: #059669;">{{referenceId}}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 7px 0; color: #64748b; border-top: 1px solid #f1f5f9;">Practice Area / Topic:</td>
-                        <td style="padding: 7px 0; font-weight: 700; border-top: 1px solid #f1f5f9;">{{practiceArea}}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 7px 0; color: #64748b; border-top: 1px solid #f1f5f9;">Date &amp; Time Slot:</td>
-                        <td style="padding: 7px 0; font-weight: 800; color: #0f172a; border-top: 1px solid #f1f5f9;">{{date}} at {{timeSlot}} (BST)</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 7px 0; color: #64748b; border-top: 1px solid #f1f5f9;">Consultation Mode:</td>
-                        <td style="padding: 7px 0; font-weight: 700; border-top: 1px solid #f1f5f9;">{{consultationMode}}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 7px 0; color: #64748b; border-top: 1px solid #f1f5f9;">Client Contact:</td>
-                        <td style="padding: 7px 0; border-top: 1px solid #f1f5f9;">{{clientEmail}} • {{clientPhone}}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 7px 0; color: #64748b; border-top: 1px solid #f1f5f9;">Case / Brief Notes:</td>
-                        <td style="padding: 7px 0; color: #334155; border-top: 1px solid #f1f5f9;">{{notes}}</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px 16px; font-size: 12px; color: #065f46; margin-bottom: 24px;">
-                <strong>Calendar &amp; Reminder Notice:</strong> {{calendarSyncInfo}}
-              </div>
-
-              <div style="text-align: center; margin: 24px 0;">
-                <a href="{{portalUrl}}" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 13px; padding: 12px 26px; border-radius: 10px;">
-                  Manage or Reschedule Appointment &rarr;
-                </a>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f1f5f9; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #64748b;">
-              <div><strong>{{firmName}}</strong> • Central Desk: {{firmDeskEmail}}</div>
-              <div style="margin-top: 4px;">{{officeAddress}}</div>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`,
-    textTemplate: `[{{referenceId}}] Consultation Appointment {{status}} — {{firmName}}
-
-Dear {{clientName}},
-Your consultation for {{practiceArea}} is scheduled on {{date}} at {{timeSlot}} ({{consultationMode}}).
-Client Contact: {{clientEmail}} | {{clientPhone}}
-Notes: {{notes}}
-
-Manage Booking: {{portalUrl}}
-Chambers Desk: {{firmDeskEmail}} | {{officeAddress}}`,
+    subjectTemplate: '[{{referenceId}}] Consultation Confirmed: {{serviceType}} on {{appointmentTime}}',
+    htmlTemplate: compileBuilderConfigToEmailTemplates(
+      DEFAULT_BUILDER_CONFIGS.booking_confirmation,
+      'Consultation Booking Confirmation'
+    ).htmlTemplate,
+    textTemplate: compileBuilderConfigToEmailTemplates(
+      DEFAULT_BUILDER_CONFIGS.booking_confirmation,
+      'Consultation Booking Confirmation'
+    ).textTemplate,
+    builderConfig: DEFAULT_BUILDER_CONFIGS.booking_confirmation,
     placeholders: [
       { key: 'clientName', token: '{{clientName}}', label: 'Client Name', description: 'Full name of the client booking the consultation', sampleValue: 'Rafiqul Islam' },
-      { key: 'clientEmail', token: '{{clientEmail}}', label: 'Client Email', description: 'Client email address', sampleValue: 'rafiqul@example.com' },
-      { key: 'clientPhone', token: '{{clientPhone}}', label: 'Client Phone', description: 'Client phone / WhatsApp number', sampleValue: '+880 1819-001122' },
-      { key: 'referenceId', token: '{{referenceId}}', label: 'Booking Reference ID', description: 'Unique booking reference code', sampleValue: 'ELAW-261028-409' },
-      { key: 'practiceArea', token: '{{practiceArea}}', label: 'Practice Area', description: 'Selected legal or tax practice area', sampleValue: 'Corporate Tax & NBR Audit Defense' },
-      { key: 'consultationMode', token: '{{consultationMode}}', label: 'Consultation Mode', description: 'Virtual (Google Meet/Zoom) or In-Chambers', sampleValue: 'Virtual Video Consultation (Google Meet)' },
+      { key: 'appointmentTime', token: '{{appointmentTime}}', label: 'Appointment Time', description: 'Formatted scheduled date and time slot (e.g. 2026-10-30 at 04:00 PM BST)', sampleValue: '2026-10-30 at 04:00 PM (BST)' },
+      { key: 'serviceType', token: '{{serviceType}}', label: 'Service Type', description: 'Selected consultation service / practice area', sampleValue: 'Corporate Tax & NBR Audit Defense' },
       { key: 'date', token: '{{date}}', label: 'Appointment Date', description: 'Scheduled consultation date', sampleValue: '2026-10-30' },
       { key: 'timeSlot', token: '{{timeSlot}}', label: 'Time Slot', description: 'Scheduled consultation time slot', sampleValue: '04:00 PM' },
+      { key: 'practiceArea', token: '{{practiceArea}}', label: 'Practice Area', description: 'Alias for service / practice area', sampleValue: 'Corporate Tax & NBR Audit Defense' },
+      { key: 'consultationMode', token: '{{consultationMode}}', label: 'Consultation Mode', description: 'Virtual (Google Meet/Zoom) or In-Chambers', sampleValue: 'Virtual Video Consultation (Google Meet)' },
+      { key: 'assignedCounsel', token: '{{assignedCounsel}}', label: 'Assigned Counsel', description: 'Lead advocate or Chartered Accountant assigned', sampleValue: 'Adv. Md. Ekramul Haque (Managing Partner)' },
+      { key: 'referenceId', token: '{{referenceId}}', label: 'Booking Reference ID', description: 'Unique booking reference code', sampleValue: 'ELAW-261028-409' },
+      { key: 'clientEmail', token: '{{clientEmail}}', label: 'Client Email', description: 'Client email address', sampleValue: 'rafiqul@example.com' },
+      { key: 'clientPhone', token: '{{clientPhone}}', label: 'Client Phone', description: 'Client phone / WhatsApp number', sampleValue: '+880 1819-001122' },
       { key: 'status', token: '{{status}}', label: 'Booking Status', description: 'Confirmed or Rescheduled status', sampleValue: 'Confirmed' },
       { key: 'notes', token: '{{notes}}', label: 'Client Brief / Notes', description: 'Additional notes submitted by the client', sampleValue: 'Review of FY 2026-27 corporate tax return and withholding tax assessment.' },
       { key: 'calendarSyncInfo', token: '{{calendarSyncInfo}}', label: 'Calendar Sync Info', description: 'Calendar invitation and 3-hour reminder status', sampleValue: 'An automated 3-hour prior reminder and Google Calendar invitation are active for this slot.' },
       { key: 'portalUrl', token: '{{portalUrl}}', label: 'Booking Portal URL', description: 'URL to view or reschedule appointment', sampleValue: 'https://blog.accounticca.com/contact?tab=appointment' },
       { key: 'firmName', token: '{{firmName}}', label: 'Firm Name', description: 'Official organization name', sampleValue: 'ACCOUNTICCA x E-Lawyers' },
       { key: 'firmDeskEmail', token: '{{firmDeskEmail}}', label: 'Firm Desk Email', description: 'Verified sender email', sampleValue: 'ekram@elawyersbd.com' },
+      { key: 'firmPhone', token: '{{firmPhone}}', label: 'Firm Phone', description: 'Chambers hotline phone number', sampleValue: '+880 1613-242524' },
       { key: 'officeAddress', token: '{{officeAddress}}', label: 'Office Address', description: 'Chambers physical address', sampleValue: 'Suite G-5, BTI Centara Grand, 144–144/1 Green Road, Panthapath, Dhaka–1205' }
     ],
     updatedAt: new Date().toISOString()
@@ -765,6 +675,31 @@ export function renderTransactionalTemplate(
     if (v !== undefined && v !== null && String(v).trim() !== '') {
       resolvedVariables[k] = String(v);
     }
+  }
+
+  // Automatic alias derivation so confirmation & reminder emails stay resilient
+  if (!resolvedVariables.serviceType && resolvedVariables.practiceArea) {
+    resolvedVariables.serviceType = resolvedVariables.practiceArea;
+  }
+  if (!resolvedVariables.practiceArea && resolvedVariables.serviceType) {
+    resolvedVariables.practiceArea = resolvedVariables.serviceType;
+  }
+  if (!resolvedVariables.date && resolvedVariables.appointmentDate) {
+    resolvedVariables.date = resolvedVariables.appointmentDate;
+  }
+  if (!resolvedVariables.appointmentDate && resolvedVariables.date) {
+    resolvedVariables.appointmentDate = resolvedVariables.date;
+  }
+  if (!resolvedVariables.appointmentTime && (resolvedVariables.date || resolvedVariables.timeSlot)) {
+    const d = resolvedVariables.date || '';
+    const t = resolvedVariables.timeSlot || '';
+    resolvedVariables.appointmentTime = d && t ? `${d} at ${t} (BST)` : d || t;
+  }
+  if (!resolvedVariables.portalUrl && resolvedVariables.bookingPortalUrl) {
+    resolvedVariables.portalUrl = resolvedVariables.bookingPortalUrl;
+  }
+  if (!resolvedVariables.bookingPortalUrl && resolvedVariables.portalUrl) {
+    resolvedVariables.bookingPortalUrl = resolvedVariables.portalUrl;
   }
 
   const replaceTokens = (raw: string): string => {

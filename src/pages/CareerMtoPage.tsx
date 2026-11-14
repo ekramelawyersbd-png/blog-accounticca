@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import type { CareerApplicationData } from '../utils/careerEmailTemplate';
 import { submitCareerApplicationToApi } from '../utils/careerStorage';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface FileMeta {
   fileName: string;
@@ -825,7 +826,7 @@ export const CareerMtoPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f2f5f8] text-[#243446] font-sans">
+    <>
       <ServiceSEO
         title="Management Trainee Officer (MTO) | E-Lawyers Job Circular & Online Application"
         description="E-Lawyers Legal & Business Consultancy Firm is hiring Management Trainee Officers (MTO) for our Panthapath, Dhaka corporate office. Fresh graduates in Business, Accounting, Finance, Law, or Management welcome. Apply online with ease."
@@ -833,140 +834,92 @@ export const CareerMtoPage: React.FC = () => {
         serviceType="Job Recruitment Posting & Application"
       />
 
-      {/* Hero Header - Light Corporate Theme */}
-      <section className="bg-gradient-to-b from-white via-[#f8fafc] to-[#f1f5f9] text-slate-800 pt-10 pb-16 px-4 border-b border-slate-200 relative overflow-hidden">
-        {/* Subtle ultra-light background accents */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-200/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-200/15 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20"></div>
-
-        <div className="max-w-5xl mx-auto relative z-10">
-          {/* Top navigation row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white border-2 border-[#167d83]/30 flex items-center justify-center font-extrabold text-[#167d83] text-lg shadow-xs">
-                ELA
-              </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-widest text-[#10243a] uppercase">
-                  E-Lawyers Legal &amp; Business Consultancy Firm
-                </h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  Accounts, Taxation, Legal &amp; Business Consultancy · Panthapath, Dhaka
-                </p>
-              </div>
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Careers', path: '/Careers' },
+          { label: 'Management Trainee Officer (MTO)' },
+        ]}
+        eyebrow="E-Lawyers Legal & Business Consultancy Firm · Official Recruitment Circular"
+        headline="Management Trainee"
+        accentHeadline="Officer (MTO)"
+        description="বিল্ড ইয়োর প্রফেশনাল ক্যারিয়ার উইথ E-Lawyers। একাউন্টস, ট্যাক্সেশন, আরজেএসসি কর্পোরেট কমপ্লায়েন্স, লিগ্যাল সার্ভিসেস ও বিজনেস কনসালটেন্সিতে বাস্তবিক অভিজ্ঞতা অর্জন ও নেতৃত্ব বিকাশের অনন্য সুযোগ।"
+        metaItems={[
+          'Multiple Openings',
+          'Bachelor Degree (BBA / Law / Acc / Fin)',
+          'Panthapath, Dhaka',
+          'Deadline: 31 October 2026',
+        ]}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => handleTabChange('apply')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              <span>Apply Online Now (অনলাইন আবেদন)</span>
+            </button>
+            <Link
+              to="/Careers"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>All Open Positions</span>
+            </Link>
+          </>
+        }
+        rightCard={
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <img
+                src="https://i.ibb.co/6hrxrmG/f1096382-e31a-40c8-af4c-fb4a5e7ff605.png"
+                alt="Management Trainee Officer (MTO) Recruitment Circular - E-Lawyers Legal & Business Consultancy Firm"
+                referrerPolicy="no-referrer"
+                className="h-auto w-full object-cover"
+              />
             </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               <Link
                 to="/Careers/sales-marketing"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-emerald-800 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
               >
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Sales &amp; Marketing</span>
               </Link>
               <Link
                 to="/Careers/accountant"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
               >
-                <Briefcase className="w-3.5 h-3.5 text-[#167d83]" />
+                <Briefcase className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Accountant Opening</span>
               </Link>
               <Link
                 to="/Careers/customer-care"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
               >
-                <Users className="w-3.5 h-3.5 text-amber-600" />
-                <span>Customer Care Opening</span>
-              </Link>
-              <Link
-                to="/Careers"
-                className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 transition-colors font-semibold"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> All Openings
+                <Users className="h-3.5 w-3.5 text-emerald-700" />
+                <span>Customer Care</span>
               </Link>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mb-8">
-            <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-50 text-teal-900 border border-teal-200 text-xs font-bold mb-3 shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-[#167d83]" /> Official Recruitment Circular · 2026 Batch
-              </div>
-
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[#10243a] mb-3">
-                Management Trainee Officer (MTO)
-              </h1>
-              <p className="text-lg md:text-xl text-slate-600 max-w-3xl mb-6 leading-relaxed">
-                বিল্ড ইয়োর প্রফেশনাল ক্যারিয়ার উইথ E-Lawyers। একাউন্টস, ট্যাক্সেশন, আরজেএসসি কর্পোরেট কমপ্লায়েন্স, লিগ্যাল সার্ভিসেস ও বিজনেস কনসালটেন্সিতে বাস্তবিক অভিজ্ঞতা অর্জন ও নেতৃত্ব বিকাশের অনন্য সুযোগ।
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('apply')}
-                  className="px-6 py-3 bg-gradient-to-r from-[#10243a] to-[#1c3c5d] hover:to-[#224b74] text-amber-300 font-black rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-sm border border-amber-400/40 cursor-pointer"
-                >
-                  <FileText className="w-4 h-4 text-amber-400" />
-                  <span>Apply Online Now (অনলাইন আবেদন)</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden border-2 border-slate-200/90 shadow-lg bg-white">
-                <img
-                  src="https://i.ibb.co/6hrxrmG/f1096382-e31a-40c8-af4c-fb4a5e7ff605.png"
-                  alt="Management Trainee Officer (MTO) Recruitment Circular - E-Lawyers Legal & Business Consultancy Firm"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Key metadata badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Users className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Vacancies</div>
-              <div className="text-sm font-bold text-[#10243a]">Multiple Openings</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <GraduationCap className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Qualification</div>
-              <div className="text-sm font-bold text-[#10243a]">Bachelor's Degree</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Compass className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Discipline</div>
-              <div className="text-sm font-bold text-[#10243a]">BBA / Law / Acc / Fin</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <MapPin className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Workplace</div>
-              <div className="text-sm font-bold text-[#10243a]">Panthapath, Dhaka</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Award className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Salary</div>
-              <div className="text-sm font-bold text-emerald-700">Negotiable</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Calendar className="w-4 h-4 mx-auto text-amber-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Deadline</div>
-              <div className="text-sm font-bold text-amber-700">31 October 2026</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Container - CRITICAL: relative z-20 prevents clipping by header */}
-      <main className="relative z-20 max-w-5xl mx-auto px-4 -mt-8 pb-20">
+        }
+        trustItems={[
+          {
+            icon: <GraduationCap className="h-4 w-4" aria-hidden="true" />,
+            label: 'Structured rotation across Accounts, Tax, RJSC & Legal divisions',
+          },
+          {
+            icon: <Award className="h-4 w-4" aria-hidden="true" />,
+            label: 'Negotiable remuneration package with mentorship',
+          },
+          {
+            icon: <Calendar className="h-4 w-4" aria-hidden="true" />,
+            label: 'Submission deadline: 31 October 2026 · Panthapath, Dhaka',
+          },
+        ]}
+      >
+        {/* Main Container */}
+        <div className="relative z-20 max-w-5xl mx-auto pb-16">
         {/* Tab Navigation Pill Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-2 mb-8 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -2435,7 +2388,8 @@ export const CareerMtoPage: React.FC = () => {
             </button>
           </div>
         )}
-      </main>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };

@@ -1377,14 +1377,15 @@ export function removeStaticHeadDuplicates(): void {
   if (typeof document === 'undefined' || !document.head) return;
 
   const staticMetaSelectors = [
-    'meta[name="description"]:not([data-react-seo="true"])',
-    'meta[name="keywords"]:not([data-react-seo="true"])',
-    'meta[name="robots"]:not([data-react-seo="true"])',
-    'meta[name="author"]:not([data-react-seo="true"])',
-    'meta[property^="og:"]:not([data-react-seo="true"])',
-    'meta[name^="twitter:"]:not([data-react-seo="true"])',
-    'link[rel="canonical"]:not([data-react-seo="true"])',
-    'script[type="application/ld+json"]:not([data-react-seo="true"])',
+    'meta[name="title"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'meta[name="description"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'meta[name="keywords"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'meta[name="robots"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'meta[name="author"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'meta[property^="og:"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'meta[name^="twitter:"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'link[rel="canonical"]:not([data-react-seo="true"]):not([data-rh="true"])',
+    'script[type="application/ld+json"]:not([data-react-seo="true"]):not([data-rh="true"])',
   ];
 
   for (const selector of staticMetaSelectors) {

@@ -33,6 +33,7 @@ import { useAuth } from '../context/AuthContext';
 import { recordToolSigning } from '../services/toolSigningService';
 import { CalculationEmailModal } from '../components/tools/CalculationEmailModal';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export type ToolCategory =
   | 'Taxation'
@@ -510,44 +511,64 @@ export const ToolsHub: React.FC = () => {
   }, [searchQuery, selectedCategory]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <ContactPageShell
+      breadcrumbs={[{ label: 'Tools & Calculators' }]}
+      eyebrow={`Statutory Interactive Suite · ${TOOLS_CATALOG.length} Calculators & Workflows · AY 2026–2027`}
+      headline="Legal, Tax, VAT &"
+      accentHeadline="RJSC Tools Directory"
+      description={`Complete suite of ${TOOLS_CATALOG.length} interactive calculators, statutory rate finders, RJSC fee estimators, Google Workspace integrations, and compliance tools aligned with the Income Tax Act 2023, VAT & SD Act 2012, Companies Act 1994, and Bangladesh Labour Act 2006.`}
+      metaItems={[
+        `${TOOLS_CATALOG.length} Statutory Tools`,
+        'AY 2026–2027 Updated',
+        'Accounticca × E-Lawyers',
+      ]}
+      actions={
+        <>
+          <button
+            type="button"
+            onClick={() => setEmailPreviewTool(TOOLS_CATALOG[0])}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+          >
+            <Mail className="h-4 w-4" aria-hidden="true" />
+            <span>Send Calculation Report</span>
+          </button>
+          <Link
+            to="/workspace"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50"
+          >
+            <ExternalLink className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <span>Open Workspace Hub</span>
+          </Link>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Verified Statutory Outputs',
+        title: `${TOOLS_CATALOG.length} Live Compliance Modules`,
+        icon: <Calculator className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Every calculation report includes itemized inputs, statutory breakdown tables, legal citations, and optional CC email dispatch.',
+        actions: [
+          {
+            label: 'SRO 273 TDS Gazette',
+            to: '/SRO/TDS2026',
+            icon: <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Book Partner Review',
+            to: '/contact?tab=appointment',
+            variant: 'neutral',
+            icon: <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+        ],
+        footerText: 'Covers ITA 2023, VAT Act 2012, Companies Act 1994 & Labour Act 2006',
+      }}
+    >
       <ToolSEO
         toolId="tools-hub"
         title="Bangladesh Legal, Tax, VAT & RJSC Compliance Tools Directory"
         canonicalUrl="/tools"
         category="BusinessApplication"
       />
-      {/* Header Banner */}
-      <div className="bg-linear-to-r from-slate-900 via-blue-900 to-indigo-950 rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10 max-w-4xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            All {TOOLS_CATALOG.length} Statutory Tools Unlocked · AY 2026–2027 Compliant
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-            Bangladesh Legal, Tax, VAT &amp; RJSC Compliance Tools Directory
-          </h1>
-
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Complete suite of {TOOLS_CATALOG.length} interactive calculators, statutory rate finders, RJSC fee estimators, Google Workspace integrations, and compliance tools updated for Assessment Year 2026–2027 (Income Tax Act 2023, VAT &amp; SD Act 2012, Companies Act 1994, and Bangladesh Labour Act 2006).
-          </p>
-
-          <div className="pt-2 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setEmailPreviewTool(TOOLS_CATALOG[0])}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-md transition-all cursor-pointer"
-            >
-              <Mail className="w-4 h-4 text-cyan-200" />
-              <span>Send Calculation Report</span>
-            </button>
-            <span className="text-xs text-slate-300 font-medium">
-              Includes Inputs, Full Statutory Breakdown Table, Legal Notes &amp; Optional CC Recipient
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
@@ -684,12 +705,12 @@ export const ToolsHub: React.FC = () => {
         </div>
         <Link
           to="/workspace"
-          className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-900 font-bold whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 text-emerald-800 hover:text-emerald-950 font-bold whitespace-nowrap"
         >
           Open Workspace Hub <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
-    </div>
+    </ContactPageShell>
   );
 };
 export default ToolsHub;

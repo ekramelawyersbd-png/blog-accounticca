@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Calendar, 
   ExternalLink, 
@@ -14,8 +14,13 @@ import {
 import { LanguageToggle } from '../LanguageToggle';
 import { buildAppointmentUrl } from '../../utils/appointmentRedirect';
 import { FloatingWhatsAppButton } from './FloatingWhatsAppButton';
+import { QuickContactSection } from '../QuickContactSection';
+
+const AUTHOR_EXCLUDED_PATH_REGEX = /^\/(author|authors|auth|login|signin|admin\/login)(\/|$)/i;
 
 export function Footer() {
+  const { pathname } = useLocation();
+  const isAuthorPage = AUTHOR_EXCLUDED_PATH_REGEX.test(pathname);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     quick_links: true,
     resources: false,
@@ -30,8 +35,11 @@ export function Footer() {
   };
 
   return (
-    <footer className="w-full bg-slate-900 text-slate-400 py-16 border-t border-slate-800 mt-12 print:hidden">
-      <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-10 xl:px-12">
+    <footer className="w-full mt-12 print:hidden">
+      {!isAuthorPage && <QuickContactSection />}
+
+      <div className="w-full bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
+        <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-10 xl:px-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 items-start text-left">
           {/* Column 1: Brand Identity */}
           <div className="col-span-1 order-1 sm:order-none min-w-0">
@@ -364,6 +372,7 @@ export function Footer() {
             <Link to="/privacy" className="text-[11px] uppercase font-bold tracking-widest text-slate-500 hover:text-emerald-400 transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="text-[11px] uppercase font-bold tracking-widest text-slate-500 hover:text-emerald-400 transition-colors">Terms &amp; Conditions</Link>
           </div>
+        </div>
         </div>
       </div>
 

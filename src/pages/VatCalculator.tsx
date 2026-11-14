@@ -3,6 +3,7 @@ import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Receipt, Coins, RefreshCw, FileText } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export const VatCalculator: React.FC = () => {
   const [basePrice, setBasePrice] = useState<number>(100000);
@@ -72,7 +73,64 @@ export const VatCalculator: React.FC = () => {
   }), [basePrice, vatRate, isPriceInclusive, vdsApplicable, netPrice, vatAmount, totalPayable, vdsAmount, netSupplierReceivable]);
 
   return (
-    <>
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'VAT & Mushak 6.3 Calculator' },
+      ]}
+      eyebrow="Value Added Tax & SD Act 2012 · Mushak 6.3 & 6.6 · Bangladesh"
+      headline="VAT & Mushak 6.3"
+      accentHeadline="Tax Engine"
+      description="Computes Value Added Tax under standard (15%), reduced (10%, 7.5%, 5%), and specific tariff tiers alongside VDS withholding schedules."
+      metaItems={[
+        'Inclusive & Exclusive Modes',
+        'VDS Deduction (Mushak 6.6)',
+        'VAT & SD Act 2012',
+      ]}
+      actions={
+        <>
+          <CalculationEmailActionBarButton
+            options={{
+              toolId: 'vat-calculator',
+              toolName: 'Bangladesh VAT & Mushak 6.3 Tax Engine',
+              toolCategory: 'VAT & Customs',
+              toolPath: '/tools/vat',
+              statutoryBasis: 'Value Added Tax & Supplementary Duty Act 2012',
+              customSnapshot: calculationSnapshot,
+            }}
+            label="Send Calculation Report"
+            variant="primary"
+          />
+          <button
+            type="button"
+            onClick={() => setBasePrice(100000)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
+            <span>Reset</span>
+          </button>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Computed VAT Summary',
+        title: `৳ ${Math.round(vatAmount).toLocaleString()} VAT`,
+        icon: <Receipt className="h-5 w-5" aria-hidden="true" />,
+        description: `Assessable net value ৳ ${Math.round(netPrice).toLocaleString()} · Net supplier payable ৳ ${Math.round(netSupplierReceivable).toLocaleString()}.`,
+        actions: [
+          {
+            label: 'VAT Guide & Mushak',
+            to: '/vat-guide',
+            icon: <FileText className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Apportionment Calc',
+            to: '/tools/vat-apportionment-calculator',
+            variant: 'neutral',
+          },
+        ],
+        footerText: 'Mushak 6.6 VDS certificates must be issued within 3 working days.',
+      }}
+    >
       <ToolSEO
         toolId="vat-calculator"
         title="Bangladesh VAT & Mushak 6.3 Calculator"
@@ -86,41 +144,7 @@ export const VatCalculator: React.FC = () => {
         toolCategory="VAT &amp; Customs"
         toolPath="/tools/vat"
       >
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-300">
-              Value Added Tax &amp; SD Act 2012
-            </span>
-            <h1 className="text-2xl font-black text-slate-900 mt-2">
-              Bangladesh VAT &amp; Mushak 6.3 Tax Engine
-            </h1>
-            <p className="text-xs text-slate-600 mt-1">
-              Supports standard (15%), reduced (10%, 7.5%, 5%), and specific tariff rates with VDS withholding schedules.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setBasePrice(100000)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Reset
-            </button>
-            <CalculationEmailActionBarButton
-              options={{
-                toolId: 'vat-calculator',
-                toolName: 'Bangladesh VAT & Mushak 6.3 Tax Engine',
-                toolCategory: 'VAT & Customs',
-                toolPath: '/tools/vat',
-                statutoryBasis: 'Value Added Tax & Supplementary Duty Act 2012',
-                customSnapshot: calculationSnapshot,
-              }}
-              label="Send Calculation Report"
-              variant="primary"
-            />
-          </div>
-        </div>
+      <div className="space-y-6">
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Inputs */}
@@ -262,6 +286,6 @@ export const VatCalculator: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
-    </>
+    </ContactPageShell>
   );
 };

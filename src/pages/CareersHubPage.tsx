@@ -28,6 +28,7 @@ import {
   Target
 } from 'lucide-react';
 import { queryLocalCareerApplications } from '../utils/careerStorage';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface FaqItem {
   q: string;
@@ -134,7 +135,7 @@ export const CareersHubPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f6f9] text-[#243446] font-sans pb-24">
+    <>
       <ServiceSEO
         title="Careers & Current Openings | E-Lawyers Legal & Business Consultancy Firm"
         description="Join E-Lawyers Legal & Business Consultancy Firm in Panthapath, Dhaka. Explore career opportunities and apply online for Management Trainee Officer (MTO), Accountant (Accounts Division), and Customer Care Executive (Female). Deadline: Oct 31, 2026."
@@ -142,216 +143,200 @@ export const CareersHubPage: React.FC = () => {
         serviceType="Job Recruitment & Career Opportunities"
       />
 
-      {/* Hero Header - Enhanced Light Official E-Lawyers WE'RE HIRING Master Banner Theme */}
-      <section className="bg-gradient-to-br from-white via-[#fdfaf3] to-emerald-50/50 text-slate-900 pt-8 sm:pt-12 pb-24 sm:pb-28 px-4 border-b border-slate-200/90 relative z-10 overflow-hidden">
-        {/* Ambient light background glows matching banner color palette */}
-        <div className="absolute top-0 right-0 w-[520px] h-[520px] bg-amber-300/20 rounded-full blur-3xl pointer-events-none -mr-28 -mt-28"></div>
-        <div className="absolute bottom-0 left-0 w-[520px] h-[520px] bg-emerald-300/20 rounded-full blur-3xl pointer-events-none -ml-28 -mb-28"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none"></div>
-
-        <div className="max-w-6xl mx-auto px-[50px] relative z-10">
-          {/* Top Brand & WhatsApp Hotline Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-5 border-b border-slate-200/90">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-white border-2 border-[#c7a76b]/60 flex items-center justify-center font-black text-[#10243a] text-lg shadow-sm ring-4 ring-amber-500/10">
-                ELA
-              </div>
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Careers' }]}
+        eyebrow="E-Lawyers Legal & Business Consultancy Firm · Dhaka, Bangladesh"
+        headline="Build Your Career with"
+        accentHeadline="E-Lawyers Chambers"
+        description="Join our Accounts, Taxation, Corporate Legal, and Client Services divisions at BTI Centara Grand, Panthapath, Dhaka. Select your track below to view requirements or submit an application."
+        metaItems={[
+          '4 Active Career Tracks',
+          'Application Deadline: 31 October 2026',
+          'Panthapath, Dhaka (In-Person)',
+        ]}
+        actions={
+          <>
+            <a
+              href="#open-positions"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+            >
+              <Briefcase className="h-4 w-4" aria-hidden="true" />
+              <span>Explore Open Tracks</span>
+            </a>
+            <a
+              href="#check-status"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              <Search className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>Track Application Status</span>
+            </a>
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'Central Recruitment Desk',
+          title: '+880 1335-230170-81',
+          description: 'Direct HR & Recruitment helpline for circular details, interview schedules, and portal guidance.',
+          icon: <Phone className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'WhatsApp Helpline',
+              href: 'https://wa.me/8801335230170?text=Hello%20E-Lawyers%2C%20I%20am%20inquiring%20about%20the%202026%20recruitment%20drive.',
+              external: true,
+              icon: <Phone className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'MTO Application',
+              to: '/Careers/mto?tab=apply',
+              variant: 'neutral',
+              icon: <GraduationCap className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerIcon: <Clock className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Official Deadline: 31 October 2026 · No Application Fee Charged',
+        }}
+        trustItems={[
+          {
+            icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+            label: 'Zero application fee or processing charge at any stage',
+          },
+          {
+            icon: <Building2 className="h-4 w-4" aria-hidden="true" />,
+            label: 'Central corporate chamber at BTI Centara Grand, Dhaka',
+          },
+          {
+            icon: <Clock className="h-4 w-4" aria-hidden="true" />,
+            label: 'Instant reference ID & rolling interview scheduling',
+          },
+        ]}
+      >
+        <div className="space-y-10">
+          {/* Quick Direct Pathways to Career Tracks */}
+          <section id="open-positions" className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs sm:p-8">
+            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <span className="text-xs font-black tracking-widest text-[#10243a] uppercase block">
-                  E-Lawyers Legal &amp; Business Consultancy Firm
-                </span>
-                <p className="text-xs text-slate-600 flex items-center gap-1.5 mt-0.5 font-semibold">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  BTI Centara Grand, Panthapath, Dhaka · Central Recruitment Portal
-                </p>
+                <p className="text-xs font-semibold text-emerald-800">2026 Recruitment Tracks</p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+                  Direct Pathways to Official Application Forms
+                </h2>
               </div>
+              <p className="text-xs sm:text-sm text-slate-500">
+                portal: blog.accounticca.com/Careers · /eLawyerssBD
+              </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* WhatsApp Hotline Pill from Banner */}
-              <a
-                href="https://wa.me/8801335230170?text=Hello%20E-Lawyers%2C%20I%20am%20inquiring%20about%20the%202026%20recruitment%20drive."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-xs font-bold transition-all shadow-2xs group"
-                title="Direct WhatsApp Helpline: +88 01335230170-81"
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Card 1: MTO */}
+              <Link
+                to="/Careers/mto?tab=apply"
+                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
               >
-                <div className="w-4 h-4 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <Phone className="w-2.5 h-2.5 fill-current" />
-                </div>
-                <span className="tracking-wide font-mono font-bold">+88 01335230170-81</span>
-              </a>
-
-              <span className="inline-flex items-center gap-2 text-xs text-emerald-900 bg-white border border-emerald-300 px-3.5 py-1.5 rounded-full font-bold shadow-2xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Active Recruitment · 4 Career Tracks</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Hero Headline & Recruitment Overview */}
-          <div className="mb-9 text-center max-w-3xl mx-auto space-y-3.5">
-            <div className="inline-flex items-center gap-2 bg-amber-50/90 px-4 py-1.5 rounded-full border border-amber-300/80 text-xs font-extrabold text-amber-900 shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Official 2026 Recruitment Circular · Deadline: 31 October 2026</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#10243a] leading-tight">
-              Build Your Career with{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9e7a33] via-emerald-700 to-[#167d83]">
-                E-Lawyers
-              </span>
-            </h1>
-            <p className="text-xs sm:text-sm md:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto font-medium">
-              Join our Accounts, Taxation, Corporate Legal &amp; Client Services divisions at BTI Centara Grand, Panthapath, Dhaka. Select your track below to view requirements or apply online.
-            </p>
-          </div>
-
-          {/* Interactive Role Action Grid - Direct 1-Click Pathways to Official Forms */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: MTO */}
-            <Link
-              to="/Careers/mto?tab=apply"
-              className="p-5 rounded-2xl bg-white hover:bg-amber-50/40 border-2 border-slate-200/90 hover:border-amber-400 text-slate-900 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shadow-2xs">
-                    <GraduationCap className="w-5 h-5" />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                      <GraduationCap className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-800">Multiple Vacancies</span>
                   </div>
-                  <span className="text-[10px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
-                    Multiple Vacancies
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-[#10243a] group-hover:text-amber-800 transition-colors leading-snug">
-                    MANAGEMENT TRAINEE OFFICER (MTO)
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    Bachelor&apos;s in Accounting, Finance, BBA, Management or Law.
-                  </p>
-                </div>
-              </div>
-              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-amber-800 group-hover:text-amber-900">
-                <span>Apply Online</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-
-            {/* Card 2: Sales & Marketing */}
-            <Link
-              to="/Careers/sales-marketing?tab=apply"
-              className="p-5 rounded-2xl bg-white hover:bg-emerald-50/40 border-2 border-slate-200/90 hover:border-emerald-500 text-slate-900 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-2xs">
-                    <TrendingUp className="w-5 h-5" />
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                      Management Trainee Officer (MTO)
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                      Bachelor&apos;s in Accounting, Finance, BBA, Management or Law.
+                    </p>
                   </div>
-                  <span className="text-[10px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200">
-                    Multiple Vacancies
-                  </span>
                 </div>
-                <div>
-                  <h3 className="font-black text-sm text-[#10243a] group-hover:text-emerald-800 transition-colors leading-snug">
-                    SALES &amp; MARKETING EXECUTIVE
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    Bachelor&apos;s Degree · Attractive Salary + Performance Incentives.
-                  </p>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
+                  <span>Apply Online</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
-              </div>
-              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-emerald-700 group-hover:text-emerald-900">
-                <span>Apply Online</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+              </Link>
 
-            {/* Card 3: Accountant */}
-            <Link
-              to="/Careers/accountant?tab=apply"
-              className="p-5 rounded-2xl bg-white hover:bg-teal-50/40 border-2 border-slate-200/90 hover:border-[#167d83] text-slate-900 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#167d83] flex items-center justify-center shadow-2xs">
-                    <Briefcase className="w-5 h-5" />
+              {/* Card 2: Sales & Marketing */}
+              <Link
+                to="/Careers/sales-marketing?tab=apply"
+                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                      <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-800">Multiple Vacancies</span>
                   </div>
-                  <span className="text-[10px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-900 border border-teal-200">
-                    2 Vacancies
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-[#10243a] group-hover:text-[#167d83] transition-colors leading-snug">
-                    ACCOUNTANT
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    Accounting, Finance or Related Degree · Corporate Accounts.
-                  </p>
-                </div>
-              </div>
-              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-[#167d83] group-hover:text-teal-900">
-                <span>Apply Online</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-
-            {/* Card 4: Customer Care */}
-            <Link
-              to="/Careers/customer-care?tab=apply"
-              className="p-5 rounded-2xl bg-white hover:bg-amber-50/40 border-2 border-slate-200/90 hover:border-[#c7a76b] text-slate-900 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-2xs">
-                    <Headphones className="w-5 h-5" />
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                      Sales &amp; Marketing Executive
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                      Bachelor&apos;s Degree · Competitive Salary + Performance Incentives.
+                    </p>
                   </div>
-                  <span className="text-[10px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
-                    2 Vacancies · Female
-                  </span>
                 </div>
-                <div>
-                  <h3 className="font-black text-sm text-[#10243a] group-hover:text-amber-800 transition-colors leading-snug">
-                    CUSTOMER CARE EXECUTIVE
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    HSC or Above · Freshers Welcome · Excellent Communication.
-                  </p>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
+                  <span>Apply Online</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
-              </div>
-              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-amber-800 group-hover:text-amber-950">
-                <span>Apply Online</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-          </div>
+              </Link>
 
-          {/* Banner Verification & Contact Information Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7 pt-5 border-t border-slate-200/90">
-            <div className="bg-white/90 border border-slate-200/90 rounded-xl p-3 text-center shadow-2xs">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Application Deadline</span>
-              <span className="text-xs sm:text-sm font-black text-amber-700 mt-0.5 block">31 October 2026</span>
+              {/* Card 3: Accountant */}
+              <Link
+                to="/Careers/accountant?tab=apply"
+                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                      <Briefcase className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-800">2 Vacancies</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                      Accountant
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                      Accounting, Finance or Related Degree · Corporate Accounts.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
+                  <span>Apply Online</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
+
+              {/* Card 4: Customer Care */}
+              <Link
+                to="/Careers/customer-care?tab=apply"
+                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                      <Headphones className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-800">2 Vacancies · Female</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                      Customer Care Executive
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                      HSC or Above · Freshers Welcome · Strong Communication.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
+                  <span>Apply Online</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Link>
             </div>
+          </section>
 
-            <div className="bg-white/90 border border-slate-200/90 rounded-xl p-3 text-center shadow-2xs">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Official Portal</span>
-              <span className="text-xs sm:text-sm font-black text-emerald-700 mt-0.5 block">blog.accounticca.com/Careers</span>
-            </div>
-
-            <div className="bg-white/90 border border-slate-200/90 rounded-xl p-3 text-center shadow-2xs">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Direct WhatsApp Helpline</span>
-              <span className="text-xs sm:text-sm font-mono font-bold text-[#10243a] mt-0.5 block">+88 01335230170-81</span>
-            </div>
-
-            <div className="bg-white/90 border border-slate-200/90 rounded-xl p-3 text-center shadow-2xs">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Social Network</span>
-              <span className="text-xs sm:text-sm font-bold text-[#167d83] mt-0.5 block">/eLawyerssBD</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content Body */}
-      <div className="w-full max-w-6xl mx-auto px-4 -mt-8 sm:-mt-10 space-y-12 relative z-20">
+          {/* Main Content Body */}
+          <div className="space-y-12">
 
         {/* Unified Application Navigator Banner - Moved Forward with Elevated Depth */}
         <div className="bg-white rounded-3xl shadow-xl hover:shadow-2xl border-2 border-slate-200/90 p-5 md:p-7 relative z-30 transition-all duration-300">
@@ -1779,7 +1764,7 @@ export const CareersHubPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="space-y-3 px-[90px]">
+          <div className="space-y-3 sm:px-4">
             {FAQS.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
@@ -1847,8 +1832,10 @@ export const CareersHubPage: React.FC = () => {
             </a>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };
 

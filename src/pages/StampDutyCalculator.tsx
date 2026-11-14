@@ -3,6 +3,7 @@ import { ToolAccessGuard } from '../components/auth/ToolAccessGuard';
 import { Scale, RefreshCw } from 'lucide-react';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
 import { ToolSEO } from '../components/SEO';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export const StampDutyCalculator: React.FC = () => {
   const [deedValue, setDeedValue] = useState<number>(5000000); // 50 Lakh
@@ -66,7 +67,63 @@ export const StampDutyCalculator: React.FC = () => {
   }), [deedValue, propertyLocation, stampDuty, registrationFee, lgt, ait, totalGovtCost, lgtRate, aitRate]);
 
   return (
-    <>
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'Stamp Duty & Registration' },
+      ]}
+      eyebrow="The Stamp Act 1899 & Registration Act 1908 · AIT Sec 125 · Bangladesh"
+      headline="Land & Deed"
+      accentHeadline="Registration Cost"
+      description="Computes statutory Stamp Duty (1.5%), Sub-Registry Fee (1%), Local Government Tax, and Advance Income Tax (AIT Sec 125) for property transfers."
+      metaItems={[
+        'Stamp Duty 1.5%',
+        'Registration Fee 1.0%',
+        'Sec 125 Source Tax',
+      ]}
+      actions={
+        <>
+          <CalculationEmailActionBarButton
+            options={{
+              toolId: 'stamp-duty',
+              toolName: 'Land & Property Deed Registration Calculator',
+              toolCategory: 'Property & Deed Registration',
+              toolPath: '/tools/stamp-duty',
+              statutoryBasis: 'Registration Act 1908 & Stamp Act 1899',
+              customSnapshot: calculationSnapshot,
+            }}
+            label="Send Calculation Report"
+            variant="primary"
+          />
+          <button
+            type="button"
+            onClick={() => setDeedValue(5000000)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
+            <span>Reset</span>
+          </button>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Estimated Registry Cost',
+        title: `৳ ${Math.round(totalGovtCost).toLocaleString()}`,
+        icon: <Scale className="h-5 w-5" aria-hidden="true" />,
+        description: `On deed value ৳ ${deedValue.toLocaleString()} · Stamp Duty ৳ ${Math.round(stampDuty).toLocaleString()} · Reg. Fee ৳ ${Math.round(registrationFee).toLocaleString()}.`,
+        actions: [
+          {
+            label: 'Book Deed Vetting',
+            to: '/contact?tab=appointment',
+          },
+          {
+            label: 'All Property Tools',
+            to: '/tools',
+            variant: 'neutral',
+          },
+        ],
+        footerText: 'Subject to Mouza minimum valuation schedules in sub-registry offices.',
+      }}
+    >
       <ToolSEO
         toolId="stamp-duty"
         title="Land & Flat Deed Stamp Duty & Registration Calculator"
@@ -80,41 +137,7 @@ export const StampDutyCalculator: React.FC = () => {
         toolCategory="Property &amp; Deed Registration"
         toolPath="/tools/stamp-duty"
       >
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full border border-amber-300">
-              Registration Act 1908 &amp; Stamp Act 1899
-            </span>
-            <h1 className="text-2xl font-black text-slate-900 mt-2">
-              Bangladesh Land &amp; Flat Deed Registration Cost Calculator
-            </h1>
-            <p className="text-xs text-slate-600 mt-1">
-              Computes statutory Stamp Duty (1.5%), Sub-Registry Fee (1%), Local Govt Tax, and Advance Income Tax (AIT Sec 125).
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setDeedValue(5000000)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Reset
-            </button>
-            <CalculationEmailActionBarButton
-              options={{
-                toolId: 'stamp-duty',
-                toolName: 'Land & Property Deed Registration Calculator',
-                toolCategory: 'Property & Deed Registration',
-                toolPath: '/tools/stamp-duty',
-                statutoryBasis: 'Registration Act 1908 & Stamp Act 1899',
-                customSnapshot: calculationSnapshot,
-              }}
-              label="Send Calculation Report"
-              variant="primary"
-            />
-          </div>
-        </div>
+      <div className="space-y-6">
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
@@ -213,6 +236,6 @@ export const StampDutyCalculator: React.FC = () => {
         </div>
       </div>
     </ToolAccessGuard>
-    </>
+    </ContactPageShell>
   );
 };

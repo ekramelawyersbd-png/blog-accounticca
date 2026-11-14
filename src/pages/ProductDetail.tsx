@@ -32,7 +32,7 @@ import { usePurchases } from '../contexts/PurchaseContext';
 import { useShopAuth } from '../contexts/ShopAuthContext';
 import { useBookmarks } from '../contexts/BookmarkContext';
 import { ShopProduct, inferProductType } from '../data/shopProducts';
-import { Breadcrumbs } from '../components/Breadcrumbs';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 import { ProductPurchaseActions } from '../components/shop/ProductPurchaseActions';
 
 export function ProductDetail() {
@@ -189,33 +189,54 @@ ${prod.samplePreviewSnippet || 'Full verified statutory template.'}
   // If loading and product not yet found
   if (loading && !product) {
     return (
-      <div className="min-h-screen bg-[#F6F8FB] flex items-center justify-center py-24">
-        <div className="text-center space-y-4">
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Tools', path: '/tools' }, { label: 'Loading Resource' }]}
+        eyebrow="Compliance Repository"
+        headline="Loading Verified Resource"
+        description="Retrieving statutory specifications, deliverables, and compliance metadata."
+      >
+        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4">
           <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-slate-600 font-semibold text-sm">Loading verified product details...</p>
         </div>
-      </div>
+      </ContactPageShell>
     );
   }
 
   // Not found state
   if (!product) {
     return (
-      <div className="min-h-screen bg-[#F6F8FB] py-20 px-4">
-        <div className="max-w-xl mx-auto bg-white rounded-2xl p-8 sm:p-10 text-center border border-slate-200 shadow-xs space-y-6">
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Tools', path: '/tools' }, { label: 'Product Not Found' }]}
+        eyebrow="Compliance Repository"
+        headline="Product Not"
+        accentHeadline="Found"
+        description="The requested digital resource could not be located or may have been updated in our repository."
+        summaryCard={{
+          eyebrow: 'Catalog Lookup',
+          title: slug || 'Unknown Slug',
+          description: 'Browse all active calculators, templates, and regulatory toolkits.',
+          icon: <FileText className="w-5 h-5" />,
+          actions: [
+            { label: 'Back to Tools Hub', to: '/tools', icon: <ArrowLeft className="w-4 h-4" />, variant: 'emerald' },
+            { label: 'Contact Legal Desk', to: '/contact', variant: 'neutral' }
+          ]
+        }}
+      >
+        <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 sm:p-10 text-center border border-slate-200 space-y-6">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
             <FileText className="w-7 h-7" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product Not Found</h1>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Product Not Found</h2>
             <p className="text-slate-600 text-sm">
-              We couldn't find the product <span className="font-mono font-bold text-slate-800">"{slug}"</span>. It may have been archived or updated in our compliance repository.
+              We couldn&apos;t find the product <span className="font-mono font-bold text-slate-800">&quot;{slug}&quot;</span>. It may have been archived or updated in our compliance repository.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Link
               to="/tools"
-              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Tools Hub</span>
@@ -228,28 +249,44 @@ ${prod.samplePreviewSnippet || 'Full verified statutory template.'}
             </Link>
           </div>
         </div>
-      </div>
+      </ContactPageShell>
     );
   }
 
   // If item is saved as draft and viewer is not logged in as authorized admin
   if (isDraft && !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#F6F8FB] py-20 px-4">
-        <div className="max-w-xl mx-auto bg-white rounded-2xl p-8 sm:p-10 text-center border border-slate-200 shadow-xs space-y-6">
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Tools', path: '/tools' }, { label: 'Draft Resource' }]}
+        eyebrow="Restricted Access"
+        headline="Product in"
+        accentHeadline="Preparation"
+        description="This compliance resource is currently saved as an unpublished draft."
+        summaryCard={{
+          eyebrow: 'Publication Status',
+          title: 'Unpublished Draft',
+          description: 'Authorized administrators may sign in to preview or publish this resource.',
+          icon: <Lock className="w-5 h-5" />,
+          actions: [
+            { label: 'Browse Compliance Tools', to: '/tools', icon: <ArrowLeft className="w-4 h-4" />, variant: 'emerald' },
+            { label: 'Admin Login', to: `/admin/login?redirect=${encodeURIComponent(`/shop/${product.slug}`)}`, variant: 'neutral' }
+          ]
+        }}
+      >
+        <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 sm:p-10 text-center border border-slate-200 space-y-6">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
             <Lock className="w-7 h-7" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product in Preparation (Draft)</h1>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Product in Preparation (Draft)</h2>
             <p className="text-slate-600 text-sm leading-relaxed">
-              The product <strong className="text-slate-800 font-semibold">"{product.title}"</strong> is currently unpublished and not visible to public customers.
+              The product <strong className="text-slate-800 font-semibold">&quot;{product.title}&quot;</strong> is currently unpublished and not visible to public customers.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Link
               to="/tools"
-              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Browse Compliance Tools</span>
@@ -262,7 +299,7 @@ ${prod.samplePreviewSnippet || 'Full verified statutory template.'}
             </Link>
           </div>
         </div>
-      </div>
+      </ContactPageShell>
     );
   }
 
@@ -278,7 +315,7 @@ ${prod.samplePreviewSnippet || 'Full verified statutory template.'}
   const productType = product.productType || inferProductType(product);
 
   return (
-    <div className="bg-[#F6F8FB] min-h-screen text-slate-800 antialiased">
+    <>
       <ServiceSEO
         title={`${product.title} | Accounticca Digital Shop`}
         description={product.shortDescription}
@@ -298,108 +335,99 @@ ${prod.samplePreviewSnippet || 'Full verified statutory template.'}
         ]}
       />
 
-      {/* Sync product hierarchy with Layout's global Breadcrumb bar beneath header */}
-      <Breadcrumbs
-        items={[
+      <ContactPageShell
+        breadcrumbs={[
           { label: 'Tools', path: '/tools' },
           { label: product.title }
         ]}
-      />
-
-      {/* Top Product Action Bar */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-600 font-medium">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Verified Digital Resource · {product.category}</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Show admin desk button strictly for authenticated users */}
-            {isAuthenticated && (
-              <Link
-                to="/admin/shop"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold transition-colors text-xs"
-              >
-                <span>⚙️ Manage in Admin</span>
-              </Link>
-            )}
-
-            <button
-              type="button"
-              onClick={handleShare}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium transition-colors cursor-pointer text-xs"
-              title="Share this product link"
-            >
-              {isCopied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-700 font-semibold">Link Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Share</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleToggleFavorite}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-medium transition-colors cursor-pointer text-xs ${
-                isSaved
-                  ? 'bg-rose-50 border-rose-300 text-rose-700 font-semibold'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-              }`}
-              title={isSaved ? 'Remove from saved bookmarks' : 'Save to personal bookmarks'}
-            >
-              <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-current text-rose-600' : 'text-slate-500'}`} />
-              <span>{isSaved ? 'Saved' : 'Save'}</span>
-            </button>
-
+        eyebrow={`${product.category} · ${productType}`}
+        headline={product.title}
+        description={product.shortDescription}
+        metaItems={[
+          product.governingLaw || 'Bangladesh Jurisdictional Law',
+          product.format || 'Digital Resource',
+          product.authorOrVettedBy || 'Accounticca × E-Lawyers'
+        ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
             <Link
               to="/tools"
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-emerald-700 hover:text-emerald-800 font-semibold hover:underline"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 text-xs font-bold transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>All Tools</span>
             </Link>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Admin Draft Mode Notice Banner */}
-      {isDraft && isAuthenticated && (
-        <div className="bg-amber-50 border-b border-amber-200 py-2.5 px-4">
-          <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-amber-900 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-              <span>Draft Preview: This product is currently hidden from the public Shop catalog.</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => togglePublishStatus(product.id)}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition-colors cursor-pointer"
-              >
-                Publish Live
-              </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-900/70 hover:bg-emerald-900 text-emerald-50 border border-emerald-700/60 font-semibold transition-colors cursor-pointer text-xs"
+            >
+              {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Share2 className="w-3.5 h-3.5" />}
+              <span>{isCopied ? 'Link Copied!' : 'Share'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-900/70 hover:bg-emerald-900 text-emerald-50 border border-emerald-700/60 font-semibold transition-colors cursor-pointer text-xs"
+            >
+              <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-current text-rose-300' : ''}`} />
+              <span>{isSaved ? 'Saved' : 'Save'}</span>
+            </button>
+            {isAuthenticated && (
               <Link
                 to="/admin/shop"
-                className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold rounded-lg text-xs transition-colors"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold transition-colors text-xs"
               >
-                Admin Desk
+                <span>Manage in Admin</span>
               </Link>
+            )}
+          </div>
+        }
+        summaryCard={{
+          eyebrow: 'Verified Digital Resource',
+          title: product.price === 0 ? 'Free Access' : `BDT ${product.price.toLocaleString('en-IN')}`,
+          description: discountPercent > 0 ? `Save ${discountPercent}% off standard chamber fee.` : `Instant digital dispatch (${product.format}).`,
+          icon: <ShieldCheck className="w-5 h-5" />,
+          actions: [
+            hasPurchased || hasPendingOrder
+              ? { label: 'Open Client Portal', to: '/client-portal', variant: 'emerald' }
+              : { label: product.price === 0 ? 'Get Free Access' : 'Proceed to Checkout', onClick: handleBuyNow, variant: 'emerald' },
+            { label: 'Consult Legal Desk', to: '/contact', variant: 'neutral' }
+          ],
+          footerIcon: <CheckCircle2 className="w-4 h-4 text-emerald-700" />,
+          footerText: `Rating ${product.rating.toFixed(1)} · Vetted statutory template`
+        }}
+      >
+        {/* Admin Draft Mode Notice Banner */}
+        {isDraft && isAuthenticated && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl py-3 px-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-amber-600" />
+                <span>Draft Preview: This product is currently hidden from the public Shop catalog.</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => togglePublishStatus(product.id)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  Publish Live
+                </button>
+                <Link
+                  to="/admin/shop"
+                  className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold rounded-lg text-xs transition-colors"
+                >
+                  Admin Desk
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content Container: 1200-1280px Max Width with Balanced 2-Column Grid */}
-      <main className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start w-full">
+        {/* Main Content Container */}
+        <div className="w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start w-full">
 
           {/* LEFT COLUMN: Visual Media (40% width on Desktop = 5 cols), Specs, Excerpt, Guarantee */}
           <div className="lg:col-span-5 space-y-5">
@@ -1241,31 +1269,31 @@ ${prod.samplePreviewSnippet || 'Full verified statutory template.'}
           </section>
         )}
 
-      </main>
-
-      {/* Floating Cart Trigger Button (When Cart Has Items) */}
-      {totalItemsCount > 0 && (
-        <div className="fixed bottom-6 left-6 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <button
-            type="button"
-            onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl shadow-lg hover:scale-105 transition-all duration-200 border border-emerald-500/40 cursor-pointer"
-            title="Open Shopping Cart"
-          >
-            <div className="relative">
-              <ShoppingBag className="w-4 h-4 text-white" />
-              <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-slate-950 font-black text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
-                {totalItemsCount}
-              </span>
-            </div>
-            <div className="text-left font-bold text-xs">
-              <div>View Cart</div>
-            </div>
-          </button>
         </div>
-      )}
 
-    </div>
+        {/* Floating Cart Trigger Button (When Cart Has Items) */}
+        {totalItemsCount > 0 && (
+          <div className="fixed bottom-6 left-6 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="flex items-center gap-2.5 px-4 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl shadow-lg hover:scale-105 transition-all duration-200 border border-emerald-500/40 cursor-pointer"
+              title="Open Shopping Cart"
+            >
+              <div className="relative">
+                <ShoppingBag className="w-4 h-4 text-white" />
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-slate-950 font-black text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                  {totalItemsCount}
+                </span>
+              </div>
+              <div className="text-left font-bold text-xs">
+                <div>View Cart</div>
+              </div>
+            </button>
+          </div>
+        )}
+      </ContactPageShell>
+    </>
   );
 }
 

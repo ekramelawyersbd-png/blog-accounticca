@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronRight, Home, ArrowLeft, Compass } from 'lucide-react';
 import { mockArticles, categories } from '../data/mockData';
@@ -27,12 +27,18 @@ interface BreadcrumbContextValue {
   customItems: BreadcrumbItem[] | null;
   setCustomItems: (items: BreadcrumbItem[] | null) => void;
   hasGlobalBar: boolean;
+  isGlobalBarSuppressed: boolean;
+  incrementSuppress: () => void;
+  decrementSuppress: () => void;
 }
 
 const BreadcrumbContext = createContext<BreadcrumbContextValue>({
   customItems: null,
   setCustomItems: () => {},
   hasGlobalBar: false,
+  isGlobalBarSuppressed: false,
+  incrementSuppress: () => {},
+  decrementSuppress: () => {},
 });
 
 const KNOWN_PARENT_PATHS: Record<string, string> = {
@@ -790,6 +796,7 @@ export function BreadcrumbProvider({
   hasGlobalBar?: boolean;
 }) {
   const [customItems, setCustomItems] = useState<BreadcrumbItem[] | null>(null);
+  const [suppressCount, setSuppressCount] = useState(0);
   const location = useLocation();
 
   // Clear custom page overrides whenever route changes before child effect runs
@@ -797,15 +804,61 @@ export function BreadcrumbProvider({
     setCustomItems(null);
   }, [location.pathname, location.search]);
 
+  const incrementSuppress = useCallback(() => {
+    setSuppressCount((c) => c + 1);
+  }, []);
+
+  const decrementSuppress = useCallback(() => {
+    setSuppressCount((c) => Math.max(0, c - 1));
+  }, []);
+
   const value = useMemo(
-    () => ({ customItems, setCustomItems, hasGlobalBar }),
-    [customItems, hasGlobalBar]
+    () => ({
+      customItems,
+      setCustomItems,
+      hasGlobalBar,
+      isGlobalBarSuppressed: suppressCount > 0,
+      incrementSuppress,
+      decrementSuppress,
+    }),
+    [customItems, hasGlobalBar, suppressCount, incrementSuppress, decrementSuppress]
   );
 
   return (
     <BreadcrumbContext.Provider value={value}>
       {children}
     </BreadcrumbContext.Provider>
+  );
+}
+
+/**
+ * Suppresses the outer global DynamicBreadcrumbBar while a page renders its own
+ * ContactPageShell hero breadcrumb, preventing duplicate stacked breadcrumb bars.
+ */
+export function useSuppressGlobalBreadcrumb(active: boolean = true) {
+  const { incrementSuppress, decrementSuppress } = useContext(BreadcrumbContext);
+  useEffect(() => {
+    if (!active) return;
+    incrementSuppress();
+    return () => decrementSuppress();
+  }, [active, incrementSuppress, decrementSuppress]);
+}
+
+/**
+ * Resolves the hierarchical breadcrumb trail for the active route.
+ */
+export function useResolvedBreadcrumbs(overrideItems?: BreadcrumbItem[] | null): BreadcrumbItem[] {
+  const location = useLocation();
+  const { customItems } = useContext(BreadcrumbContext);
+  return useMemo(
+    () =>
+      resolveDynamicBreadcrumbs(
+        location.pathname,
+        location.search,
+        location.hash,
+        overrideItems && overrideItems.length > 0 ? overrideItems : customItems
+      ),
+    [location.pathname, location.search, location.hash, overrideItems, customItems]
   );
 }
 
@@ -1039,11 +1092,11 @@ function BreadcrumbTrail({
  */
 export function DynamicBreadcrumbBar() {
   const location = useLocation();
-  const { customItems } = useContext(BreadcrumbContext);
+  const { customItems, isGlobalBarSuppressed } = useContext(BreadcrumbContext);
 
   const cleanPath = location.pathname.replace(/\/+$/, '') || '/';
 
-  if (cleanPath === '/') {
+  if (cleanPath === '/' || isGlobalBarSuppressed) {
     return null;
   }
 

@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import type { CareerApplicationData } from '../utils/careerEmailTemplate';
 import { submitCareerApplicationToApi } from '../utils/careerStorage';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface FileMeta {
   fileName: string;
@@ -931,7 +932,7 @@ export const CareerCustomerCarePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f2f5f8] text-[#243446] font-sans">
+    <>
       <ServiceSEO
         title="Customer Care Executive (Female) | E-Lawyers Job Circular & Online Application"
         description="E-Lawyers Legal & Business Consultancy Firm is hiring 2 Female Customer Care Executives for our Panthapath, Dhaka office. Minimum HSC or Graduate. Apply online with ease."
@@ -939,138 +940,92 @@ export const CareerCustomerCarePage: React.FC = () => {
         serviceType="Job Recruitment Posting & Application"
       />
 
-      {/* Hero Header - Light Corporate Theme */}
-      <section className="bg-gradient-to-b from-white via-[#f8fafc] to-[#f1f5f9] text-slate-800 pt-10 pb-16 px-4 border-b border-slate-200 relative overflow-hidden">
-        {/* Subtle ultra-light background accents */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-200/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-200/15 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20"></div>
-
-        <div className="max-w-5xl mx-auto relative z-10">
-          {/* Top navigation row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white border-2 border-amber-400/40 flex items-center justify-center font-extrabold text-[#c7a76b] text-lg shadow-xs">
-                ELA
-              </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-widest text-[#10243a] uppercase">
-                  E-Lawyers Legal &amp; Business Consultancy Firm
-                </h2>
-                <p className="text-xs text-slate-500 font-medium">Customer Care &amp; Call Center Division · Panthapath, Dhaka</p>
-              </div>
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Careers', path: '/Careers' },
+          { label: 'Customer Care Executive (Female)' },
+        ]}
+        eyebrow="E-Lawyers Legal & Business Consultancy Firm · Customer Care & Call Center Division"
+        headline="Customer Care"
+        accentHeadline="Executive (Female)"
+        description="কাস্টমার কেয়ার ও কল সেন্টারে উজ্জ্বল ক্যারিয়ার গড়ুন। আপনার আত্মবিশ্বাস, মার্জিত বাচনভঙ্গি ও যোগাযোগ দক্ষতাকে কাজে লাগিয়ে E-Lawyers-এর ক্লায়েন্টদের বিশ্বস্ত সেবা দিন।"
+        metaItems={[
+          '2 Vacancies (Female)',
+          'Min. HSC or Graduate',
+          'Freshers Welcome',
+          'Deadline: 31 October 2026',
+        ]}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => handleTabChange('apply')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              <span>Apply Online Now (অনলাইন আবেদন)</span>
+            </button>
+            <Link
+              to="/Careers"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>All Open Positions</span>
+            </Link>
+          </>
+        }
+        rightCard={
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <img
+                src="https://i.ibb.co/Kz0BfBPn/65a0c170-51c2-4122-8430-e881e995471f.png"
+                alt="Customer Care Executive (Female) Recruitment Circular - E-Lawyers Legal & Business Consultancy Firm"
+                referrerPolicy="no-referrer"
+                className="h-auto w-full object-cover"
+              />
             </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               <Link
                 to="/Careers/mto"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>MTO Trainee Opening</span>
+                <Sparkles className="h-3.5 w-3.5 text-emerald-700" />
+                <span>MTO Trainee</span>
               </Link>
               <Link
                 to="/Careers/sales-marketing"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-emerald-800 px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
               >
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Sales &amp; Marketing</span>
               </Link>
               <Link
                 to="/Careers/accountant"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
               >
-                <Briefcase className="w-3.5 h-3.5 text-[#167d83]" />
+                <Briefcase className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Accountant (2)</span>
               </Link>
-              <Link
-                to="/Careers"
-                className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 transition-colors font-semibold"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> All Openings
-              </Link>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mb-8">
-            <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold mb-3 shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-amber-700" /> Official Career Circular · 2026 Recruitment
-              </div>
-
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[#10243a] mb-3">
-                Customer Care Executive (Female)
-              </h1>
-              <p className="text-lg md:text-xl text-slate-600 max-w-3xl mb-6 leading-relaxed">
-                কাস্টমার কেয়ার ও কল সেন্টারে উজ্জ্বল ক্যারিয়ার গড়ুন। আপনার আত্মবিশ্বাস, মার্জিত বাচনভঙ্গি ও যোগাযোগ দক্ষতাকে কাজে লাগিয়ে E-Lawyers-এর ক্লায়েন্টদের বিশ্বস্ত সেবা দিন।
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('apply')}
-                  className="px-6 py-3 bg-gradient-to-r from-[#10243a] to-[#1c3c5d] hover:to-[#224b74] text-amber-300 font-black rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-sm border border-amber-400/40 cursor-pointer"
-                >
-                  <FileText className="w-4 h-4 text-amber-400" />
-                  <span>Apply Online Now (অনলাইন আবেদন)</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden border-2 border-slate-200/90 shadow-lg bg-white">
-                <img
-                  src="https://i.ibb.co/Kz0BfBPn/65a0c170-51c2-4122-8430-e881e995471f.png"
-                  alt="Customer Care Executive (Female) Recruitment Circular - E-Lawyers Legal & Business Consultancy Firm"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Key metadata badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Users className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Vacancies</div>
-              <div className="text-sm font-bold text-[#10243a]">2 Positions (Female)</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <GraduationCap className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Qualification</div>
-              <div className="text-sm font-bold text-[#10243a]">Min. HSC / Graduate</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Briefcase className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Experience</div>
-              <div className="text-sm font-bold text-[#10243a]">Freshers Welcome</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <MapPin className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Location</div>
-              <div className="text-sm font-bold text-[#10243a]">Panthapath, Dhaka</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Award className="w-4 h-4 mx-auto text-[#167d83] mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Salary</div>
-              <div className="text-sm font-bold text-emerald-700">Negotiable</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Calendar className="w-4 h-4 mx-auto text-amber-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Deadline</div>
-              <div className="text-sm font-bold text-amber-700">31 October 2026</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Container */}
-      <main className="relative z-20 max-w-5xl mx-auto px-4 -mt-8 pb-20">
+        }
+        trustItems={[
+          {
+            icon: <Headphones className="h-4 w-4" aria-hidden="true" />,
+            label: 'Client reception & telephone advisory at BTI Centara Grand',
+          },
+          {
+            icon: <HeartHandshake className="h-4 w-4" aria-hidden="true" />,
+            label: 'Supportive corporate workspace for women professionals',
+          },
+          {
+            icon: <Calendar className="h-4 w-4" aria-hidden="true" />,
+            label: 'Deadline: 31 October 2026 · Freshers encouraged to apply',
+          },
+        ]}
+      >
+        {/* Main Container */}
+        <div className="relative z-20 max-w-5xl mx-auto pb-16">
         {/* Tab Navigation Pill Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-2 mb-8 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -2569,8 +2524,9 @@ export const CareerCustomerCarePage: React.FC = () => {
             </button>
           </div>
         )}
-      </main>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };
 export default CareerCustomerCarePage;

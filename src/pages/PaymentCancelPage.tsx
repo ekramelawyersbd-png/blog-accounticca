@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, ShoppingBag, ShieldCheck, RefreshCw } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { getPendingUddoktaCheckout } from '../services/uddoktapayService';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export const PaymentCancelPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -53,76 +54,125 @@ export const PaymentCancelPage: React.FC = () => {
   const retryUrl = `/paymently?${retryParams.toString()}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+    <>
       <SEO
         title="Payment Cancelled - UddoktaPay Hosted"
         description="Payment session was cancelled. No charges were incurred."
       />
 
-      <div className="max-w-lg mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden text-center p-8 sm:p-10 space-y-6">
-        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
-          <AlertTriangle className="w-10 h-10" />
-        </div>
-
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black text-slate-900">Payment Process Cancelled</h1>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
-            Your UddoktaPay automated checkout was cancelled or closed before completion. No deductions were made from your bKash, Nagad, Rocket, or card account.
-          </p>
-        </div>
-
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs text-slate-500 font-mono space-y-1 text-left">
-          <div className="flex justify-between">
-            <span className="text-slate-400">Status:</span>
-            <span className="font-bold text-amber-700">TRANSACTION_ABORTED</span>
-          </div>
-          {reference && (
-            <div className="flex justify-between">
-              <span className="text-slate-400">Reference:</span>
-              <span className="font-semibold text-slate-700">{reference}</span>
-            </div>
-          )}
-          {amount && (
-            <div className="flex justify-between">
-              <span className="text-slate-400">Amount:</span>
-              <span className="font-semibold text-slate-700">৳{amount} BDT</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 pt-2">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Checkout', path: '/checkout' },
+          { label: 'Payment Cancelled' },
+        ]}
+        eyebrow="Payment Settlement Status · UddoktaPay Hosted"
+        headline="Payment Process"
+        accentHeadline="Cancelled"
+        description="Your automated checkout session was cancelled or closed before completion. Zero charges were processed on your MFS wallet or card."
+        metaItems={[
+          reference ? `Reference: ${reference}` : 'Status: TRANSACTION_ABORTED',
+          amount ? `Amount: ৳${amount} BDT` : 'No Charges Incurred',
+        ]}
+        actions={
           <button
+            type="button"
             onClick={() => navigate(retryUrl)}
-            className="w-full px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 transform active:scale-95 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
             <span>Retry Payment {amount ? `(৳${amount})` : ''}</span>
           </button>
+        }
+        summaryCard={{
+          eyebrow: 'Transaction Summary',
+          title: amount ? `৳${amount} BDT` : 'No Deduction Made',
+          description: reference
+            ? `Session reference ${reference} remains saved so you can resume settlement anytime.`
+            : 'Resume payment settlement or browse compliance tools without losing your cart.',
+          icon: <AlertTriangle className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'Retry Payment',
+              onClick: () => navigate(retryUrl),
+              icon: <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Compliance Tools',
+              to: '/tools',
+              variant: 'neutral',
+              icon: <ShoppingBag className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Protected by Accounticca Verified Security & UddoktaPay',
+        }}
+      >
+        <div className="max-w-lg mx-auto bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden text-center p-8 sm:p-10 space-y-6">
+          <div className="w-16 h-16 bg-amber-50 text-amber-700 rounded-2xl border border-amber-200 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              to="/tools"
-              className="w-full sm:w-1/2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950">No Charges Were Incurred</h2>
+            <p className="text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+              Your UddoktaPay automated checkout was closed before completion. No deductions were made from your bKash, Nagad, Rocket, or card account.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs text-slate-600 font-mono space-y-1.5 text-left">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Status:</span>
+              <span className="font-bold text-amber-700">TRANSACTION_ABORTED</span>
+            </div>
+            {reference && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Reference:</span>
+                <span className="font-semibold text-slate-800">{reference}</span>
+              </div>
+            )}
+            {amount && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Amount:</span>
+                <span className="font-semibold text-slate-800">৳{amount} BDT</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate(retryUrl)}
+              className="w-full px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Compliance Tools</span>
-            </Link>
-            <Link
-              to="/"
-              className="w-full sm:w-1/2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Go to Homepage</span>
-            </Link>
+              <RefreshCw className="w-4 h-4" />
+              <span>Retry Payment {amount ? `(৳${amount})` : ''}</span>
+            </button>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to="/tools"
+                className="w-full sm:w-1/2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Compliance Tools</span>
+              </Link>
+              <Link
+                to="/"
+                className="w-full sm:w-1/2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Go to Homepage</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Protected by Accounticca Verified Security &amp; UddoktaPay</span>
           </div>
         </div>
-
-        <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Protected by Accounticca Verified Security & UddoktaPay</span>
-        </div>
-      </div>
-    </div>
+      </ContactPageShell>
+    </>
   );
 };
 

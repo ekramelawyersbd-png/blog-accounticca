@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { isItemSaved } from '../utils/readingList';
 import { calculateReadingTime } from '../utils/readingTime';
 import { Bookmark, Clock, MessageCircle, Share2, ThumbsUp, Printer, Award, Facebook, Twitter, Linkedin, Link as LinkIcon, Search, ChevronRight, User, Calendar, Briefcase, FileText, ExternalLink, Loader2, ImageOff, Check, ShieldCheck } from 'lucide-react';
-import { Breadcrumbs } from '../components/Breadcrumbs';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import React from 'react';
@@ -38,6 +37,7 @@ import { ArticleSEO } from '../components/SEO';
 import { BlogDisclaimer } from '../components/BlogDisclaimer';
 import { ContactELawyers } from '../components/ContactELawyers';
 import { EstimatedReadingTime } from '../components/EstimatedReadingTime';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 export function TaxRefundGuide() {
   const navigate = useNavigate();
@@ -64,13 +64,17 @@ export function TaxRefundGuide() {
 
   if (!article) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <h2 className="text-3xl font-bold text-slate-900 mb-4">Article Not Found</h2>
-        <p className="text-slate-600 mb-8">The legal article or guide you are looking for does not exist or has been removed.</p>
-        <Link to="/" className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-500 transition-colors">
-          Return to Homepage
-        </Link>
-      </div>
+      <ContactPageShell
+        breadcrumbs={[{ label: 'Knowledge Hub', path: '/search' }, { label: 'Not Found' }]}
+        headline="Article not found."
+        description="The legal article or guide you are looking for does not exist or has been removed."
+      >
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-12 text-center shadow-xs">
+          <Link to="/" className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-800">
+            Return to Homepage
+          </Link>
+        </div>
+      </ContactPageShell>
     );
   }
 
@@ -197,17 +201,43 @@ export function TaxRefundGuide() {
         variant="floating-rail" 
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <Breadcrumbs 
-          items={[
-            { label: article.category, path: `/category/${article.categoryId}` },
-            { label: article.title }
-          ]} 
-        />
-
-        <div 
-          className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-12"
-          style={{ borderColor: '#125cc6' }}
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Tax & VAT Guides', path: '/category/tax' },
+          { label: 'Tax Refund & Adjustment Guide' },
+        ]}
+        eyebrow={`${article.category} · Statutory Return & Refund Guide`}
+        headline={article.title}
+        description={article.excerpt}
+        metaItems={[
+          article.author.name,
+          format(new Date(article.publishedAt), 'MMM d, yyyy'),
+          'Income Tax Act 2023 Compliance',
+        ]}
+        summaryCard={{
+          eyebrow: 'Refund & Rebate Guidance',
+          title: 'Sec 78 & Online Claims',
+          icon: <FileText className="h-5 w-5" aria-hidden="true" />,
+          description:
+            'Step-by-step protocol for investment tax rebate claims, advance tax set-offs, and NBR online tax refund applications.',
+          actions: [
+            {
+              label: 'Investment Rebate Tool',
+              to: '/tools/investment-rebate',
+              icon: <Award className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Book Tax Review',
+              to: '/contact?tab=appointment',
+              variant: 'neutral',
+            },
+          ],
+          footerIcon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Reviewed by Accounticca × E-Lawyers Direct Tax Chambers.',
+        }}
+      >
+        <div
+          className="grid grid-cols-1 lg:grid-cols-12 gap-10"
         >
           
           {/* Main Content Area */}
@@ -528,18 +558,19 @@ export function TaxRefundGuide() {
               </div>
 
               {/* Advertisement / Service Banner */}
-              <div className="bg-slate-900 p-8 rounded-3xl text-center text-white shadow-lg relative overflow-hidden border border-slate-800">
-                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                  <FileText className="w-24 h-24 text-emerald-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 relative z-10">Company Registration Service</h3>
-                <p className="text-slate-400 text-sm mb-6 relative z-10">End-to-end RJSC incorporation and trade license acquisition.</p>
-                <Link 
-                  to="/contact" 
-                  className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors relative z-10 shadow-md"
+              <div className="rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/30 p-7 text-center shadow-xs">
+                <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100/80 text-emerald-800">
+                  <FileText className="h-6 w-6" />
+                </span>
+                <p className="text-xs font-semibold text-emerald-800">Chambers Advisory</p>
+                <h3 className="mt-1 text-lg font-bold text-slate-950 mb-2">Company &amp; Tax Advisory Service</h3>
+                <p className="text-slate-600 text-sm mb-5 leading-6">End-to-end RJSC incorporation, NBR refund representation, and tax audit support.</p>
+                <Link
+                  to="/contact?tab=appointment"
+                  className="inline-flex items-center justify-center gap-2 w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-xl transition-colors shadow-sm text-sm"
                 >
                   <span>Book Consultation</span>
-                  <ExternalLink className="w-4 h-4 text-emerald-200" />
+                  <ExternalLink className="w-4 h-4" />
                 </Link>
               </div>
 
@@ -547,10 +578,12 @@ export function TaxRefundGuide() {
           </div>
 
         </div>
-      </div>
 
-      {/* 9. Related Articles */}
-      <RelatedArticles currentArticle={article} maxItems={3} />
+        {/* 9. Related Articles */}
+        <div className="pt-4">
+          <RelatedArticles currentArticle={article} maxItems={3} />
+        </div>
+      </ContactPageShell>
     </>
   );
 }

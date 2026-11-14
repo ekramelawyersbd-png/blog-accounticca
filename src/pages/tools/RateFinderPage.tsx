@@ -41,6 +41,7 @@ import {
   DutyCalculationInputs 
 } from '../../data/nationalRateDatabase';
 import { ToolSEO } from '../../components/SEO';
+import { ContactPageShell } from '../../components/layout/ContactPageShell';
 
 export function RateFinderPage() {
   // Navigation tab states
@@ -260,7 +261,54 @@ Effective Total Tax Incidence (TTI): ${dutyBreakdown.effectiveTotalTaxIncidenceP
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-6 pb-16">
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'National Rate Finder' },
+      ]}
+      eyebrow="National Tax, VAT & Customs Tariff Directory · AY 2026–2027"
+      headline="National Rate Finder &"
+      accentHeadline="Tariff Database"
+      description="Search and verify live statutory rates for Bangladesh Value Added Tax (VAT), Withholding Tax (TDS/VDS under ITA 2023), and Customs HS Code tariffs with predictive lookup and a Total Tax Incidence (TTI) calculator."
+      metaItems={[
+        'VAT & SD Act 2012',
+        'Income Tax Act 2023',
+        'S.R.O. No. 240-AIN/2021 VDS',
+      ]}
+      rightCard={
+        <div className="space-y-4">
+          <p className="text-xs font-semibold text-emerald-800">Indexed Statutory Coverage</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
+              <div className="text-xs text-slate-500">Total Indexed</div>
+              <div className="mt-0.5 text-lg font-bold text-slate-950 tabular-nums">{stats.total} Rates</div>
+            </div>
+            <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/50 p-3">
+              <div className="text-xs text-emerald-800">VAT Services</div>
+              <div className="mt-0.5 text-lg font-bold text-emerald-800 tabular-nums">{stats.vatCount} Codes</div>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
+              <div className="text-xs text-slate-500">TDS / VDS Sections</div>
+              <div className="mt-0.5 text-lg font-bold text-slate-950 tabular-nums">{stats.tdsCount} Sections</div>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3">
+              <div className="text-xs text-slate-500">Customs Tariffs</div>
+              <div className="mt-0.5 text-lg font-bold text-slate-950 tabular-nums">{stats.customsCount} HS Codes</div>
+            </div>
+          </div>
+          <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-xs text-slate-600">
+            <span>Includes Customs Act 2023 &amp; Finance Act 2026</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('CALCULATOR')}
+              className="font-semibold text-emerald-800 hover:underline cursor-pointer"
+            >
+              Open TTI Calc →
+            </button>
+          </div>
+        </div>
+      }
+    >
       <ToolSEO
         title={
           selectedItem
@@ -271,76 +319,7 @@ Effective Total Tax Incidence (TTI): ${dutyBreakdown.effectiveTotalTaxIncidenceP
         canonicalUrl="/tools/rate-finder"
         keywords={['Bangladesh VAT Rate Finder', 'TDS VDS Rate Schedule', 'HS Code Duty Calculator Bangladesh', 'NBR Rate Finder']}
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Breadcrumb Navigation */}
-        <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
-          <Link to="/tools" className="hover:text-emerald-700 transition-colors flex items-center gap-1">
-            <ArrowLeft className="w-4 h-4" />
-            Tools Hub
-          </Link>
-          <span>/</span>
-          <span className="text-slate-900 font-medium">National Rate Finder</span>
-        </div>
-
-        {/* Hero Header Banner */}
-        <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl mb-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 translate-x-12 -translate-y-12 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5" />
-              National Tax, VAT & Customs Tariff Directory 2026–27
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
-              National Rate Finder & Tariff Database
-            </h1>
-            <p className="text-slate-300 max-w-3xl text-sm sm:text-base leading-relaxed mb-6">
-              Search & verify live statutory rates for Bangladesh Value Added Tax (VAT), Withholding Tax (TDS/VDS under ITA 2023), and Customs HS Code tariffs with predictive search and an integrated Total Tax Incidence (TTI) duty calculator.
-            </p>
-
-            {/* Statutory Badges */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-200 mb-6">
-              <span className="px-3 py-1 rounded-lg bg-white/10 backdrop-blur-xs border border-white/10 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                VAT & SD Act, 2012
-              </span>
-              <span className="px-3 py-1 rounded-lg bg-white/10 backdrop-blur-xs border border-white/10 flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-                Income Tax Act, 2023
-              </span>
-              <span className="px-3 py-1 rounded-lg bg-white/10 backdrop-blur-xs border border-white/10 flex items-center gap-1.5">
-                <Scale className="w-3.5 h-3.5 text-amber-400" />
-                Customs Act, 2023 & Finance Act 2026
-              </span>
-              <span className="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5 font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                S.R.O. No. 240-AIN/2021 VDS Compliant
-              </span>
-            </div>
-
-            {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-700/60">
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
-                <div className="text-xs text-slate-400">Total Indexed Items</div>
-                <div className="text-xl font-bold text-white mt-0.5">{stats.total} Statutory Rates</div>
-              </div>
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
-                <div className="text-xs text-slate-400">VAT & Service Codes</div>
-                <div className="text-xl font-bold text-emerald-400 mt-0.5">{stats.vatCount} Categories</div>
-              </div>
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
-                <div className="text-xs text-slate-400">TDS / VDS Sections</div>
-                <div className="text-xl font-bold text-blue-400 mt-0.5">{stats.tdsCount} ITA Sections</div>
-              </div>
-              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
-                <div className="text-xs text-slate-400">HS Customs Tariffs</div>
-                <div className="text-xl font-bold text-amber-400 mt-0.5">{stats.customsCount} HS Codes</div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div>
 
         {/* Multi-Category Tabs Navigation */}
         <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center justify-between gap-2">
@@ -1467,6 +1446,6 @@ Effective Total Tax Incidence (TTI): ${dutyBreakdown.effectiveTotalTaxIncidenceP
         )}
 
       </div>
-    </div>
+    </ContactPageShell>
   );
 }

@@ -21,7 +21,6 @@ import {
   SlidersHorizontal,
   Info
 } from 'lucide-react';
-import { Breadcrumbs } from '../components/Breadcrumbs';
 import { 
   glossaryTerms, 
   glossaryCategories, 
@@ -34,6 +33,7 @@ import { TermDetailModal } from '../components/glossary/TermDetailModal';
 import { InteractiveKeyTermsEducator } from '../components/glossary/InteractiveKeyTermsEducator';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
+import { ContactPageShell, ContactSectionHeader } from '../components/layout/ContactPageShell';
 
 const BOOKMARKS_STORAGE_KEY = 'elawyers_glossary_bookmarks';
 
@@ -128,7 +128,74 @@ export function Glossary() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-20">
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Knowledge Hub', path: '/search' },
+        { label: 'Accounting & Tax Glossary' },
+      ]}
+      eyebrow="Statutory Legal & Tax Dictionary · Bangladesh"
+      headline="Accounting & Tax Glossary."
+      accentHeadline="Authoritative statutes, definitions & rules."
+      description="Comprehensive statutory definitions, governing sections, calculation examples, and compliance rules under Bangladesh’s Income Tax Act, 2023 and VAT & SD Act, 2012."
+      metaItems={[
+        `${glossaryTerms.length} Defined Terms`,
+        'ITA 2023 & VAT Act 2012',
+        'English & Bengali Terminology',
+      ]}
+      actions={
+        <>
+          <a
+            href="#interactive-key-terms-hub"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            Interactive Terms Hub
+          </a>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer"
+            title="Print glossary reference sheet"
+          >
+            <Printer className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            Print Reference
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowOnlyBookmarked((prev) => !prev)}
+            className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition cursor-pointer ${
+              showOnlyBookmarked
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'border border-slate-300 bg-white text-slate-800 hover:border-emerald-300 hover:bg-emerald-50/40'
+            }`}
+          >
+            <Bookmark className={`h-4 w-4 ${showOnlyBookmarked ? 'fill-white' : 'text-amber-600'}`} aria-hidden="true" />
+            Saved Terms ({bookmarkedIds.length})
+          </button>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Statutory Coverage',
+        title: `${glossaryTerms.length} Terms Indexed`,
+        icon: <BookOpen className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Cross-referenced with Bangladesh Gazette definitions, TDS/VDS schedules, and RJSC filings. Click any card for bilingual examples.',
+        actions: [
+          {
+            label: 'Jump to Full Directory',
+            href: '#all-terms',
+            icon: <Search className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Browse FAQs',
+            to: '/faq',
+            variant: 'neutral',
+          },
+        ],
+        footerIcon: <Scale className="h-4 w-4" aria-hidden="true" />,
+        footerText: 'Covers ITA 2023, VAT & SD Act 2012, Companies Act 1994, and IFRS.',
+      }}
+    >
       <SEO
         title={
           selectedTermForModal
@@ -146,68 +213,13 @@ export function Glossary() {
           { name: 'Glossary & Terminology', url: '/glossary' }
         ]}
       />
-      {/* Top Breadcrumb & Hero */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-          <Breadcrumbs items={[{ label: 'Glossary & Terminology' }]} />
 
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-4">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold mb-3 border border-emerald-200">
-                <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Statutory Legal & Tax Dictionary</span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                Accounting & Tax Glossary
-              </h1>
-              <p className="mt-3 text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
-                Authoritative definitions, governing sections, calculation examples, and compliance rules under Bangladesh’s 
-                <strong className="text-slate-900 font-semibold"> Income Tax Act, 2023</strong> and 
-                <strong className="text-slate-900 font-semibold"> VAT & SD Act, 2012</strong>.
-              </p>
-            </div>
-
-            {/* Quick Action Badges */}
-            <div className="flex items-center gap-2.5 flex-wrap shrink-0">
-              <a
-                href="#interactive-key-terms-hub"
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Interactive Terms Hub</span>
-              </a>
-
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors shadow-xs"
-                title="Print glossary reference sheet"
-              >
-                <Printer className="w-4 h-4 text-slate-500" />
-                <span>Print Reference</span>
-              </button>
-
-              <button
-                onClick={() => setShowOnlyBookmarked(prev => !prev)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
-                  showOnlyBookmarked
-                    ? 'bg-amber-500 text-white font-extrabold shadow'
-                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Bookmark className={`w-4 h-4 ${showOnlyBookmarked ? 'fill-white' : 'text-amber-500'}`} />
-                <span>Saved Terms ({bookmarkedIds.length})</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="space-y-12">
         {/* ========================================================= */}
         {/* SECTION 1: INTERACTIVE STATUTORY KEY TERMS EDUCATOR */}
         {/* ========================================================= */}
         <section aria-labelledby="interactive-key-terms-heading">
-          <InteractiveKeyTermsEducator 
+          <InteractiveKeyTermsEducator
             onOpenModal={(term) => setSelectedTermForModal(term)}
           />
         </section>
@@ -215,23 +227,12 @@ export function Glossary() {
         {/* ========================================================= */}
         {/* SECTION 2: STATUTORY SPOTLIGHT CARDS (TDS, VAT, SIXTH SCHEDULE) */}
         {/* ========================================================= */}
-        <section className="mb-14" aria-labelledby="featured-terms-heading">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                  Detailed Provision Explorer
-                </span>
-              </div>
-              <h2 id="featured-terms-heading" className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                Core Tax Pillars: TDS, VAT & Sixth Schedule
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-md text-left sm:text-right">
-              Examine statutory clauses, compliance checklists, and legal citations for each pillar.
-            </p>
-          </div>
+        <section aria-labelledby="featured-terms-heading">
+          <ContactSectionHeader
+            eyebrow="Detailed Provision Explorer"
+            title="Core Tax Pillars: TDS, VAT & Sixth Schedule"
+            description="Examine statutory clauses, compliance checklists, and legal citations for each pillar."
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {featuredTerms.map(term => (
@@ -621,30 +622,31 @@ export function Glossary() {
         {/* ========================================================= */}
         {/* EDUCATIONAL RESOURCE FOOTER CALLOUT */}
         {/* ========================================================= */}
-        <section className="mt-16 p-8 bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl text-white shadow-lg">
+        <section className="rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/50 to-teal-50/30 p-8 shadow-xs">
           <div className="max-w-3xl">
-            <h3 className="text-2xl font-bold mb-2">
+            <p className="text-xs font-semibold text-emerald-800">Chambers Advisory Desk</p>
+            <h3 className="mt-1 text-2xl font-bold text-slate-950 mb-2">
               Need Specific Statutory Advisory or Clarifications?
             </h3>
-            <p className="text-emerald-100 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+            <p className="text-slate-600 text-sm sm:text-base leading-7 mb-6">
               Our legal and tax experts assist businesses, salaried professionals, and expatriates with return preparation, withholding audits, advance tax planning, and NBR dispute resolution.
             </p>
             <div className="flex items-center gap-3 flex-wrap">
               <Link
-                to="/contact"
-                className="px-5 py-2.5 bg-white text-emerald-950 font-bold rounded-xl text-xs sm:text-sm shadow hover:bg-emerald-50 transition-colors"
+                to="/contact?tab=appointment"
+                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs sm:text-sm shadow-sm transition-colors"
               >
                 Schedule Legal Consultation
               </Link>
               <Link
                 to="/tax-calculator"
-                className="px-5 py-2.5 bg-emerald-700/80 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm border border-emerald-500/40 transition-colors"
+                className="px-5 py-2.5 bg-white hover:bg-emerald-50 text-slate-800 font-semibold rounded-xl text-xs sm:text-sm border border-slate-300 transition-colors"
               >
                 Launch General Tax Calculator
               </Link>
               <Link
                 to="/vat-guide"
-                className="px-5 py-2.5 bg-emerald-700/80 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm border border-emerald-500/40 transition-colors"
+                className="px-5 py-2.5 bg-white hover:bg-emerald-50 text-slate-800 font-semibold rounded-xl text-xs sm:text-sm border border-slate-300 transition-colors"
               >
                 Read Bangladesh VAT Guide
               </Link>
@@ -666,6 +668,6 @@ export function Glossary() {
           }}
         />
       )}
-    </div>
+    </ContactPageShell>
   );
 }

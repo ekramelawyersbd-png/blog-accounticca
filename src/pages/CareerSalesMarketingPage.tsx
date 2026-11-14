@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import type { CareerApplicationData } from '../utils/careerEmailTemplate';
 import { submitCareerApplicationToApi } from '../utils/careerStorage';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 interface FileMeta {
   fileName: string;
@@ -837,7 +838,7 @@ export const CareerSalesMarketingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f2f5f8] text-[#243446] font-sans">
+    <>
       <ServiceSEO
         title="Sales & Marketing Executive | E-Lawyers Job Circular & Online Application"
         description="E-Lawyers Legal & Business Consultancy Firm is hiring dynamic Sales & Marketing Executives for our Panthapath, Dhaka corporate office. Fresh graduates in Marketing, BBA, or Business Studies welcome. Apply online with ease."
@@ -845,114 +846,78 @@ export const CareerSalesMarketingPage: React.FC = () => {
         serviceType="Job Recruitment Posting & Application"
       />
 
-      {/* Hero Header - Light Corporate Theme with Ruby / Gold Accents */}
-      <section className="bg-gradient-to-b from-white via-[#f8fafc] to-[#f1f5f9] text-slate-800 pt-10 pb-16 px-4 border-b border-slate-200 relative overflow-hidden">
-        {/* Subtle ultra-light background accents */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-rose-200/20 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-200/15 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20"></div>
-
-        <div className="max-w-5xl mx-auto relative z-10">
-          {/* Top navigation row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white border-2 border-rose-600/30 flex items-center justify-center font-extrabold text-rose-700 text-lg shadow-xs">
-                ELA
-              </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-widest text-[#10243a] uppercase">
-                  E-Lawyers Legal &amp; Business Consultancy Firm
-                </h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  Sales &amp; Business Development Division · Panthapath, Dhaka
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <Link
-                to="/Careers/mto"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>MTO Trainee</span>
-              </Link>
-              <Link
-                to="/Careers/accountant"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
-              >
-                <Briefcase className="w-3.5 h-3.5 text-[#167d83]" />
-                <span>Accountant</span>
-              </Link>
-              <Link
-                to="/Careers/customer-care"
-                className="text-xs bg-white hover:bg-slate-50 text-slate-700 hover:text-[#10243a] px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 font-semibold"
-              >
-                <Users className="w-3.5 h-3.5 text-teal-600" />
-                <span>Customer Care</span>
-              </Link>
-              <Link
-                to="/Careers"
-                className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 transition-colors font-semibold"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> All Openings
-              </Link>
-            </div>
-          </div>
-
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-50 text-rose-900 border border-rose-200 text-xs font-bold mb-3 shadow-2xs">
-            <Target className="w-3.5 h-3.5 text-rose-600" /> Official Recruitment Circular · Sales &amp; Growth Team
-          </div>
-
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight text-[#10243a] mb-3">
-            Sales &amp; Marketing Executive
-          </h1>
-          <p className="text-lg md:text-xl text-slate-600 max-w-3xl mb-6 leading-relaxed">
-            কর্পোরেট সেলস ও ক্লায়েন্ট অ্যাকুইজিশনে আকর্ষণীয় ক্যারিয়ার। আপনার যোগাযোগ, সম্পর্ক তৈরি ও কনভিন্স করার দক্ষতাকে কাজে লাগিয়ে E-Lawyers-এর লিগ্যাল, ট্যাক্স, অ্যাকাউন্টিং ও কনসালটেন্সি সেবাকে ছড়িয়ে দিন দেশজুড়ে।
-          </p>
-
-          {/* Key metadata badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Users className="w-4 h-4 mx-auto text-rose-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Vacancies</div>
-              <div className="text-sm font-bold text-[#10243a]">Multiple Openings</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <GraduationCap className="w-4 h-4 mx-auto text-rose-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Qualification</div>
-              <div className="text-sm font-bold text-[#10243a]">Bachelor's Degree</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Compass className="w-4 h-4 mx-auto text-rose-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Discipline</div>
-              <div className="text-sm font-bold text-[#10243a]">BBA / Mkt / Any</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <MapPin className="w-4 h-4 mx-auto text-rose-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Workplace</div>
-              <div className="text-sm font-bold text-[#10243a]">Panthapath, Dhaka</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <DollarSign className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Remuneration</div>
-              <div className="text-sm font-bold text-emerald-700">Salary + Incentive</div>
-            </div>
-
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 text-center shadow-xs">
-              <Calendar className="w-4 h-4 mx-auto text-amber-600 mb-1" />
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Deadline</div>
-              <div className="text-sm font-bold text-amber-700">31 October 2026</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Container - CRITICAL: relative z-20 prevents clipping by header */}
-      <main className="relative z-20 max-w-5xl mx-auto px-4 -mt-8 pb-20">
+      <ContactPageShell
+        breadcrumbs={[
+          { label: 'Careers', path: '/Careers' },
+          { label: 'Sales & Marketing Executive' },
+        ]}
+        eyebrow="E-Lawyers Legal & Business Consultancy Firm · Sales & Business Development"
+        headline="Sales & Marketing"
+        accentHeadline="Executive"
+        description="কর্পোরেট সেলস ও ক্লায়েন্ট অ্যাকুইজিশনে আকর্ষণীয় ক্যারিয়ার। আপনার যোগাযোগ, সম্পর্ক তৈরি ও কনভিন্স করার দক্ষতাকে কাজে লাগিয়ে E-Lawyers-এর লিগ্যাল, ট্যাক্স, অ্যাকাউন্টিং ও কনসালটেন্সি সেবাকে ছড়িয়ে দিন দেশজুড়ে।"
+        metaItems={[
+          'Multiple Openings',
+          'Bachelor Degree (BBA / Marketing / Any)',
+          'Salary + Performance Incentive',
+          'Deadline: 31 October 2026',
+        ]}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => handleTabChange('apply')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              <span>Apply Online Now</span>
+            </button>
+            <Link
+              to="/Careers"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <span>All Open Positions</span>
+            </Link>
+          </>
+        }
+        summaryCard={{
+          eyebrow: 'Sales & Growth Division · Dhaka',
+          title: 'Salary + Performance Incentives',
+          description: 'Full-time corporate role at BTI Centara Grand, Panthapath. Switch to another open position or contact our recruitment desk.',
+          icon: <TrendingUp className="h-5 w-5" aria-hidden="true" />,
+          actions: [
+            {
+              label: 'MTO Opening',
+              to: '/Careers/mto',
+              icon: <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />,
+            },
+            {
+              label: 'Accountant (2)',
+              to: '/Careers/accountant',
+              variant: 'neutral',
+              icon: <Briefcase className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+            },
+          ],
+          footerIcon: <Mail className="h-4 w-4" aria-hidden="true" />,
+          footerText: 'Recruitment Desk: career@elawyersbd.com · Panthapath, Dhaka',
+        }}
+        trustItems={[
+          {
+            icon: <DollarSign className="h-4 w-4" aria-hidden="true" />,
+            label: 'Competitive base salary paired with performance incentives',
+          },
+          {
+            icon: <Building2 className="h-4 w-4" aria-hidden="true" />,
+            label: 'Represent B2B Legal, Tax, VAT & Corporate Advisory services',
+          },
+          {
+            icon: <Calendar className="h-4 w-4" aria-hidden="true" />,
+            label: 'Application deadline: 31 October 2026 · Rolling interviews',
+          },
+        ]}
+      >
+        {/* Main Container */}
+        <div className="relative z-20 max-w-5xl mx-auto pb-16">
         {/* Tab Navigation Pill Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-2 mb-8 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -2445,7 +2410,8 @@ export const CareerSalesMarketingPage: React.FC = () => {
             </button>
           </div>
         )}
-      </main>
-    </div>
+        </div>
+      </ContactPageShell>
+    </>
   );
 };

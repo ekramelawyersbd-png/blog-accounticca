@@ -29,6 +29,7 @@ import { buildAppointmentUrl } from '../utils/appointmentRedirect';
 import { parseTaxScenarioFromUrl } from '../utils/taxShareUtils';
 import { ToolSEO } from '../components/SEO';
 import { CalculationEmailActionBarButton } from '../components/tools/CalculationEmailActionBarButton';
+import { ContactPageShell } from '../components/layout/ContactPageShell';
 
 type Category = TaxCategory;
 type Location = TaxLocation;
@@ -262,47 +263,73 @@ export function TaxPlanner() {
   }), [income, results, investment, tds, category, location, isFirstTimeFiler]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <ContactPageShell
+      breadcrumbs={[
+        { label: 'Tools & Calculators', path: '/tools' },
+        { label: 'Individual Income Tax Planner' },
+      ]}
+      eyebrow="Income Tax Act 2023 · Finance Act 2026 · AY 2026–2027"
+      headline="Individual Income"
+      accentHeadline="Tax Planner"
+      description="Estimate your annual tax liability based on the 2026 guidelines. Model progressive tax slabs, approved investment rebates, TDS credits, wealth surcharge, and early filing incentives."
+      metaItems={[
+        'Progressive Slab Modeler',
+        'Wealth Surcharge (0%–35%)',
+        '5% Early Filing Incentive',
+      ]}
+      actions={
+        <>
+          <a
+            href="#income-tax-calculator"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800"
+          >
+            <Calculator className="h-4 w-4" aria-hidden="true" />
+            <span>Income Tax Calculator</span>
+          </a>
+          <a
+            href="#wealth-surcharge-section"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50"
+          >
+            <Coins className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <span>Wealth Surcharge</span>
+          </a>
+          <a
+            href="#early-filing-incentive"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50"
+          >
+            <CalendarCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <span>5% Early Filing</span>
+          </a>
+        </>
+      }
+      summaryCard={{
+        eyebrow: 'Scenario Modeling',
+        title: activeScenarioName || 'Custom Tax Plan',
+        icon: <Calculator className="h-5 w-5" aria-hidden="true" />,
+        description:
+          'Save multiple income scenarios locally or generate a shareable deep link to review with an advisor.',
+        actions: [
+          {
+            label: 'Book Return Filing',
+            to: '/contact?tab=appointment',
+            icon: <Calendar className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+          {
+            label: 'Salary TDS Engine',
+            to: '/tax-calculator',
+            variant: 'neutral',
+            icon: <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />,
+          },
+        ],
+        footerText: 'Covers General, Female/65+, Disabled & Freedom Fighter thresholds',
+      }}
+    >
       <ToolSEO
         title="Individual Income Tax Planner & Scenario Simulator (2026–2027) | Accounticca"
         description="Estimate your annual individual income tax liability, Section 78 investment tax rebate, TDS credit, and wealth surcharge under Bangladesh Finance Act 2026."
         canonicalUrl="/tax-planner"
         keywords={['Bangladesh Income Tax Planner', 'Individual Tax Calculator 2026', 'Section 78 Rebate', 'Wealth Surcharge']}
       />
-      
-      <div className="text-center max-w-3xl mx-auto mb-8">
-        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-6">
-          Individual Income <span className="text-emerald-600">Tax Planner</span>
-        </h1>
-        <p className="text-lg text-slate-600 leading-relaxed mb-6">
-          Estimate your annual tax liability based on the 2026 guidelines. Input your income, approved investments, and TDS to calculate your net payable tax.
-        </p>
-
-        {/* Section Jump Links */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <a
-            href="#income-tax-calculator"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors shadow-2xs"
-          >
-            <Calculator className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Income Tax Calculator</span>
-          </a>
-          <a
-            href="#wealth-surcharge-section"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-xs font-bold hover:bg-slate-200 transition-colors shadow-2xs"
-          >
-            <Coins className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Wealth Surcharge Visualizer (0% – 35%)</span>
-          </a>
-          <a
-            href="#early-filing-incentive"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold hover:bg-amber-100 transition-colors shadow-2xs"
-          >
-            <CalendarCheck className="w-3.5 h-3.5 text-amber-600" />
-            <span>5% Early Filing Incentive</span>
-          </a>
-        </div>
-      </div>
 
       {/* Tax Filing Deadline Notification Component */}
       <div className="mb-10">
@@ -750,7 +777,7 @@ export function TaxPlanner() {
           results={results}
         />
       )}
-    </div>
+    </ContactPageShell>
   );
 }
 

@@ -47,6 +47,7 @@ import {
   downloadIcsFile,
   isAppointmentPast,
 } from '../services/appointmentService';
+import { EmailTemplateGenerator } from '../utils/emailGenerator';
 
 function parseAppointmentStartTime(dateStr: string, timeSlot: string): Date | null {
   if (!dateStr || !timeSlot) return null;
@@ -589,24 +590,57 @@ export const ClientBookingDashboard: React.FC<ClientBookingDashboardProps> = ({
   const handleSendReminderNow = async (apt: ExtendedAppointment) => {
     setSendingReminderRef(apt.referenceId);
     try {
+      const appointmentTime = `${apt.date} at ${apt.timeSlot} (BST)`;
+      const generatedEmail = await EmailTemplateGenerator.generateFromAdminTemplate(
+        'booking_reminder_3h',
+        {
+          name: apt.clientName,
+          clientName: apt.clientName,
+          time: appointmentTime,
+          appointmentTime,
+          service: apt.practiceArea,
+          serviceType: apt.practiceArea,
+          practiceArea: apt.practiceArea,
+          date: apt.date,
+          timeSlot: apt.timeSlot,
+          referenceId: apt.referenceId,
+          email: apt.email,
+          clientEmail: apt.email,
+          phone: apt.phone,
+          clientPhone: apt.phone,
+          companyName: apt.companyName,
+          mode: apt.mode,
+          status: 'Reminder3H',
+          assignedCounsel: apt.assignedPartner?.name,
+          assignedLead: apt.assignedPartner?.name,
+          notes: apt.notes,
+        }
+      );
+
       const res = await fetch('/api/appointments/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           referenceId: apt.referenceId,
+          templateId: generatedEmail.templateId,
           clientName: apt.clientName,
           email: apt.email,
           phone: apt.phone,
           companyName: apt.companyName,
           practiceArea: apt.practiceArea,
+          serviceType: apt.practiceArea,
           expertiseArea: apt.expertiseArea,
           division: apt.division,
           mode: apt.mode,
           date: apt.date,
           timeSlot: apt.timeSlot,
+          appointmentTime,
           status: 'Reminder3H',
           assignedPartner: apt.assignedPartner,
           notes: apt.notes,
+          subject: generatedEmail.subject,
+          html: generatedEmail.html,
+          text: generatedEmail.text,
         }),
       });
 
