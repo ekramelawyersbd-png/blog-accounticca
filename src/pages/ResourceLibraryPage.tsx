@@ -435,8 +435,8 @@ export function ResourceLibraryPage() {
       )}
 
       {/* Compact Institutional Top Header */}
-      <div className="w-full min-h-[242.5px] flex items-center bg-[#0A2A66] text-white border-b border-blue-900">
-        <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="w-full h-[242.5px] bg-[#0A2A66] text-white border-b border-blue-900">
+        <div className="w-full max-w-[1527px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
             <div className="space-y-1.5 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -525,7 +525,7 @@ export function ResourceLibraryPage() {
       </div>
 
       {/* Main Content Container */}
-      <div className="w-full max-w-[1527px] mx-auto px-0 pt-5">
+      <div style={{ width: '1154.2px', maxWidth: '100%' }} className="mx-auto px-0 pt-5">
         {/* ================= FEATURED 2026-2027 STATUTORY SPOTLIGHT ================= */}
         {activeTab === 'regulatory' && pinnedDocs.length > 0 && (
           <section className="mb-5">

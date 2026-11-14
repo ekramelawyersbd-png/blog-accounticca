@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Trash2,
   FileCode2,
-  Columns2
+  Columns2,
+  CalendarClock
 } from 'lucide-react';
 import {
   DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES,
@@ -28,6 +29,8 @@ import {
   type TransactionalEmailCategory,
   type EmailPlaceholderDefinition
 } from '../../utils/transactionalEmailTemplates';
+import { EmailTemplatePreviewModal } from './EmailTemplatePreviewModal';
+import { ScheduledEmailQueuePanel } from './ScheduledEmailQueuePanel';
 
 interface BrevoRelaySummary {
   host: string;
@@ -110,6 +113,8 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [queuedScheduleCount, setQueuedScheduleCount] = useState(0);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -459,6 +464,26 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              document
+                .getElementById('scheduled-dispatch-queue')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            <span>Schedule Queue ({queuedScheduleCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPreviewModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Preview &amp; Send Modal</span>
+          </button>
           <button
             type="button"
             onClick={loadTemplatesFromServer}
@@ -1066,8 +1091,16 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
                 </button>
               </div>
 
-              {/* Right: Send Live Test Email via Brevo */}
+              {/* Right: Preview Modal + Send Live Test Email via Brevo */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(true)}
+                  className="px-4 py-2.5 rounded-xl border border-emerald-600 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-black inline-flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Preview &amp; Send to User</span>
+                </button>
                 <div className="relative flex-1 sm:w-64">
                   <input
                     type="email"
@@ -1093,6 +1126,62 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Scheduled Email Dispatch Queue */}
+      <ScheduledEmailQueuePanel
+        templates={templates}
+        activeTemplate={activeTemplate}
+        draftOverride={
+          activeTemplate
+            ? {
+                id: activeTemplate.id,
+                name: nameInput,
+                enabled: enabledInput,
+                ccAdmin: ccAdminInput,
+                subjectTemplate: subjectInput,
+                htmlTemplate: htmlInput,
+                textTemplate: textInput,
+                placeholders: placeholdersList
+              }
+            : null
+        }
+        sampleValues={sampleValues}
+        defaultRecipientEmail={testRecipient}
+        onQueueCountChange={setQueuedScheduleCount}
+      />
+
+      {/* Admin Email Template Preview & Send Modal */}
+      <EmailTemplatePreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        templates={templates}
+        initialTemplateId={activeTemplate?.id}
+        draftOverride={
+          activeTemplate
+            ? {
+                id: activeTemplate.id,
+                name: nameInput,
+                enabled: enabledInput,
+                ccAdmin: ccAdminInput,
+                subjectTemplate: subjectInput,
+                htmlTemplate: htmlInput,
+                textTemplate: textInput,
+                placeholders: placeholdersList
+              }
+            : null
+        }
+        initialVariables={sampleValues}
+        initialRecipientEmail={testRecipient}
+        onEmailSent={(res) => {
+          setFeedback({
+            type: res.liveDelivered ? 'success' : 'error',
+            text: res.liveDelivered
+              ? `Dispatched template "${res.templateId}" to ${res.recipientEmail} via Brevo.`
+              : `Brevo relay failed for ${res.recipientEmail}: ${res.smtpNotice || 'delivery rejected'}.`,
+            details: `Reference: ${res.referenceId} • Message-ID: ${res.messageId} • Transport: ${res.transport}`
+          });
+        }}
+      />
     </div>
   );
 };

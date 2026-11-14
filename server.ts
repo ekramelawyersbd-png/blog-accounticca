@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -5,7 +6,15 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import nodemailer, { type Transporter } from 'nodemailer';
+import {
+  getBrevoRelayConfig,
+  getSupportEmailRecipient,
+  dispatchBrevoEmail,
+  sendSupportContactEmail,
+  previewEmailTemplate,
+  sendEmailTemplateToUser,
+  verifyBrevoSmtpConnection,
+} from './src/lib/emailService';
 import {
   DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES,
   renderTransactionalTemplate,
@@ -62,6 +71,7 @@ const APPOINTMENT_NOTIFS_FILE = path.join(DATA_DIR, 'appointment-email-notificat
 const CALCULATION_EMAILS_FILE = path.join(DATA_DIR, 'calculation-emails-server.json');
 const EMAIL_TEMPLATES_FILE = path.join(DATA_DIR, 'transactional-email-templates.json');
 const EMAIL_HISTORY_FILE = path.join(DATA_DIR, 'transactional-email-history.json');
+const SCHEDULED_EMAILS_FILE = path.join(DATA_DIR, 'scheduled-email-dispatches.json');
 
 try {
   if (!fs.existsSync(DATA_DIR)) {
@@ -91,241 +101,7 @@ function writeJsonArray<T = any>(filePath: string, data: T[]): void {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Unified Brevo SMTP (`smtp-relay.brevo.com:587`) & REST API v3 Mail Engine
-// ─────────────────────────────────────────────────────────────────────────────
-interface BrevoRelaySummary {
-  host: string;
-  port: number;
-  login: string;
-  senderName: string;
-  senderEmail: string;
-  fromHeader: string;
-  formattedFrom: string;
-  liveRelayActive: boolean;
-  configured: boolean;
-  hasCredentials: boolean;
-  mode: string;
-  status: string;
-}
-
-function getBrevoRelayConfig(): BrevoRelaySummary {
-  const host = (process.env.BREVO_SMTP_HOST || process.env.SMTP_HOST || 'smtp-relay.brevo.com').trim();
-  const port = parseInt(process.env.BREVO_SMTP_PORT || process.env.SMTP_PORT || '587', 10);
-  const login = (process.env.BREVO_SMTP_USER || process.env.SMTP_USER || '9dabe5001@smtp-brevo.com').trim();
-  const senderName = (process.env.BREVO_SENDER_NAME || 'ACCOUNTICCA x E-Lawyers').trim();
-  const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'ekram@elawyersbd.com').trim();
-  const formattedFrom = `"${senderName}" <${senderEmail}>`;
-  const smtpKey = (process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS || '').trim();
-  const apiKey = (process.env.BREVO_API_KEY || '').trim();
-  const hasCredentials = Boolean(smtpKey || apiKey);
-
-  return {
-    host,
-    port,
-    login,
-    senderName,
-    senderEmail,
-    fromHeader: formattedFrom,
-    formattedFrom,
-    liveRelayActive: true,
-    configured: true,
-    hasCredentials,
-    mode: apiKey
-      ? 'brevo_rest_api_v3'
-      : smtpKey
-      ? `brevo_smtp_relay (${host}:${port})`
-      : `brevo_smtp_relay (${host}:${port} • ${login})`,
-    status: 'ready',
-  };
-}
-
-let cachedTestTransporter: Transporter | null = null;
-
-async function getFallbackNodemailerTransporter(): Promise<{
-  transporter: Transporter;
-  isEthereal: boolean;
-}> {
-  if (cachedTestTransporter) {
-    return { transporter: cachedTestTransporter, isEthereal: true };
-  }
-  try {
-    const testAccount = await Promise.race([
-      nodemailer.createTestAccount(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1200)),
-    ]);
-    cachedTestTransporter = nodemailer.createTransport({
-      host: testAccount.smtp.host,
-      port: testAccount.smtp.port,
-      secure: testAccount.smtp.secure,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    return { transporter: cachedTestTransporter, isEthereal: true };
-  } catch {
-    const streamTransporter = nodemailer.createTransport({
-      streamTransport: true,
-      newline: 'unix',
-      buffer: true,
-    });
-    cachedTestTransporter = streamTransporter;
-    return {
-      transporter: streamTransporter,
-      isEthereal: false,
-    };
-  }
-}
-
-async function dispatchBrevoEmail(options: {
-  recipientEmail: string;
-  recipientName?: string;
-  subject: string;
-  html: string;
-  text?: string;
-  ccEmails?: string[];
-}): Promise<{
-  messageId: string;
-  transport: string;
-  fromHeader: string;
-  previewUrl: string | null;
-  smtpNotice: string | null;
-}> {
-  const relay = getBrevoRelayConfig();
-  const brevoApiKey = (
-    process.env.BREVO_API_KEY ||
-    (process.env.BREVO_SMTP_KEY?.startsWith('xkeysib-') ? process.env.BREVO_SMTP_KEY : '') ||
-    ''
-  ).trim();
-  const smtpKey = (process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS || '').trim();
-  const cleanCc = Array.from(
-    new Set(
-      (options.ccEmails || [])
-        .map((e) => String(e || '').trim())
-        .filter((e) => e.includes('@') && e.toLowerCase() !== options.recipientEmail.toLowerCase())
-    )
-  );
-  const plainText =
-    (options.text || '').trim() ||
-    options.html
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim() ||
-    options.subject;
-
-  let smtpNotice: string | null = null;
-
-  // 1. Primary: Brevo Transactional Email REST API v3 (`https://api.brevo.com/v3/smtp/email`)
-  if (brevoApiKey) {
-    try {
-      const brevoPayload: Record<string, any> = {
-        sender: { name: relay.senderName, email: relay.senderEmail },
-        to: [{ email: options.recipientEmail, name: options.recipientName || 'Valued Client' }],
-        replyTo: { email: relay.senderEmail, name: relay.senderName },
-        subject: options.subject,
-        htmlContent: options.html,
-        textContent: plainText,
-      };
-      if (cleanCc.length > 0) {
-        brevoPayload.cc = cleanCc.map((email) => ({ email }));
-      }
-      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'api-key': brevoApiKey,
-        },
-        body: JSON.stringify(brevoPayload),
-      });
-
-      if (response.ok) {
-        const result = (await response.json()) as { messageId?: string };
-        return {
-          messageId: result.messageId || `<brevo-api-${Date.now()}@smtp-relay.brevo.com>`,
-          transport: `brevo_rest_api_v3 (${relay.host})`,
-          fromHeader: relay.formattedFrom,
-          previewUrl: null,
-          smtpNotice: null,
-        };
-      } else {
-        const errBody = await response.text();
-        smtpNotice = `Brevo REST API notice: ${errBody.slice(0, 180)}`;
-      }
-    } catch (apiErr: any) {
-      smtpNotice = `Brevo REST API fallback: ${apiErr?.message || 'network error'}`;
-    }
-  }
-
-  // 2. Brevo SMTP Relay (`smtp-relay.brevo.com:587` with login `9dabe5001@smtp-brevo.com`)
-  if (smtpKey) {
-    try {
-      const smtpTransporter = nodemailer.createTransport({
-        host: relay.host,
-        port: relay.port,
-        secure: relay.port === 465,
-        auth: {
-          user: relay.login,
-          pass: smtpKey,
-        },
-      });
-      const info = await smtpTransporter.sendMail({
-        from: relay.formattedFrom,
-        to: options.recipientName
-          ? `"${options.recipientName}" <${options.recipientEmail}>`
-          : options.recipientEmail,
-        cc: cleanCc.length > 0 ? cleanCc : undefined,
-        replyTo: relay.senderEmail,
-        subject: options.subject,
-        html: options.html,
-        text: plainText,
-      });
-      return {
-        messageId: info.messageId || `<brevo-smtp-${Date.now()}@smtp-relay.brevo.com>`,
-        transport: `brevo_smtp_relay (${relay.host}:${relay.port} • ${relay.login})`,
-        fromHeader: relay.formattedFrom,
-        previewUrl: null,
-        smtpNotice: null,
-      };
-    } catch (smtpErr: any) {
-      smtpNotice = `Brevo SMTP notice (${relay.host}:${relay.port}): ${smtpErr?.message || 'relay fallback'}`;
-    }
-  }
-
-  // 3. Nodemailer MIME Compilation & Relay Fallback (Ethereal / Stream)
-  try {
-    const { transporter, isEthereal } = await getFallbackNodemailerTransporter();
-    const info = await transporter.sendMail({
-      from: relay.formattedFrom,
-      to: options.recipientName
-        ? `"${options.recipientName}" <${options.recipientEmail}>`
-        : options.recipientEmail,
-      cc: cleanCc.length > 0 ? cleanCc : undefined,
-      replyTo: relay.senderEmail,
-      subject: options.subject,
-      html: options.html,
-      text: plainText,
-    });
-    const previewUrl = isEthereal ? (nodemailer.getTestMessageUrl(info) || null) : null;
-    return {
-      messageId: info.messageId || `<brevo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@smtp-relay.brevo.com>`,
-      transport: `brevo_smtp_relay (${relay.host}:${relay.port} • ${relay.login})`,
-      fromHeader: relay.formattedFrom,
-      previewUrl: typeof previewUrl === 'string' ? previewUrl : null,
-      smtpNotice,
-    };
-  } catch (err: any) {
-    return {
-      messageId: `<brevo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@smtp-relay.brevo.com>`,
-      transport: `brevo_smtp_relay (${relay.host}:${relay.port} • ${relay.login})`,
-      fromHeader: relay.formattedFrom,
-      previewUrl: null,
-      smtpNotice: smtpNotice || err?.message || null,
-    };
-  }
-}
+// Brevo SMTP & Transactional Email Engine is provided by ./src/lib/emailService.ts
 
 function loadEmailTemplates(): TransactionalEmailTemplate[] {
   const saved = readJsonArray<TransactionalEmailTemplate>(EMAIL_TEMPLATES_FILE);
@@ -627,11 +403,20 @@ app.post('/api/auth/reset-password', async (req, res) => {
     </div>
   `.trim();
 
-  await dispatchBrevoEmail({
+  const sent = await dispatchBrevoEmail({
     recipientEmail: email,
     subject,
     html,
   });
+
+  if (!sent.liveDelivered) {
+    res.status(502).json({
+      success: false,
+      error: sent.smtpNotice || 'Brevo relay rejected password reset dispatch.',
+      message: sent.smtpNotice || 'Unable to dispatch password reset email via Brevo.',
+    });
+    return;
+  }
 
   res.json({
     success: true,
@@ -654,6 +439,15 @@ app.post('/api/email/send-registration', async (req, res) => {
   const templateId = isEnrollment ? 'registration_enrollment' : 'registration_welcome';
   const tpl =
     templates.find((t) => t.id === templateId) || DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES[0];
+
+  if (!tpl.enabled) {
+    res.json({
+      success: true,
+      skipped: true,
+      reason: `Template "${tpl.name}" is disabled in Email Template Manager.`,
+    });
+    return;
+  }
 
   const referenceId = String(
     body.enrollmentId || body.referenceId || `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`
@@ -712,13 +506,13 @@ app.post('/api/email/send-registration', async (req, res) => {
     mode: isEnrollment ? 'Academy LMS' : 'Client Portal',
     date: sentAt.slice(0, 10),
     timeSlot: new Date(sentAt).toLocaleTimeString(),
-    status: 'Confirmed',
+    status: sent.liveDelivered ? 'Confirmed' : 'Failed',
     subject: rendered.subject,
     html: rendered.html,
     text: rendered.text,
     sentAt,
-    delivered: true,
-    deliveryStatus: 'delivered',
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
     category: 'registration',
     transport: sent.transport,
     fromHeader: sent.fromHeader,
@@ -726,19 +520,30 @@ app.post('/api/email/send-registration', async (req, res) => {
     smtpNotice: sent.smtpNotice,
   });
 
-  res.json({
-    success: true,
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
     messageId: sent.messageId,
     referenceId,
     recipient: email,
     transport: sent.transport,
     previewUrl: sent.previewUrl,
+    smtpNotice: sent.smtpNotice,
+    error: sent.liveDelivered ? undefined : sent.smtpNotice || 'Brevo relay did not deliver the message.',
     timestamp: sentAt,
   });
 });
 
 app.get('/api/email/brevo-status', (_req, res) => {
   res.json(getBrevoRelayConfig());
+});
+
+app.get('/api/email/brevo-verify', async (_req, res) => {
+  const result = await verifyBrevoSmtpConnection();
+  res.status(result.ok ? 200 : 502).json({
+    ...result,
+    relay: getBrevoRelayConfig(),
+  });
 });
 
 app.post('/api/email/brevo-test', async (req, res) => {
@@ -804,13 +609,13 @@ app.post('/api/email/brevo-test', async (req, res) => {
     mode: `${relay.host}:${relay.port}`,
     date: sentAt.slice(0, 10),
     timeSlot: new Date(sentAt).toLocaleTimeString(),
-    status: 'Delivered',
+    status: sent.liveDelivered ? 'Delivered' : 'Failed',
     subject,
     html,
     text,
     sentAt,
-    delivered: true,
-    deliveryStatus: 'delivered',
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
     category: 'system',
     transport: sent.transport,
     fromHeader: sent.fromHeader,
@@ -818,8 +623,9 @@ app.post('/api/email/brevo-test', async (req, res) => {
     smtpNotice: sent.smtpNotice,
   });
 
-  res.json({
-    success: true,
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
     referenceId,
     messageId: sent.messageId,
     recipient: toEmail,
@@ -829,7 +635,85 @@ app.post('/api/email/brevo-test', async (req, res) => {
     fromHeader: sent.fromHeader,
     transport: sent.transport,
     previewUrl: sent.previewUrl,
-    message: `Diagnostic email [${referenceId}] dispatched to ${toEmail} via ${sent.transport}.`,
+    smtpNotice: sent.smtpNotice,
+    error: sent.liveDelivered
+      ? undefined
+      : sent.smtpNotice || 'Brevo relay failed; captured via fallback only.',
+    message: sent.liveDelivered
+      ? `Diagnostic email [${referenceId}] dispatched to ${toEmail} via ${sent.transport}.`
+      : `Brevo relay failed for [${referenceId}]: ${sent.smtpNotice || 'delivery rejected'}.`,
+  });
+});
+
+app.post('/api/subscribe-newsletter', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const topics: string[] = Array.isArray(req.body?.topics) ? req.body.topics.map(String) : [];
+
+  if (!email || !email.includes('@')) {
+    res.status(400).json({ success: false, error: 'Valid subscriber email is required.' });
+    return;
+  }
+
+  const relay = getBrevoRelayConfig();
+  const referenceId = `NEWS-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+  const sentAt = new Date().toISOString();
+  const topicText = topics.length > 0 ? topics.join(', ') : 'Bangladesh Tax, VAT, RJSC & NBR SRO Alerts';
+
+  const subject = `[${referenceId}] Compliance Dispatch Subscription Confirmed — ${relay.senderName}`;
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background: #0A2A66; color: #ffffff; padding: 24px;">
+        <div style="font-size: 11px; color: #34d399; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">${relay.senderName} • Statutory Gazette Alerts</div>
+        <h2 style="margin: 6px 0 0 0; font-size: 18px;">Newsletter Subscription Active (${referenceId})</h2>
+      </div>
+      <div style="padding: 24px; color: #1e293b; font-size: 14px; line-height: 1.6;">
+        <p>Thank you for subscribing to our compliance briefing for <strong>${email}</strong>.</p>
+        <p><strong>Selected Topics:</strong> ${topicText}</p>
+        <p style="font-size: 12px; color: #64748b;">You will receive curated alerts covering NBR SRO updates, Income Tax Act 2023 circulars, VAT schedules, and RJSC filings.</p>
+      </div>
+    </div>
+  `.trim();
+  const text = `Newsletter Subscription Confirmed (${referenceId}) for ${email}. Selected topics: ${topicText}.`;
+
+  const sent = await dispatchBrevoEmail({
+    recipientEmail: email,
+    recipientName: 'Compliance Subscriber',
+    subject,
+    html,
+    text,
+  });
+
+  appendEmailHistory({
+    id: `news-${Date.now()}`,
+    messageId: sent.messageId,
+    referenceId,
+    clientName: 'Newsletter Subscriber',
+    recipientEmail: email,
+    practiceArea: topicText,
+    mode: 'Footer Newsletter',
+    date: sentAt.slice(0, 10),
+    timeSlot: new Date(sentAt).toLocaleTimeString(),
+    status: sent.liveDelivered ? 'Delivered' : 'Failed',
+    subject,
+    html,
+    text,
+    sentAt,
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
+    category: 'registration',
+    transport: sent.transport,
+    fromHeader: sent.fromHeader,
+    previewUrl: sent.previewUrl,
+    smtpNotice: sent.smtpNotice,
+  });
+
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
+    referenceId,
+    messageId: sent.messageId,
+    transport: sent.transport,
+    smtpNotice: sent.smtpNotice,
   });
 });
 
@@ -952,13 +836,13 @@ app.post('/api/email/templates/:id/test', async (req, res) => {
     mode: 'Brevo Template Editor',
     date: sentAt.slice(0, 10),
     timeSlot: new Date(sentAt).toLocaleTimeString(),
-    status: 'Delivered',
+    status: sent.liveDelivered ? 'Delivered' : 'Failed',
     subject: rendered.subject,
     html: rendered.html,
     text: rendered.text,
     sentAt,
-    delivered: true,
-    deliveryStatus: 'delivered',
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
     category: baseTpl.category,
     transport: sent.transport,
     fromHeader: sent.fromHeader,
@@ -966,13 +850,555 @@ app.post('/api/email/templates/:id/test', async (req, res) => {
     smtpNotice: sent.smtpNotice,
   });
 
-  res.json({
-    success: true,
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
     messageId: sent.messageId,
     fromHeader: sent.fromHeader,
     transport: sent.transport,
     previewUrl: sent.previewUrl,
-    message: `Test email for "${baseTpl.name}" dispatched to ${recipientEmail} via ${sent.transport}.`,
+    smtpNotice: sent.smtpNotice,
+    error: sent.liveDelivered ? undefined : sent.smtpNotice || 'Brevo relay did not deliver the test email.',
+    message: sent.liveDelivered
+      ? `Test email for "${baseTpl.name}" dispatched to ${recipientEmail} via ${sent.transport}.`
+      : `Brevo relay failed for "${baseTpl.name}": ${sent.smtpNotice || 'delivery rejected'}.`,
+  });
+});
+
+app.post('/api/email/templates/:id/preview', (req, res) => {
+  const { id } = req.params;
+  const templates = loadEmailTemplates();
+  const baseTpl = templates.find((t) => t.id === id);
+  if (!baseTpl) {
+    res.status(404).json({ success: false, error: `Template '${id}' not found.` });
+    return;
+  }
+
+  const body = req.body || {};
+  const mergedTemplate: TransactionalEmailTemplate = {
+    ...baseTpl,
+    name: body.name !== undefined ? String(body.name) : baseTpl.name,
+    enabled: body.enabled !== undefined ? Boolean(body.enabled) : baseTpl.enabled,
+    ccAdmin: body.ccAdmin !== undefined ? Boolean(body.ccAdmin) : baseTpl.ccAdmin,
+    subjectTemplate:
+      body.subjectTemplate !== undefined ? String(body.subjectTemplate) : baseTpl.subjectTemplate,
+    htmlTemplate:
+      body.htmlTemplate !== undefined ? String(body.htmlTemplate) : baseTpl.htmlTemplate,
+    textTemplate:
+      body.textTemplate !== undefined ? String(body.textTemplate) : baseTpl.textTemplate,
+    placeholders: Array.isArray(body.placeholders) ? body.placeholders : baseTpl.placeholders,
+  };
+
+  const preview = previewEmailTemplate({
+    template: mergedTemplate,
+    variables: body.variables || {},
+    useSampleFallback: body.useSampleFallback !== false,
+    recipientEmail: typeof body.recipientEmail === 'string' ? body.recipientEmail : undefined,
+    recipientName: typeof body.recipientName === 'string' ? body.recipientName : undefined,
+    ccAdmin: typeof body.ccAdmin === 'boolean' ? body.ccAdmin : mergedTemplate.ccAdmin,
+  });
+
+  res.json({
+    success: true,
+    preview,
+  });
+});
+
+app.post('/api/email/templates/:id/send', async (req, res) => {
+  const { id } = req.params;
+  const templates = loadEmailTemplates();
+  const baseTpl = templates.find((t) => t.id === id);
+  if (!baseTpl) {
+    res.status(404).json({ success: false, error: `Template '${id}' not found.` });
+    return;
+  }
+
+  const body = req.body || {};
+  const recipientEmail = String(body.recipientEmail || '').trim();
+  const recipientName = String(body.recipientName || '').trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  if (!recipientEmail || !emailRegex.test(recipientEmail)) {
+    res.status(400).json({
+      success: false,
+      error: 'Please enter a valid recipient email address.',
+    });
+    return;
+  }
+
+  const mergedTemplate: TransactionalEmailTemplate = {
+    ...baseTpl,
+    name: body.name !== undefined ? String(body.name) : baseTpl.name,
+    enabled: body.enabled !== undefined ? Boolean(body.enabled) : baseTpl.enabled,
+    ccAdmin: body.ccAdmin !== undefined ? Boolean(body.ccAdmin) : baseTpl.ccAdmin,
+    subjectTemplate:
+      body.subjectTemplate !== undefined ? String(body.subjectTemplate) : baseTpl.subjectTemplate,
+    htmlTemplate:
+      body.htmlTemplate !== undefined ? String(body.htmlTemplate) : baseTpl.htmlTemplate,
+    textTemplate:
+      body.textTemplate !== undefined ? String(body.textTemplate) : baseTpl.textTemplate,
+    placeholders: Array.isArray(body.placeholders) ? body.placeholders : baseTpl.placeholders,
+  };
+
+  if (!mergedTemplate.enabled && body.forceSend !== true) {
+    res.status(409).json({
+      success: false,
+      error: `Template "${mergedTemplate.name}" is currently disabled. Enable it or confirm force-send to dispatch.`,
+    });
+    return;
+  }
+
+  const referenceId = String(
+    body.referenceId || `ADM-SEND-${Math.floor(10000 + Math.random() * 90000)}`
+  ).trim();
+
+  const { preview, result: sent } = await sendEmailTemplateToUser({
+    template: mergedTemplate,
+    variables: {
+      ...(body.variables || {}),
+      referenceId: (body.variables && body.variables.referenceId) || referenceId,
+      clientEmail: (body.variables && body.variables.clientEmail) || recipientEmail,
+      clientName: (body.variables && body.variables.clientName) || recipientName || undefined,
+    },
+    useSampleFallback: body.useSampleFallback !== false,
+    recipientEmail,
+    recipientName: recipientName || undefined,
+    ccAdmin: typeof body.ccAdmin === 'boolean' ? body.ccAdmin : mergedTemplate.ccAdmin,
+    referenceId,
+  });
+
+  const sentAt = new Date().toISOString();
+  appendEmailHistory({
+    id: `tpl-send-${Date.now()}`,
+    messageId: sent.messageId,
+    referenceId,
+    clientName: recipientName || `${mergedTemplate.name} Recipient`,
+    recipientEmail,
+    ccEmails: preview.ccEmails,
+    practiceArea: mergedTemplate.name,
+    mode: 'Admin Template Preview Modal',
+    date: sentAt.slice(0, 10),
+    timeSlot: new Date(sentAt).toLocaleTimeString(),
+    status: sent.liveDelivered ? 'Delivered' : 'Failed',
+    subject: preview.subject,
+    html: preview.html,
+    text: preview.text,
+    sentAt,
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
+    category: mergedTemplate.category,
+    transport: sent.transport,
+    fromHeader: sent.fromHeader,
+    previewUrl: sent.previewUrl,
+    smtpNotice: sent.smtpNotice,
+  });
+
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
+    referenceId,
+    recipientEmail,
+    messageId: sent.messageId,
+    fromHeader: sent.fromHeader,
+    transport: sent.transport,
+    previewUrl: sent.previewUrl,
+    smtpNotice: sent.smtpNotice,
+    preview,
+    error: sent.liveDelivered
+      ? undefined
+      : sent.smtpNotice || 'Brevo relay did not deliver the email.',
+    message: sent.liveDelivered
+      ? `Email "${mergedTemplate.name}" delivered to ${recipientEmail} (Ref: ${referenceId}).`
+      : `Brevo relay failed for ${recipientEmail}: ${sent.smtpNotice || 'delivery rejected'}.`,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scheduled Email Dispatch Queue (/api/email/schedules*)
+// ─────────────────────────────────────────────────────────────────────────────
+interface ScheduledEmailDispatchRecord {
+  id: string;
+  referenceId: string;
+  templateId: string;
+  templateName: string;
+  category: 'registration' | 'booking' | 'payment' | 'system';
+  recipientEmail: string;
+  recipientName?: string;
+  ccAdmin: boolean;
+  ccEmails: string[];
+  subject: string;
+  html: string;
+  text: string;
+  variables: Record<string, string>;
+  useSampleFallback: boolean;
+  scheduledFor: string;
+  notes?: string;
+  status: 'scheduled' | 'processing' | 'sent' | 'failed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+  dispatchedAt?: string | null;
+  messageId?: string | null;
+  transport?: string | null;
+  smtpNotice?: string | null;
+  error?: string | null;
+}
+
+function loadScheduledEmails(): ScheduledEmailDispatchRecord[] {
+  return readJsonArray<ScheduledEmailDispatchRecord>(SCHEDULED_EMAILS_FILE);
+}
+
+function saveScheduledEmails(items: ScheduledEmailDispatchRecord[]): void {
+  const trimmed = items.slice(0, 300);
+  writeJsonArray(SCHEDULED_EMAILS_FILE, trimmed);
+}
+
+async function executeScheduledEmailItem(
+  item: ScheduledEmailDispatchRecord
+): Promise<ScheduledEmailDispatchRecord> {
+  const sent = await dispatchBrevoEmail({
+    recipientEmail: item.recipientEmail,
+    recipientName: item.recipientName || 'Valued Client',
+    ccEmails: item.ccEmails,
+    subject: item.subject,
+    html: item.html,
+    text: item.text,
+  });
+
+  const dispatchedAt = new Date().toISOString();
+  const updated: ScheduledEmailDispatchRecord = {
+    ...item,
+    status: sent.liveDelivered ? 'sent' : 'failed',
+    dispatchedAt,
+    updatedAt: dispatchedAt,
+    messageId: sent.messageId,
+    transport: sent.transport,
+    smtpNotice: sent.smtpNotice,
+    error: sent.liveDelivered
+      ? null
+      : sent.smtpNotice || 'Brevo SMTP relay did not deliver the scheduled email.',
+  };
+
+  appendEmailHistory({
+    id: `sched-hist-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    messageId: sent.messageId,
+    referenceId: item.referenceId,
+    clientName: item.recipientName || `${item.templateName} Recipient`,
+    recipientEmail: item.recipientEmail,
+    ccEmails: item.ccEmails,
+    practiceArea: item.templateName,
+    mode: `Scheduled Queue (${new Date(item.scheduledFor).toLocaleString()})`,
+    date: dispatchedAt.slice(0, 10),
+    timeSlot: new Date(dispatchedAt).toLocaleTimeString(),
+    status: sent.liveDelivered ? 'Delivered' : 'Failed',
+    subject: item.subject,
+    html: item.html,
+    text: item.text,
+    sentAt: dispatchedAt,
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
+    category: item.category,
+    transport: sent.transport,
+    fromHeader: sent.fromHeader,
+    previewUrl: sent.previewUrl,
+    smtpNotice: sent.smtpNotice,
+  });
+
+  return updated;
+}
+
+let isProcessingScheduledQueue = false;
+
+async function processDueScheduledEmails(): Promise<{
+  processedCount: number;
+  sentCount: number;
+  failedCount: number;
+}> {
+  if (isProcessingScheduledQueue) {
+    return { processedCount: 0, sentCount: 0, failedCount: 0 };
+  }
+  isProcessingScheduledQueue = true;
+  let processedCount = 0;
+  let sentCount = 0;
+  let failedCount = 0;
+
+  try {
+    const nowMs = Date.now();
+    const queue = loadScheduledEmails();
+    const dueIds = queue
+      .filter((item) => item.status === 'scheduled' && new Date(item.scheduledFor).getTime() <= nowMs)
+      .map((item) => item.id);
+
+    if (dueIds.length === 0) {
+      return { processedCount: 0, sentCount: 0, failedCount: 0 };
+    }
+
+    const dueSet = new Set(dueIds);
+    const markedQueue = queue.map((item) =>
+      dueSet.has(item.id)
+        ? { ...item, status: 'processing' as const, updatedAt: new Date().toISOString() }
+        : item
+    );
+    saveScheduledEmails(markedQueue);
+
+    for (const id of dueIds) {
+      const latestQueue = loadScheduledEmails();
+      const idx = latestQueue.findIndex((entry) => entry.id === id);
+      if (idx === -1 || latestQueue[idx].status !== 'processing') continue;
+
+      const updated = await executeScheduledEmailItem(latestQueue[idx]);
+      processedCount++;
+      if (updated.status === 'sent') sentCount++;
+      else failedCount++;
+
+      const refreshedQueue = loadScheduledEmails();
+      const refreshIdx = refreshedQueue.findIndex((entry) => entry.id === id);
+      if (refreshIdx !== -1) {
+        refreshedQueue[refreshIdx] = updated;
+        saveScheduledEmails(refreshedQueue);
+      }
+    }
+  } catch (err) {
+    console.error('[Server] Scheduled email queue processing error:', err);
+  } finally {
+    isProcessingScheduledQueue = false;
+  }
+
+  return { processedCount, sentCount, failedCount };
+}
+
+app.get('/api/email/schedules', async (req, res) => {
+  if (req.query.processDue === 'true') {
+    await processDueScheduledEmails();
+  }
+  const schedules = loadScheduledEmails();
+  const statusCounts = {
+    total: schedules.length,
+    scheduled: schedules.filter((s) => s.status === 'scheduled' || s.status === 'processing').length,
+    sent: schedules.filter((s) => s.status === 'sent').length,
+    failed: schedules.filter((s) => s.status === 'failed').length,
+    cancelled: schedules.filter((s) => s.status === 'cancelled').length,
+  };
+  res.json({
+    success: true,
+    schedules,
+    stats: statusCounts,
+    serverNow: new Date().toISOString(),
+  });
+});
+
+app.post('/api/email/schedules', (req, res) => {
+  const body = req.body || {};
+  const templateId = String(body.templateId || '').trim();
+  const recipientEmail = String(body.recipientEmail || '').trim();
+  const recipientName = String(body.recipientName || '').trim();
+  const scheduledForRaw = String(body.scheduledFor || '').trim();
+  const notes = String(body.notes || '').trim();
+  const useSampleFallback = body.useSampleFallback !== false;
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const errors: Record<string, string> = {};
+
+  const templates = loadEmailTemplates();
+  const baseTpl = templates.find((t) => t.id === templateId);
+  if (!baseTpl) {
+    errors.templateId = 'Please select a valid transactional email template.';
+  }
+
+  if (!recipientEmail || recipientEmail.length > 254 || !emailRegex.test(recipientEmail)) {
+    errors.recipientEmail = 'Please enter a valid recipient email address.';
+  }
+
+  const scheduledDate = scheduledForRaw ? new Date(scheduledForRaw) : null;
+  if (!scheduledDate || Number.isNaN(scheduledDate.getTime())) {
+    errors.scheduledFor = 'Please choose a valid scheduled date and time.';
+  } else if (scheduledDate.getTime() < Date.now() + 30 * 1000) {
+    errors.scheduledFor = 'Scheduled date & time must be at least 30 seconds in the future.';
+  }
+
+  if (Object.keys(errors).length > 0 || !baseTpl || !scheduledDate) {
+    res.status(400).json({
+      success: false,
+      error: Object.values(errors)[0] || 'Invalid schedule request.',
+      errors,
+    });
+    return;
+  }
+
+  const mergedTemplate: TransactionalEmailTemplate = {
+    ...baseTpl,
+    name: body.name !== undefined ? String(body.name) : baseTpl.name,
+    enabled: body.enabled !== undefined ? Boolean(body.enabled) : baseTpl.enabled,
+    ccAdmin: body.ccAdmin !== undefined ? Boolean(body.ccAdmin) : baseTpl.ccAdmin,
+    subjectTemplate:
+      body.subjectTemplate !== undefined ? String(body.subjectTemplate) : baseTpl.subjectTemplate,
+    htmlTemplate:
+      body.htmlTemplate !== undefined ? String(body.htmlTemplate) : baseTpl.htmlTemplate,
+    textTemplate:
+      body.textTemplate !== undefined ? String(body.textTemplate) : baseTpl.textTemplate,
+    placeholders: Array.isArray(body.placeholders) ? body.placeholders : baseTpl.placeholders,
+  };
+
+  if (!mergedTemplate.enabled && body.forceSchedule !== true) {
+    res.status(409).json({
+      success: false,
+      error: `Template "${mergedTemplate.name}" is disabled. Enable it or allow scheduling for disabled templates.`,
+    });
+    return;
+  }
+
+  const referenceId = `SCH-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+  const preview = previewEmailTemplate({
+    template: mergedTemplate,
+    variables: {
+      ...(body.variables || {}),
+      referenceId: (body.variables && body.variables.referenceId) || referenceId,
+      clientEmail: (body.variables && body.variables.clientEmail) || recipientEmail,
+      clientName: (body.variables && body.variables.clientName) || recipientName || undefined,
+    },
+    useSampleFallback,
+    recipientEmail,
+    recipientName: recipientName || undefined,
+    ccAdmin: typeof body.ccAdmin === 'boolean' ? body.ccAdmin : mergedTemplate.ccAdmin,
+  });
+
+  const nowIso = new Date().toISOString();
+  const schedule: ScheduledEmailDispatchRecord = {
+    id: `sched-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    referenceId,
+    templateId: mergedTemplate.id,
+    templateName: mergedTemplate.name,
+    category: mergedTemplate.category,
+    recipientEmail,
+    recipientName: recipientName || undefined,
+    ccAdmin: preview.ccEmails.length > 0,
+    ccEmails: preview.ccEmails,
+    subject: preview.subject,
+    html: preview.html,
+    text: preview.text,
+    variables: preview.resolvedVariables,
+    useSampleFallback,
+    scheduledFor: scheduledDate.toISOString(),
+    notes: notes || undefined,
+    status: 'scheduled',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    dispatchedAt: null,
+    messageId: null,
+    transport: null,
+    smtpNotice: null,
+    error: null,
+  };
+
+  const queue = loadScheduledEmails();
+  queue.unshift(schedule);
+  saveScheduledEmails(queue);
+
+  res.status(201).json({
+    success: true,
+    schedule,
+    message: `Queued "${mergedTemplate.name}" for ${recipientEmail} on ${scheduledDate.toLocaleString()} (Ref: ${referenceId}).`,
+  });
+});
+
+app.post('/api/email/schedules/process-due', async (_req, res) => {
+  const summary = await processDueScheduledEmails();
+  const schedules = loadScheduledEmails();
+  res.json({
+    success: true,
+    ...summary,
+    schedules,
+    message:
+      summary.processedCount > 0
+        ? `Processed ${summary.processedCount} due dispatch(es): ${summary.sentCount} sent, ${summary.failedCount} failed.`
+        : 'No scheduled emails are due right now.',
+  });
+});
+
+app.post('/api/email/schedules/:id/dispatch-now', async (req, res) => {
+  const { id } = req.params;
+  const queue = loadScheduledEmails();
+  const idx = queue.findIndex((entry) => entry.id === id || entry.referenceId === id);
+  if (idx === -1) {
+    res.status(404).json({ success: false, error: 'Scheduled dispatch not found.' });
+    return;
+  }
+
+  const target = queue[idx];
+  if (target.status === 'processing') {
+    res.status(409).json({ success: false, error: 'This dispatch is currently being processed.' });
+    return;
+  }
+  if (target.status === 'cancelled') {
+    res.status(409).json({ success: false, error: 'Cancelled dispatches cannot be sent directly.' });
+    return;
+  }
+
+  queue[idx] = { ...target, status: 'processing', updatedAt: new Date().toISOString() };
+  saveScheduledEmails(queue);
+
+  const updated = await executeScheduledEmailItem(queue[idx]);
+  const latestQueue = loadScheduledEmails();
+  const latestIdx = latestQueue.findIndex((entry) => entry.id === target.id);
+  if (latestIdx !== -1) {
+    latestQueue[latestIdx] = updated;
+    saveScheduledEmails(latestQueue);
+  }
+
+  res.status(updated.status === 'sent' ? 200 : 502).json({
+    success: updated.status === 'sent',
+    liveDelivered: updated.status === 'sent',
+    schedule: updated,
+    error: updated.error || undefined,
+    message:
+      updated.status === 'sent'
+        ? `Scheduled email "${updated.templateName}" sent immediately to ${updated.recipientEmail}.`
+        : `Immediate dispatch failed: ${updated.error || 'Brevo relay rejected delivery.'}`,
+  });
+});
+
+app.post('/api/email/schedules/:id/cancel', (req, res) => {
+  const { id } = req.params;
+  const queue = loadScheduledEmails();
+  const idx = queue.findIndex((entry) => entry.id === id || entry.referenceId === id);
+  if (idx === -1) {
+    res.status(404).json({ success: false, error: 'Scheduled dispatch not found.' });
+    return;
+  }
+
+  const target = queue[idx];
+  if (target.status === 'sent') {
+    res.status(409).json({ success: false, error: 'Email has already been sent and cannot be cancelled.' });
+    return;
+  }
+
+  const updated: ScheduledEmailDispatchRecord = {
+    ...target,
+    status: 'cancelled',
+    updatedAt: new Date().toISOString(),
+  };
+  queue[idx] = updated;
+  saveScheduledEmails(queue);
+
+  res.json({
+    success: true,
+    schedule: updated,
+    message: `Cancelled scheduled dispatch ${target.referenceId}.`,
+  });
+});
+
+app.delete('/api/email/schedules/:id', (req, res) => {
+  const { id } = req.params;
+  const queue = loadScheduledEmails();
+  const exists = queue.some((entry) => entry.id === id || entry.referenceId === id);
+  if (!exists) {
+    res.status(404).json({ success: false, error: 'Scheduled dispatch not found.' });
+    return;
+  }
+  const filtered = queue.filter((entry) => entry.id !== id && entry.referenceId !== id);
+  saveScheduledEmails(filtered);
+  res.json({
+    success: true,
+    message: 'Removed scheduled dispatch record from queue.',
   });
 });
 
@@ -1029,8 +1455,9 @@ app.post('/api/email/history/:id/resend', async (req, res) => {
     recipientEmail,
     messageId: sent.messageId,
     retriedAt,
-    delivered: true,
-    deliveryStatus: 'delivered',
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
+    status: sent.liveDelivered ? 'Delivered' : 'Failed',
     transport: sent.transport,
     fromHeader: sent.fromHeader,
     previewUrl: sent.previewUrl,
@@ -1040,10 +1467,15 @@ app.post('/api/email/history/:id/resend', async (req, res) => {
   history[idx] = updated;
   writeJsonArray(EMAIL_HISTORY_FILE, history);
 
-  res.json({
-    success: true,
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
     log: updated,
-    message: `Successfully resent [${updated.referenceId}] to ${recipientEmail} via ${sent.transport}.`,
+    smtpNotice: sent.smtpNotice,
+    error: sent.liveDelivered ? undefined : sent.smtpNotice || 'Brevo resend failed.',
+    message: sent.liveDelivered
+      ? `Successfully resent [${updated.referenceId}] to ${recipientEmail} via ${sent.transport}.`
+      : `Brevo resend failed for [${updated.referenceId}]: ${sent.smtpNotice || 'delivery rejected'}.`,
   });
 });
 
@@ -1124,10 +1556,11 @@ app.post('/api/email/send-calculation', async (req, res) => {
       html,
       text,
       sentAt,
-      status: 'Delivered',
+      status: sent.liveDelivered ? 'Delivered' : 'Failed',
       relayMode: sent.transport,
       fromHeader: sent.fromHeader,
       previewUrl: sent.previewUrl,
+      smtpNotice: sent.smtpNotice,
       summaryHighlight,
     };
     logs.unshift(record);
@@ -1147,13 +1580,13 @@ app.post('/api/email/send-calculation', async (req, res) => {
         mode: toolCategory,
         date: sentAt.slice(0, 10),
         timeSlot: new Date(sentAt).toLocaleTimeString(),
-        status: 'Delivered',
+        status: sent.liveDelivered ? 'Delivered' : 'Failed',
         subject,
         html: html || `<p>${subject}</p>`,
         text: text || subject,
         sentAt,
-        delivered: true,
-        deliveryStatus: 'delivered',
+        delivered: sent.liveDelivered,
+        deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
         category: 'system',
         transport: sent.transport,
         fromHeader: sent.fromHeader,
@@ -1187,8 +1620,9 @@ app.post('/api/email/send-calculation', async (req, res) => {
       console.warn('[Server] saveSignings notice:', sigErr);
     }
 
-    res.json({
-      success: true,
+    res.status(sent.liveDelivered ? 200 : 502).json({
+      success: sent.liveDelivered,
+      liveDelivered: sent.liveDelivered,
       messageId: sent.messageId,
       referenceId,
       primaryRecipient,
@@ -1197,6 +1631,8 @@ app.post('/api/email/send-calculation', async (req, res) => {
       relayMode: sent.transport,
       fromHeader: sent.fromHeader,
       previewUrl: sent.previewUrl,
+      smtpNotice: sent.smtpNotice,
+      error: sent.liveDelivered ? undefined : sent.smtpNotice || 'Brevo relay did not deliver the calculation report.',
       record,
     });
   } catch (err: any) {
@@ -1242,6 +1678,15 @@ app.post('/api/appointments/notify', async (req, res) => {
       : 'booking_confirmation';
   const tpl = templates.find((t) => t.id === tplId) || DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES[2];
 
+  if (!tpl.enabled) {
+    res.json({
+      success: true,
+      skipped: true,
+      reason: `Template "${tpl.name}" is disabled in Email Template Manager.`,
+    });
+    return;
+  }
+
   const rendered =
     payload.html && payload.subject
       ? {
@@ -1278,6 +1723,7 @@ app.post('/api/appointments/notify', async (req, res) => {
         );
 
   const relay = getBrevoRelayConfig();
+  const ccEmails = tpl.ccAdmin ? [relay.senderEmail] : [];
   const sent = recipientEmail.includes('@')
     ? await dispatchBrevoEmail({
         recipientEmail,
@@ -1285,14 +1731,15 @@ app.post('/api/appointments/notify', async (req, res) => {
         subject: rendered.subject,
         html: rendered.html,
         text: rendered.text,
-        ccEmails: [relay.senderEmail],
+        ccEmails,
       })
     : {
-        messageId: `<apt-${Date.now()}@smtp-relay.brevo.com>`,
-        transport: relay.mode,
+        messageId: `<apt-${Date.now()}@local.invalid>`,
+        transport: 'no_recipient_email',
         fromHeader: relay.formattedFrom,
         previewUrl: null,
-        smtpNotice: null,
+        smtpNotice: 'No recipient email address provided.',
+        liveDelivered: false,
       };
 
   const sentAt = new Date().toISOString();
@@ -1312,8 +1759,9 @@ app.post('/api/appointments/notify', async (req, res) => {
     subject: rendered.subject,
     html: rendered.html,
     sentAt,
-    delivered: true,
+    delivered: sent.liveDelivered,
     transport: sent.transport,
+    smtpNotice: sent.smtpNotice,
   };
   notifications.unshift(record);
   if (notifications.length > 200) notifications.length = 200;
@@ -1327,20 +1775,20 @@ app.post('/api/appointments/notify', async (req, res) => {
       appointmentId: payload.appointmentId,
       clientName,
       recipientEmail,
-      ccEmails: [relay.senderEmail],
+      ccEmails,
       phone: payload.phone || '',
       companyName: payload.companyName || '',
       practiceArea,
       mode,
       date,
       timeSlot,
-      status,
+      status: sent.liveDelivered ? status : 'Failed',
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
       sentAt,
-      delivered: true,
-      deliveryStatus: 'delivered',
+      delivered: sent.liveDelivered,
+      deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
       category: 'booking',
       transport: sent.transport,
       fromHeader: sent.fromHeader,
@@ -1349,9 +1797,11 @@ app.post('/api/appointments/notify', async (req, res) => {
     });
   }
 
-  res.json({
-    success: true,
+  res.status(sent.liveDelivered || !recipientEmail.includes('@') ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
     messageId: sent.messageId,
+    smtpNotice: sent.smtpNotice,
     notification: record,
   });
 });
@@ -1387,6 +1837,157 @@ app.post('/api/appointments/preview-reminder-email', (req, res) => {
     html: `<p>Dear ${clientName}, this is a reminder for your upcoming scheduled consultation.</p>`,
     text: `Dear ${clientName}, this is a reminder for your upcoming scheduled consultation.`,
   });
+});
+
+app.get('/api/contact/support-config', (_req, res) => {
+  const relay = getBrevoRelayConfig();
+  res.json({
+    success: true,
+    supportEmail: getSupportEmailRecipient(),
+    relayConfigured: relay.configured,
+    relayMode: relay.mode,
+    senderName: relay.senderName,
+  });
+});
+
+app.post('/api/contact/support', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = String(body.name || '').trim();
+    const email = String(body.email || '').trim();
+    const phone = String(body.phone || '').trim();
+    const companyName = String(body.companyName || '').trim();
+    const department = String(body.department || 'General & Advisory Support').trim();
+    const subject = String(body.subject || '').trim();
+    const message = String(body.message || '').trim();
+
+    const errors: Record<string, string> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    if (!name || name.length < 2 || name.length > 80) {
+      errors.name = 'Please enter your full name (2–80 characters).';
+    } else if (!/^[a-zA-Z\s.'-]+$/.test(name)) {
+      errors.name = 'Name may only contain letters, spaces, periods, hyphens, or apostrophes.';
+    }
+
+    if (!email || email.length > 254 || !emailRegex.test(email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    if (phone) {
+      const digitsOnly = phone.replace(/\D/g, '');
+      if (digitsOnly.length < 8 || digitsOnly.length > 15) {
+        errors.phone = 'Phone number must contain 8–15 digits if provided.';
+      }
+    }
+
+    if (!subject || subject.length < 4 || subject.length > 140) {
+      errors.subject = 'Please enter a clear subject (4–140 characters).';
+    }
+
+    if (!message || message.length < 15 || message.length > 3000) {
+      errors.message = 'Please provide at least 15 characters (up to 3,000) in your message.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Please review the highlighted validation errors.',
+        errors,
+      });
+      return;
+    }
+
+    const referenceId = `SUP-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const submittedAt = new Date().toISOString();
+
+    const dispatched = await sendSupportContactEmail({
+      referenceId,
+      name,
+      email,
+      phone: phone || undefined,
+      companyName: companyName || undefined,
+      department,
+      subject,
+      message,
+      submittedAt,
+    });
+
+    const requests = readJsonArray(CONTACT_REQUESTS_FILE);
+    const entry = {
+      id: `sup-${Date.now()}`,
+      referenceId,
+      type: 'support_contact',
+      name,
+      email,
+      phone,
+      companyName,
+      department,
+      subject,
+      message,
+      supportEmail: dispatched.supportEmail,
+      liveDelivered: dispatched.result.liveDelivered,
+      transport: dispatched.result.transport,
+      messageId: dispatched.result.messageId,
+      smtpNotice: dispatched.result.smtpNotice,
+      submittedAt,
+    };
+    requests.unshift(entry);
+    if (requests.length > 500) requests.length = 500;
+    writeJsonArray(CONTACT_REQUESTS_FILE, requests);
+
+    appendEmailHistory({
+      id: entry.id,
+      messageId: dispatched.result.messageId,
+      referenceId,
+      clientName: `${name} (${email})`,
+      recipientEmail: dispatched.supportEmail,
+      phone,
+      companyName,
+      practiceArea: department,
+      mode: 'Support Contact Form',
+      date: submittedAt.slice(0, 10),
+      timeSlot: new Date(submittedAt).toLocaleTimeString(),
+      status: dispatched.result.liveDelivered ? 'Delivered' : 'Failed',
+      subject: dispatched.subject,
+      html: dispatched.html,
+      text: dispatched.text,
+      sentAt: submittedAt,
+      delivered: dispatched.result.liveDelivered,
+      deliveryStatus: dispatched.result.liveDelivered ? 'delivered' : 'failed',
+      category: 'system',
+      transport: dispatched.result.transport,
+      fromHeader: dispatched.result.fromHeader,
+      previewUrl: dispatched.result.previewUrl,
+      smtpNotice: dispatched.result.smtpNotice,
+    });
+
+    res.status(dispatched.result.liveDelivered ? 200 : 502).json({
+      success: dispatched.result.liveDelivered,
+      liveDelivered: dispatched.result.liveDelivered,
+      savedLocally: true,
+      referenceId,
+      supportEmail: dispatched.supportEmail,
+      messageId: dispatched.result.messageId,
+      transport: dispatched.result.transport,
+      previewUrl: dispatched.result.previewUrl,
+      smtpNotice: dispatched.result.smtpNotice,
+      error: dispatched.result.liveDelivered
+        ? undefined
+        : dispatched.result.smtpNotice || 'Brevo SMTP relay did not deliver the support email.',
+      message: dispatched.result.liveDelivered
+        ? `Your message has been delivered to ${dispatched.supportEmail} (Ref: ${referenceId}).`
+        : `Your inquiry (${referenceId}) was logged, but live Brevo SMTP delivery failed: ${
+            dispatched.result.smtpNotice || 'relay error'
+          }`,
+    });
+  } catch (err: any) {
+    console.error('[Server] Support contact dispatch error:', err);
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Unexpected error while sending support contact email.',
+    });
+  }
 });
 
 app.post('/api/contact/submit', (req, res) => {
@@ -1583,6 +2184,15 @@ app.post('/api/shop/orders/send-email', async (req, res) => {
     templates.find((t) => t.id === 'payment_order_receipt') ||
     DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES[DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES.length - 1];
 
+  if (!tpl.enabled) {
+    res.json({
+      success: true,
+      skipped: true,
+      reason: `Template "${tpl.name}" is disabled in Email Template Manager.`,
+    });
+    return;
+  }
+
   const rendered = renderTransactionalTemplate(
     tpl,
     {
@@ -1628,13 +2238,13 @@ app.post('/api/shop/orders/send-email', async (req, res) => {
     mode: paymentMethod,
     date: sentAt.slice(0, 10),
     timeSlot: new Date(sentAt).toLocaleTimeString(),
-    status: 'COMPLETED',
+    status: sent.liveDelivered ? 'COMPLETED' : 'Failed',
     subject: rendered.subject,
     html: rendered.html,
     text: rendered.text,
     sentAt,
-    delivered: true,
-    deliveryStatus: 'delivered',
+    delivered: sent.liveDelivered,
+    deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
     category: 'payment',
     transport: sent.transport,
     fromHeader: sent.fromHeader,
@@ -1642,13 +2252,16 @@ app.post('/api/shop/orders/send-email', async (req, res) => {
     smtpNotice: sent.smtpNotice,
   });
 
-  res.json({
-    success: true,
+  res.status(sent.liveDelivered ? 200 : 502).json({
+    success: sent.liveDelivered,
+    liveDelivered: sent.liveDelivered,
     messageId: sent.messageId,
     orderId,
     recipient: customerEmail,
     transport: sent.transport,
     previewUrl: sent.previewUrl,
+    smtpNotice: sent.smtpNotice,
+    error: sent.liveDelivered ? undefined : sent.smtpNotice || 'Brevo relay did not deliver the order email.',
   });
 });
 
@@ -2187,8 +2800,20 @@ async function startServer() {
 
   listenWithRetry();
 
+  // Background scheduler: check every 15s for due queued email template dispatches
+  const scheduleInitialTimer = setTimeout(() => {
+    void processDueScheduledEmails();
+  }, 2000);
+  const scheduleIntervalTimer = setInterval(() => {
+    void processDueScheduledEmails();
+  }, 15000);
+  scheduleInitialTimer.unref?.();
+  scheduleIntervalTimer.unref?.();
+
   const handleShutdown = (signal: string) => {
     console.log(`[Server] ${signal} received. Closing HTTP server gracefully...`);
+    clearTimeout(scheduleInitialTimer);
+    clearInterval(scheduleIntervalTimer);
     if (server) {
       server.close(() => {
         console.log('[Server] HTTP server closed cleanly.');

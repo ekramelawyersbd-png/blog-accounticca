@@ -33,6 +33,7 @@ import { db } from '../lib/firebase';
 import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { AppointmentBookingForm } from '../components/AppointmentBookingForm';
+import { SupportContactForm } from '../components/SupportContactForm';
 import { OfficeLocationMap } from '../components/OfficeLocationMap';
 import { FormSuccessAnimation } from '../components/FormSuccessAnimation';
 import { ServiceSEO } from '../components/SEO';
@@ -1997,6 +1998,14 @@ export function Contact() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* 4b. Direct Support Mail Desk (Brevo SMTP) */}
+      <section
+        id="support-contact-section"
+        className="mx-auto max-w-7xl scroll-mt-6 px-4 py-6 sm:px-6 lg:px-8"
+      >
+        <SupportContactForm />
       </section>
 
       {/* 5. Pre-Consultation FAQ Section */}
