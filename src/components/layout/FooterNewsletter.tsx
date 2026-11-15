@@ -14,6 +14,7 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { trackUxEngagementEvent } from '../../services/firebaseAnalyticsService';
+import { TurnstileWidget } from '../security/TurnstileWidget';
 
 const COLLECTION_NAME = 'newsletterSubscribers';
 
@@ -33,6 +34,8 @@ export function FooterNewsletter() {
   const [showTopicPicker, setShowTopicPicker] = useState(false);
   const [inlineSuccess, setInlineSuccess] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<{ email: string; message: string } | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const formContainerRef = useRef<HTMLDivElement | null>(null);
   const hasLoggedViewRef = useRef<boolean>(false);
 
@@ -134,6 +137,11 @@ export function FooterNewsletter() {
       return;
     }
 
+    if (!turnstileToken) {
+      setErrorMessage('Please complete the Cloudflare Turnstile security check before subscribing.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Create deterministic doc ID from email
@@ -162,15 +170,23 @@ export function FooterNewsletter() {
 
       // Dispatch Brevo SMTP welcome & compliance confirmation email
       try {
-        await fetch('/api/subscribe-newsletter', {
+        const subRes = await fetch('/api/subscribe-newsletter', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: cleanEmail,
             topics: selectedTopics,
             sourceCategory: 'footer_compliance',
+            turnstileToken,
           }),
         });
+        if (subRes.status === 403) {
+          const errBody = await subRes.json().catch(() => ({}));
+          setTurnstileResetSignal((prev) => prev + 1);
+          setErrorMessage(errBody?.error || 'Cloudflare Turnstile verification failed. Please retry.');
+          setIsSubmitting(false);
+          return;
+        }
       } catch {
         // Non-blocking if offline
       }
@@ -202,8 +218,9 @@ export function FooterNewsletter() {
       });
 
       setAlreadySubscribedEmail(cleanEmail);
-      // Automatically clear input field
+      // Automatically clear input field & reset Turnstile
       setEmail('');
+      setTurnstileResetSignal((prev) => prev + 1);
       // Set inline success message
       setInlineSuccess(`Subscription confirmed! We've saved ${cleanEmail} to our compliance registry and dispatched a confirmation via Brevo SMTP.`);
       // Trigger floating success toast notification
@@ -343,8 +360,8 @@ export function FooterNewsletter() {
                 <button
                   id="footer-newsletter-submit-btn"
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto shrink-0 whitespace-nowrap rounded-xl px-5 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                  disabled={isSubmitting || !turnstileToken}
+                  className="w-full sm:w-auto shrink-0 whitespace-nowrap rounded-xl px-5 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-65 text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/30 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>
@@ -359,6 +376,18 @@ export function FooterNewsletter() {
                   )}
                 </button>
               </div>
+
+              <TurnstileWidget
+                compactLayout
+                theme="dark"
+                size="flexible"
+                action="footer_newsletter"
+                onVerify={(token) => {
+                  setTurnstileToken(token);
+                  if (token && errorMessage.includes('Turnstile')) setErrorMessage('');
+                }}
+                resetSignal={turnstileResetSignal}
+              />
 
               {/* Optional Topics Selector */}
               {showTopicPicker && (

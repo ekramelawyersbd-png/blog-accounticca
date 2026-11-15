@@ -14,6 +14,7 @@ import {
   User,
 } from 'lucide-react';
 import { dispatchFormSubmissionToast } from './ui/FormSubmissionToast';
+import { TurnstileWidget } from './security/TurnstileWidget';
 
 export type SupportField =
   | 'name'
@@ -152,6 +153,8 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<SupportSubmitResult | null>(null);
   const [supportConfig, setSupportConfig] = useState<SupportConfigResponse | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -211,6 +214,7 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
     setErrors({});
     setFormErrorBanner(null);
     setSubmitResult(null);
+    setTurnstileResetSignal((prev) => prev + 1);
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -236,6 +240,11 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
       return;
     }
 
+    if (!turnstileToken) {
+      setFormErrorBanner('Please complete the Cloudflare Turnstile security check before sending your message.');
+      return;
+    }
+
     setIsSubmitting(true);
     setFormErrorBanner(null);
 
@@ -251,10 +260,19 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
           department: values.department,
           subject: values.subject.trim(),
           message: values.message.trim(),
+          turnstileToken,
         }),
       });
 
       const data = await response.json().catch(() => ({}));
+
+      if (response.status === 403) {
+        setTurnstileResetSignal((prev) => prev + 1);
+        setFormErrorBanner(
+          data?.error || 'Cloudflare Turnstile verification failed. Please retry the security check.'
+        );
+        return;
+      }
 
       if (response.status === 400 && data?.errors) {
         setErrors(data.errors as SupportFieldErrors);
@@ -707,13 +725,26 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
           )}
         </div>
 
+        <TurnstileWidget
+          action="support_contact"
+          theme="light"
+          size="flexible"
+          onVerify={(token) => {
+            setTurnstileToken(token);
+            if (token && formErrorBanner?.includes('Turnstile')) {
+              setFormErrorBanner(null);
+            }
+          }}
+          resetSignal={turnstileResetSignal}
+        />
+
         <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-slate-500">
             Dispatched via Brevo SMTP relay with automatic reply-to routing to your email.
           </p>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !turnstileToken}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-700/20 disabled:cursor-not-allowed disabled:opacity-65 cursor-pointer"
           >
             {isSubmitting ? (

@@ -17,6 +17,8 @@ import { authService } from '../services/authService';
 import { ServiceSEO } from '../components/SEO';
 import { ShieldCheck, Lock, ArrowLeft, Calculator, CheckCircle2 } from 'lucide-react';
 import { ContactPageShell } from '../components/layout/ContactPageShell';
+import { TurnstileWidget } from '../components/security/TurnstileWidget';
+import { verifyTurnstileTokenClient } from '../services/turnstileService';
 
 const formatAuthError = (err: any): string => {
   const code = err?.code || '';
@@ -67,6 +69,8 @@ export function Auth() {
   const [isGithubLoading, setIsGithubLoading] = useState(false);
   const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
   const [isFacebookLoading, setIsFacebookLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   const isAnyAuthLoading = isLoading || isGoogleLoading || isGithubLoading || isMicrosoftLoading || isFacebookLoading;
 
@@ -136,6 +140,7 @@ export function Auth() {
   const resetFormFeedback = () => {
     setError(null);
     setSuccessMessage(null);
+    setTurnstileResetSignal((prev) => prev + 1);
   };
 
   const handleEmailAuthSubmit = async (e: React.FormEvent) => {
@@ -147,8 +152,19 @@ export function Auth() {
         setError('Please enter your email address to reset password.');
         return;
       }
+      if (!turnstileToken) {
+        setError('Please complete the Cloudflare Turnstile security check first.');
+        return;
+      }
       setIsLoading(true);
       try {
+        const turnstileCheck = await verifyTurnstileTokenClient(turnstileToken, 'auth_forgot');
+        if (!turnstileCheck.success) {
+          setTurnstileResetSignal((prev) => prev + 1);
+          setError(turnstileCheck.message || 'Cloudflare Turnstile verification failed.');
+          setIsLoading(false);
+          return;
+        }
         const result = await authService.requestPasswordReset(email.trim());
         setSuccessMessage(result.message);
         setError(null);
@@ -176,7 +192,20 @@ export function Auth() {
       }
     }
 
+    if (!turnstileToken) {
+      setError('Please complete the Cloudflare Turnstile security check to continue.');
+      return;
+    }
+
     setIsLoading(true);
+
+    const turnstileCheck = await verifyTurnstileTokenClient(turnstileToken, `auth_${mode}`);
+    if (!turnstileCheck.success) {
+      setTurnstileResetSignal((prev) => prev + 1);
+      setError(turnstileCheck.message || 'Cloudflare Turnstile verification failed. Please retry.');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       if (mode === 'login') {
@@ -744,11 +773,21 @@ export function Auth() {
                 </div>
               )}
 
+              {/* Cloudflare Turnstile Verification */}
+              <TurnstileWidget
+                compactLayout
+                size="flexible"
+                theme="light"
+                action={`auth_${mode}`}
+                onVerify={setTurnstileToken}
+                resetSignal={turnstileResetSignal}
+              />
+
               {/* Primary Action Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="mt-0.5 w-full h-10 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-75"
+                disabled={isLoading || !turnstileToken}
+                className="mt-0.5 w-full h-10 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-65 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>

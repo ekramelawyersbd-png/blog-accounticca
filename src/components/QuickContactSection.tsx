@@ -24,6 +24,8 @@ import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { dispatchFormSubmissionToast, FormSuccessNotification } from './ui/FormSubmissionToast';
 import { PatternFormat } from 'react-number-format';
 import { EmailTemplateGenerator } from '../utils/emailGenerator';
+import { TurnstileWidget } from './security/TurnstileWidget';
+import { verifyTurnstileTokenClient } from '../services/turnstileService';
 
 const PRIMARY_PHONE = '+880 1335-230170';
 const RAW_PHONE = '+8801335230170';
@@ -77,8 +79,10 @@ export function QuickContactSection() {
   const [isSubmittingAppt, setIsSubmittingAppt] = useState(false);
   const [submittedApptRef, setSubmittedApptRef] = useState<string | null>(null);
 
-  // Validation
+  // Validation & Turnstile
   const [formError, setFormError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   const handleInquirySubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -89,7 +93,19 @@ export function QuickContactSection() {
       return;
     }
 
+    if (!turnstileToken) {
+      setFormError('Please complete the Cloudflare Turnstile security check before submitting.');
+      return;
+    }
+
     setIsSubmittingInquiry(true);
+    const verifyRes = await verifyTurnstileTokenClient(turnstileToken, 'quick_inquiry');
+    if (!verifyRes.success) {
+      setIsSubmittingInquiry(false);
+      setTurnstileResetSignal((prev) => prev + 1);
+      setFormError(verifyRes.message || 'Cloudflare Turnstile verification failed. Please retry.');
+      return;
+    }
     const refNumber = Math.floor(10000 + Math.random() * 90000);
     const referenceId = `INQ-2026-${refNumber}`;
     const division = inquiryService.includes('Law') || inquiryService.includes('Contracts') || inquiryService.includes('BIDA')
@@ -140,6 +156,7 @@ export function QuickContactSection() {
     }
 
     setIsSubmittingInquiry(false);
+    setTurnstileResetSignal((prev) => prev + 1);
     setSubmittedInquiryRef(referenceId);
 
     dispatchFormSubmissionToast({
@@ -161,7 +178,19 @@ export function QuickContactSection() {
       return;
     }
 
+    if (!turnstileToken) {
+      setFormError('Please complete the Cloudflare Turnstile security check before booking.');
+      return;
+    }
+
     setIsSubmittingAppt(true);
+    const verifyRes = await verifyTurnstileTokenClient(turnstileToken, 'quick_appointment');
+    if (!verifyRes.success) {
+      setIsSubmittingAppt(false);
+      setTurnstileResetSignal((prev) => prev + 1);
+      setFormError(verifyRes.message || 'Cloudflare Turnstile verification failed. Please retry.');
+      return;
+    }
     const refNumber = Math.floor(20000 + Math.random() * 80000);
     const referenceId = `APT-2026-${refNumber}`;
 
@@ -238,6 +267,7 @@ export function QuickContactSection() {
     }
 
     setIsSubmittingAppt(false);
+    setTurnstileResetSignal((prev) => prev + 1);
     setSubmittedApptRef(referenceId);
 
     dispatchFormSubmissionToast({
@@ -546,14 +576,22 @@ export function QuickContactSection() {
                         />
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                      <TurnstileWidget
+                        action="quick_inquiry"
+                        theme="light"
+                        size="flexible"
+                        onVerify={setTurnstileToken}
+                        resetSignal={turnstileResetSignal}
+                      />
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                         <span className="text-[11px] text-slate-500">
                           Directly routed to Chambers Docket &amp; Lead Counsel
                         </span>
                         <button
                           type="submit"
-                          disabled={isSubmittingInquiry}
-                          className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                          disabled={isSubmittingInquiry || !turnstileToken}
+                          className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <Send className="w-4 h-4" />
                           <span>{isSubmittingInquiry ? 'Sending...' : 'Send Inquiry Brief'}</span>
@@ -727,14 +765,22 @@ export function QuickContactSection() {
                         />
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                      <TurnstileWidget
+                        action="quick_appointment"
+                        theme="light"
+                        size="flexible"
+                        onVerify={setTurnstileToken}
+                        resetSignal={turnstileResetSignal}
+                      />
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                         <span className="text-[11px] text-slate-500">
                           Slots confirmed subject to chamber business hours
                         </span>
                         <button
                           type="submit"
-                          disabled={isSubmittingAppt}
-                          className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                          disabled={isSubmittingAppt || !turnstileToken}
+                          className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <Calendar className="w-4 h-4" />
                           <span>{isSubmittingAppt ? 'Booking...' : 'Reserve Consultation Slot'}</span>

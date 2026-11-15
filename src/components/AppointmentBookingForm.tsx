@@ -41,6 +41,8 @@ import { workspaceCalendarApi } from '../services/workspaceService';
 import { ClientBookingDashboard } from './ClientBookingDashboard';
 import { dispatchFormSubmissionToast } from './ui/FormSubmissionToast';
 import { AppointmentSuccessModal } from './AppointmentSuccessModal';
+import { TurnstileWidget } from './security/TurnstileWidget';
+import { verifyTurnstileTokenClient } from '../services/turnstileService';
 import {
   initiateUddoktaPayCheckout,
   verifyUddoktaPayPayment,
@@ -640,6 +642,9 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
   const [confirmationDispatched, setConfirmationDispatched] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedShareLink, setCopiedShareLink] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
 
   const consultationFeeAmount = useMemo(() => {
     const digits = activePractice.suggestedFee.replace(/[^0-9]/g, '');
@@ -785,13 +790,27 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
   const handleBookAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormAttempted(true);
+    setTurnstileError(null);
     setTouched({ clientName: true, email: true, phone: true, companyName: true });
 
     if (Object.keys(validationErrors).length > 0) {
       return;
     }
 
+    if (!turnstileToken) {
+      setTurnstileError('Please complete the Cloudflare Turnstile security check before submitting.');
+      return;
+    }
+
     setIsSubmitting(true);
+
+    const turnstileCheck = await verifyTurnstileTokenClient(turnstileToken, 'appointment_booking');
+    if (!turnstileCheck.success) {
+      setIsSubmitting(false);
+      setTurnstileResetSignal((prev) => prev + 1);
+      setTurnstileError(turnstileCheck.message || 'Cloudflare Turnstile verification failed. Please retry.');
+      return;
+    }
 
     const refNumber = Math.floor(10000 + Math.random() * 90000);
     const referenceId = `APT-2026-${refNumber}`;
@@ -1966,6 +1985,26 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
             </div>
           </div>
 
+          {/* Cloudflare Turnstile Verification */}
+          <div className="space-y-2">
+            <TurnstileWidget
+              action="appointment_booking"
+              theme="light"
+              size="flexible"
+              onVerify={(token) => {
+                setTurnstileToken(token);
+                if (token) setTurnstileError(null);
+              }}
+              resetSignal={turnstileResetSignal}
+            />
+            {turnstileError && (
+              <p className="text-xs text-rose-600 font-semibold flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" aria-hidden="true" />
+                <span>{turnstileError}</span>
+              </p>
+            )}
+          </div>
+
           {/* Submission Bar & Summary */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-slate-600 flex items-center gap-2">
@@ -1977,8 +2016,8 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl px-7 py-3 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
+              disabled={isSubmitting || !turnstileToken}
+              className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-7 py-3 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
             >
               {isSubmitting ? (
                 <>

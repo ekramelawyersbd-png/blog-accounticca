@@ -40,6 +40,8 @@ import { ServiceSEO } from '../components/SEO';
 import { dispatchFormSubmissionToast } from '../components/ui/FormSubmissionToast';
 import { PatternFormat } from 'react-number-format';
 import { useDebounce } from '../hooks/useDebounce';
+import { TurnstileWidget } from '../components/security/TurnstileWidget';
+import { verifyTurnstileTokenClient } from '../services/turnstileService';
 
 type ContactTab = 'inquiry' | 'appointment';
 type FormField =
@@ -640,6 +642,8 @@ export function Contact() {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   const {
     currentStep,
@@ -932,7 +936,27 @@ export function Contact() {
       return;
     }
 
+    if (!turnstileToken) {
+      setInquiryState((prev) => ({
+        ...prev,
+        stepValidationMessage:
+          'Please complete the Cloudflare Turnstile security check before submitting your inquiry.',
+      }));
+      return;
+    }
+
     setIsSubmittingInquiry(true);
+    const verifyRes = await verifyTurnstileTokenClient(turnstileToken, 'contact_inquiry');
+    if (!verifyRes.success) {
+      setIsSubmittingInquiry(false);
+      setTurnstileResetSignal((prev) => prev + 1);
+      setInquiryState((prev) => ({
+        ...prev,
+        stepValidationMessage:
+          verifyRes.message || 'Cloudflare Turnstile verification failed. Please retry.',
+      }));
+      return;
+    }
     const refNumber = Math.floor(10000 + Math.random() * 90000);
     const referenceId = `INQ-2026-${refNumber}`;
 
@@ -1043,6 +1067,7 @@ export function Contact() {
     setEmailDraftUrl(null);
     setSubmittedInquiryRef(null);
     setInquirySheetSynced(false);
+    setTurnstileResetSignal((prev) => prev + 1);
   };
 
   const inputError = (field: FormField, step: InquiryStep) =>
@@ -1382,6 +1407,19 @@ export function Contact() {
               </div>
             )}
 
+            <TurnstileWidget
+              action="contact_inquiry"
+              theme="light"
+              size="flexible"
+              onVerify={(token) => {
+                setTurnstileToken(token);
+                if (token && stepValidationMessage?.includes('Turnstile')) {
+                  setInquiryState((prev) => ({ ...prev, stepValidationMessage: null }));
+                }
+              }}
+              resetSignal={turnstileResetSignal}
+            />
+
             <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
@@ -1392,8 +1430,8 @@ export function Contact() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmittingInquiry}
-                className="group inline-flex min-h-12 flex-1 items-center justify-center gap-2.5 rounded-xl bg-[#0b5e48] px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-900/10 transition hover:bg-[#084b3a] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-600/20 disabled:opacity-60 cursor-pointer"
+                disabled={isSubmittingInquiry || !turnstileToken}
+                className="group inline-flex min-h-12 flex-1 items-center justify-center gap-2.5 rounded-xl bg-[#0b5e48] px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-900/10 transition hover:bg-[#084b3a] hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-600/20 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmittingInquiry
                   ? 'Booking consultation...'
