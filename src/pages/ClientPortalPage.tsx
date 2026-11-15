@@ -24,8 +24,8 @@ export const ClientPortalPage: React.FC = () => {
         accentHeadline="Portal"
         description="Track consultation milestones, access purchased digital toolkits, download NBR tax assessment dockets, and manage corporate filings."
         metaItems={[
+          'My Appointments (Real-Time Status)',
           'Purchased Toolkits & Kits',
-          'Consultation Milestones',
           'Verified Legal & Tax Vault'
         ]}
         summaryCard={{

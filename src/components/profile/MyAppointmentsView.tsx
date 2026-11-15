@@ -36,6 +36,7 @@ import {
   Appointment, 
   AppointmentStatus, 
   fetchUserAppointments, 
+  subscribeToUserAppointments,
   updateAppointmentStatus, 
   createSeedAppointments, 
   getGoogleCalendarUrl, 
@@ -122,8 +123,23 @@ export function MyAppointmentsView() {
   };
 
   useEffect(() => {
-    loadData();
-  }, [user]);
+    if (!user?.uid) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    const unsubscribe = subscribeToUserAppointments(
+      user.uid,
+      user.email || undefined,
+      (liveList) => {
+        setAppointments(liveList);
+        setIsLoading(false);
+      }
+    );
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.uid, user?.email]);
 
   // Handle Copy Reference ID
   const handleCopyRef = (refId: string) => {

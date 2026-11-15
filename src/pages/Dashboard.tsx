@@ -59,6 +59,7 @@ import { DashboardQuickActions } from '../components/dashboard/DashboardQuickAct
 import { WeeklyActivityTrendChart } from '../components/dashboard/WeeklyActivityTrendChart';
 import { AnnualActivityHeatmap } from '../components/dashboard/AnnualActivityHeatmap';
 import { FirebaseAnalyticsDashboard } from '../components/dashboard/FirebaseAnalyticsDashboard';
+import { MyAppointmentsSection } from '../components/portal/MyAppointmentsSection';
 import { SEO } from '../components/SEO';
 import { checkAndDispatchDeadlineNotifications } from '../services/smartNotificationService';
 import { generateComplianceSummaryPDF } from '../utils/pdfGenerator';
@@ -93,9 +94,10 @@ export function Dashboard() {
   
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [profileSubTab, setProfileSubTab] = useState<
-    'overview' | 'saved' | 'applications' | 'payments' | 'reminders' | 'activity' | 'achievements'
+    'overview' | 'appointments' | 'saved' | 'applications' | 'payments' | 'reminders' | 'activity' | 'achievements'
   >(() => {
     const target = sectionParam || tabParam;
+    if (target === 'appointments' || target === 'consultations') return 'appointments';
     if (target === 'achievements' || target === 'badges') return 'achievements';
     if (target === 'activity') return 'activity';
     if (target === 'reminders' || target === 'invoices') return 'reminders';
@@ -202,6 +204,9 @@ export function Dashboard() {
       setActiveTab('purchases');
     } else if (tabParam === 'articles') {
       setActiveTab('articles');
+    } else if (target === 'appointments' || target === 'consultations') {
+      setActiveTab('profile');
+      setProfileSubTab('appointments');
     } else if (target === 'achievements' || target === 'badges') {
       setActiveTab('profile');
       setProfileSubTab('achievements');
@@ -227,7 +232,7 @@ export function Dashboard() {
   }, [tabParam, sectionParam]);
 
   const switchProfileSubTab = (
-    subTab: 'overview' | 'saved' | 'applications' | 'payments' | 'reminders' | 'activity' | 'achievements'
+    subTab: 'overview' | 'appointments' | 'saved' | 'applications' | 'payments' | 'reminders' | 'activity' | 'achievements'
   ) => {
     setActiveTab('profile');
     setProfileSubTab(subTab);
@@ -512,6 +517,7 @@ export function Dashboard() {
                 <div className="ml-4 pl-3 border-l-2 border-emerald-100 space-y-1 py-1">
                   {[
                     { id: 'overview', label: 'Account Settings', badge: null },
+                    { id: 'appointments', label: 'My Appointments', badge: 'Live' },
                     { id: 'saved', label: 'Saved Articles', badge: savedItems.length },
                     { id: 'applications', label: 'My Applications', badge: myApplications.length },
                     { id: 'payments', label: 'Payment Status', badge: null },
@@ -877,6 +883,20 @@ export function Dashboard() {
                 </button>
 
                 <button
+                  id="profile-subtab-appointments"
+                  type="button"
+                  onClick={() => switchProfileSubTab('appointments')}
+                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    profileSubTab === 'appointments'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>My Appointments</span>
+                </button>
+
+                <button
                   id="profile-subtab-saved"
                   type="button"
                   onClick={() => switchProfileSubTab('saved')}
@@ -993,6 +1013,12 @@ export function Dashboard() {
 
             {profileSubTab === 'overview' && activeTab !== 'articles' ? (
               <UserProfile />
+            ) : profileSubTab === 'appointments' ? (
+              <MyAppointmentsSection
+                userId={user?.uid || 'guest-session'}
+                userEmail={user?.email}
+                userName={user?.displayName}
+              />
             ) : profileSubTab === 'payments' ? (
               <PaymentStatusWidget onNavigateReminders={() => switchProfileSubTab('reminders')} />
             ) : profileSubTab === 'activity' ? (

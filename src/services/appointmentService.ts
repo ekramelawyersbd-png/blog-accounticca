@@ -7,7 +7,8 @@ import {
   updateDoc, 
   serverTimestamp,
   orderBy,
-  addDoc
+  addDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 
@@ -441,6 +442,343 @@ export async function fetchUserAppointments(userId: string, userEmail?: string):
   return list;
 }
 
+export interface RealtimeAppointmentsMeta {
+  isLiveFirestore: boolean;
+  lastSyncedAt: string;
+  firestoreCount: number;
+}
+
+/**
+ * Real-time subscription to a logged-in user's appointments (Pending, Confirmed, Cancelled)
+ * using Firestore onSnapshot listeners + local cross-tab synchronization.
+ */
+export function subscribeToUserAppointments(
+  userId: string,
+  userEmail: string | undefined | null,
+  onUpdate: (appointments: Appointment[], meta: RealtimeAppointmentsMeta) => void
+): () => void {
+  const firestoreByUid = new Map<string, Appointment>();
+  const firestoreByEmail = new Map<string, Appointment>();
+  let isLiveConnected = false;
+
+  const parseDocToAppointment = (docSnap: { id: string; data: () => Record<string, any> }): Appointment => {
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      referenceId: data.referenceId || `APT-${docSnap.id.slice(0, 8).toUpperCase()}`,
+      practiceArea: data.practiceArea || 'General Compliance Advisory',
+      practiceAreaId: data.practiceAreaId,
+      expertiseArea: data.expertiseArea,
+      assignedPartner: data.assignedPartner,
+      division: data.division || PRACTICE_DIVISIONS[data.practiceArea] || 'Accounticca Advisory',
+      mode: data.mode === 'in_person' ? 'in_person' : 'virtual',
+      date: data.date || '',
+      timeSlot: data.timeSlot || '10:00 AM - 10:45 AM BST',
+      clientName: data.clientName || 'Valued Client',
+      email: data.email || userEmail || '',
+      phone: data.phone || '',
+      companyName: data.companyName || 'Corporate Client',
+      notes: data.notes || '',
+      userId: data.userId || userId,
+      userEmail: data.userEmail || userEmail || undefined,
+      status: normalizeStatus(data.status),
+      cancellationReason: data.cancellationReason,
+      cancelledAt: data.cancelledAt,
+      meetingLink: data.mode === 'virtual' ? (data.meetingLink || DEFAULT_MEET_LINK) : undefined,
+      chamberLocation: data.mode === 'in_person' ? (data.chamberLocation || CHAMBER_ADDRESS) : undefined,
+      chamberHotline: CHAMBER_HOTLINE,
+      rating: data.rating || undefined,
+      lastNotification: data.lastNotification || undefined,
+      createdAt: data.createdAt?.toDate
+        ? data.createdAt.toDate().toISOString()
+        : typeof data.createdAt === 'string'
+        ? data.createdAt
+        : new Date().toISOString(),
+      updatedAt: data.updatedAt?.toDate
+        ? data.updatedAt.toDate().toISOString()
+        : typeof data.updatedAt === 'string'
+        ? data.updatedAt
+        : undefined
+    };
+  };
+
+  const emitMerged = () => {
+    const mergedMap = new Map<string, Appointment>();
+
+    // 1. Live Firestore records by userId and email
+    firestoreByUid.forEach((apt, key) => mergedMap.set(key, apt));
+    firestoreByEmail.forEach((apt, key) => {
+      if (!mergedMap.has(key)) {
+        mergedMap.set(key, apt);
+      }
+    });
+
+    const firestoreCount = mergedMap.size;
+
+    // 2. Merge shared local bookings from AppointmentBookingForm
+    try {
+      const rawLocal = localStorage.getItem(SHARED_BOOKED_KEY);
+      if (rawLocal) {
+        const parsed: any[] = JSON.parse(rawLocal);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(localItem => {
+            const matchesUser =
+              (localItem.userId && localItem.userId === userId) ||
+              (userEmail && localItem.email && localItem.email.toLowerCase() === userEmail.toLowerCase()) ||
+              !localItem.userId;
+
+            if (matchesUser) {
+              const refKey = localItem.referenceId || `local-${localItem.date}`;
+              if (!mergedMap.has(refKey)) {
+                mergedMap.set(refKey, {
+                  id: localItem.id || refKey,
+                  referenceId: localItem.referenceId || refKey,
+                  practiceArea: localItem.practiceArea || 'Tax & Corporate Advisory',
+                  practiceAreaId: localItem.practiceAreaId,
+                  expertiseArea: localItem.expertiseArea,
+                  assignedPartner: localItem.assignedPartner,
+                  division: localItem.division || PRACTICE_DIVISIONS[localItem.practiceArea] || 'Accounticca Advisory',
+                  mode: localItem.mode === 'in_person' ? 'in_person' : 'virtual',
+                  date: localItem.date,
+                  timeSlot: localItem.timeSlot,
+                  clientName: localItem.clientName,
+                  email: localItem.email || userEmail || '',
+                  phone: localItem.phone || '',
+                  companyName: localItem.companyName || '',
+                  notes: localItem.notes || '',
+                  userId: localItem.userId || userId,
+                  userEmail: localItem.userEmail || userEmail || undefined,
+                  status: normalizeStatus(localItem.status || 'Confirmed'),
+                  cancellationReason: localItem.cancellationReason,
+                  cancelledAt: localItem.cancelledAt,
+                  meetingLink: localItem.mode === 'virtual' ? (localItem.meetingLink || DEFAULT_MEET_LINK) : undefined,
+                  chamberLocation: localItem.mode === 'in_person' ? (localItem.chamberLocation || CHAMBER_ADDRESS) : undefined,
+                  chamberHotline: CHAMBER_HOTLINE,
+                  rating: localItem.rating,
+                  lastNotification: localItem.lastNotification,
+                  createdAt: localItem.createdAt || new Date().toISOString()
+                });
+              }
+            }
+          });
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
+    // 3. Merge user-specific local storage cache (or seed if completely empty)
+    try {
+      const userKey = `${LOCAL_STORAGE_KEY_PREFIX}${userId}`;
+      const userLocal = localStorage.getItem(userKey);
+      if (userLocal) {
+        const parsedUserList: Appointment[] = JSON.parse(userLocal);
+        if (Array.isArray(parsedUserList)) {
+          parsedUserList.forEach(item => {
+            const key = item.referenceId || item.id;
+            if (mergedMap.has(key)) {
+              const existing = mergedMap.get(key)!;
+              // If existing is a non-Firestore seed/local record, allow local status overrides
+              if (existing.id.startsWith('seed-') || existing.id.startsWith('local-')) {
+                mergedMap.set(key, { ...existing, ...item, status: normalizeStatus(item.status) });
+              }
+            } else {
+              mergedMap.set(key, { ...item, status: normalizeStatus(item.status) });
+            }
+          });
+        }
+      } else if (mergedMap.size === 0) {
+        // Seed initial Pending, Confirmed, and Cancelled appointments so logged-in user can inspect all states immediately
+        const seeded = createSeedAppointments({
+          uid: userId,
+          email: userEmail,
+          displayName: auth.currentUser?.displayName || 'Authorized Client'
+        });
+        try {
+          localStorage.setItem(userKey, JSON.stringify(seeded));
+        } catch {
+          // ignore
+        }
+        seeded.forEach(item => mergedMap.set(item.referenceId, item));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
+    const list = Array.from(mergedMap.values()).sort(
+      (a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()
+    );
+
+    onUpdate(list, {
+      isLiveFirestore: isLiveConnected,
+      lastSyncedAt: new Date().toISOString(),
+      firestoreCount
+    });
+  };
+
+  // Emit initial local state immediately while Firestore snapshots connect
+  emitMerged();
+
+  const unsubscribers: Array<() => void> = [];
+
+  try {
+    const appointmentsRef = collection(db, COLLECTION_NAME);
+
+    if (userId && userId !== 'demo-client-uid') {
+      const qUid = query(appointmentsRef, where('userId', '==', userId));
+      const unsubUid = onSnapshot(
+        qUid,
+        snapshot => {
+          isLiveConnected = true;
+          firestoreByUid.clear();
+          snapshot.forEach(docSnap => {
+            const item = parseDocToAppointment(docSnap);
+            firestoreByUid.set(item.referenceId || item.id, item);
+          });
+          emitMerged();
+        },
+        err => {
+          console.warn('Firestore real-time userId listener notice:', err);
+          emitMerged();
+        }
+      );
+      unsubscribers.push(unsubUid);
+    }
+
+    if (userEmail) {
+      const qEmail = query(appointmentsRef, where('email', '==', userEmail));
+      const unsubEmail = onSnapshot(
+        qEmail,
+        snapshot => {
+          isLiveConnected = true;
+          firestoreByEmail.clear();
+          snapshot.forEach(docSnap => {
+            const item = parseDocToAppointment(docSnap);
+            firestoreByEmail.set(item.referenceId || item.id, item);
+          });
+          emitMerged();
+        },
+        err => {
+          console.warn('Firestore real-time email listener notice:', err);
+          emitMerged();
+        }
+      );
+      unsubscribers.push(unsubEmail);
+    }
+  } catch (err) {
+    console.warn('Could not attach Firestore real-time appointment listeners:', err);
+  }
+
+  const handleLocalChange = () => {
+    emitMerged();
+  };
+
+  window.addEventListener('accounticca:appointment-updated', handleLocalChange);
+  window.addEventListener('storage', handleLocalChange);
+
+  return () => {
+    unsubscribers.forEach(unsub => unsub());
+    window.removeEventListener('accounticca:appointment-updated', handleLocalChange);
+    window.removeEventListener('storage', handleLocalChange);
+  };
+}
+
+/**
+ * Creates a new appointment directly from the Client Portal and saves it to Firestore & local cache
+ */
+export async function createQuickPortalAppointment(params: {
+  userId: string;
+  userEmail: string;
+  clientName: string;
+  companyName?: string;
+  phone?: string;
+  practiceArea: string;
+  expertiseArea?: string;
+  mode: 'virtual' | 'in_person';
+  date: string;
+  timeSlot: string;
+  notes?: string;
+  status?: AppointmentStatus;
+}): Promise<Appointment> {
+  const referenceId = `APT-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+  const status: AppointmentStatus = params.status || 'Pending';
+  const division = PRACTICE_DIVISIONS[params.practiceArea] || 'Accounticca Advisory';
+  const nowIso = new Date().toISOString();
+
+  let docId = `local-${Date.now()}`;
+
+  try {
+    if (params.userId && params.userId !== 'demo-client-uid') {
+      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+        referenceId,
+        practiceArea: params.practiceArea,
+        expertiseArea: params.expertiseArea || 'Executive Consultation Scoping',
+        division,
+        mode: params.mode,
+        date: params.date,
+        timeSlot: params.timeSlot,
+        clientName: params.clientName,
+        email: params.userEmail,
+        phone: params.phone || '+880 1712-345678',
+        companyName: params.companyName || 'Corporate Client',
+        notes: params.notes || '',
+        userId: params.userId,
+        userEmail: params.userEmail,
+        status: status.toLowerCase(),
+        meetingLink: params.mode === 'virtual' ? DEFAULT_MEET_LINK : null,
+        chamberLocation: params.mode === 'in_person' ? CHAMBER_ADDRESS : null,
+        createdAt: serverTimestamp()
+      });
+      docId = docRef.id;
+    }
+  } catch (err) {
+    console.warn('Saved quick portal appointment locally:', err);
+  }
+
+  const created: Appointment = {
+    id: docId,
+    referenceId,
+    practiceArea: params.practiceArea,
+    expertiseArea: params.expertiseArea || 'Executive Consultation Scoping',
+    division,
+    mode: params.mode,
+    date: params.date,
+    timeSlot: params.timeSlot,
+    clientName: params.clientName,
+    email: params.userEmail,
+    phone: params.phone || '+880 1712-345678',
+    companyName: params.companyName || 'Corporate Client',
+    notes: params.notes || '',
+    userId: params.userId,
+    userEmail: params.userEmail,
+    status,
+    meetingLink: params.mode === 'virtual' ? DEFAULT_MEET_LINK : undefined,
+    chamberLocation: params.mode === 'in_person' ? CHAMBER_ADDRESS : undefined,
+    chamberHotline: CHAMBER_HOTLINE,
+    createdAt: nowIso
+  };
+
+  try {
+    const userKey = `${LOCAL_STORAGE_KEY_PREFIX}${params.userId}`;
+    const raw = localStorage.getItem(userKey);
+    const list: Appointment[] = raw ? JSON.parse(raw) : [];
+    localStorage.setItem(userKey, JSON.stringify([created, ...list]));
+  } catch {
+    // ignore
+  }
+
+  try {
+    const rawShared = localStorage.getItem(SHARED_BOOKED_KEY);
+    const sharedList: any[] = rawShared ? JSON.parse(rawShared) : [];
+    localStorage.setItem(SHARED_BOOKED_KEY, JSON.stringify([created, ...sharedList]));
+  } catch {
+    // ignore
+  }
+
+  window.dispatchEvent(new CustomEvent('accounticca:appointment-updated'));
+  return created;
+}
+
 /**
  * Updates an appointment's status (Pending, Confirmed, Cancelled) in Firestore and local storage
  */
@@ -453,18 +791,27 @@ export async function updateAppointmentStatus(
 ): Promise<void> {
   // 1. Try Firestore update
   try {
-    // If appointmentId is a valid Firestore doc id
-    if (appointmentId && !appointmentId.startsWith('seed-') && !appointmentId.startsWith('local-')) {
+    const updatePayload: Record<string, any> = {
+      status: newStatus.toLowerCase(),
+      updatedAt: serverTimestamp()
+    };
+    if (reason) {
+      updatePayload.cancellationReason = reason;
+      updatePayload.cancelledAt = new Date().toISOString();
+    } else if (newStatus !== 'Cancelled') {
+      updatePayload.cancellationReason = null;
+      updatePayload.cancelledAt = null;
+    }
+
+    if (appointmentId && !appointmentId.startsWith('seed-') && !appointmentId.startsWith('local-') && !appointmentId.startsWith('APT-')) {
       const docRef = doc(db, COLLECTION_NAME, appointmentId);
-      const updatePayload: Record<string, any> = {
-        status: newStatus.toLowerCase(),
-        updatedAt: serverTimestamp()
-      };
-      if (reason) {
-        updatePayload.cancellationReason = reason;
-        updatePayload.cancelledAt = new Date().toISOString();
-      }
       await updateDoc(docRef, updatePayload);
+    } else if (referenceId) {
+      const qRef = query(collection(db, COLLECTION_NAME), where('referenceId', '==', referenceId));
+      const snap = await getDocs(qRef);
+      if (!snap.empty) {
+        await updateDoc(snap.docs[0].ref, updatePayload);
+      }
     }
   } catch (err) {
     console.warn('Could not update Firestore appointment directly, persisting in local storage:', err);
@@ -573,6 +920,8 @@ export async function updateAppointmentStatus(
       console.warn('Notification processing notice:', notifErr);
     }
   }
+
+  window.dispatchEvent(new CustomEvent('accounticca:appointment-updated'));
 }
 
 /**

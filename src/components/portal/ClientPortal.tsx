@@ -44,7 +44,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePurchases } from '../../contexts/PurchaseContext';
 import { getStoredPortalNotifications, ClientPortalNotification } from '../../services/invoiceReminderService';
-import { Appointment, fetchUserAppointments, getGoogleCalendarUrl, downloadIcsFile } from '../../services/appointmentService';
+import { Appointment, subscribeToUserAppointments, getGoogleCalendarUrl, downloadIcsFile } from '../../services/appointmentService';
 import { 
   ClientDocument, 
   fetchClientDocuments, 
@@ -55,6 +55,7 @@ import { UploadDocumentModal } from './UploadDocumentModal';
 import { PaymentHistory } from './PaymentHistory';
 import { SharedClientCalendar } from './SharedClientCalendar';
 import { ClientBookingDashboard } from '../ClientBookingDashboard';
+import { MyAppointmentsSection } from './MyAppointmentsSection';
 
 export const ClientPortal: React.FC = () => {
   const { user, authUser, signInWithGoogle, logout } = useAuth();
@@ -128,25 +129,27 @@ export const ClientPortal: React.FC = () => {
     email: 'client.executive@apex-global.com'
   } as any : null);
 
-  // Load consultations
+  // Subscribe to consultations in real time
   useEffect(() => {
-    if (!activeUser) {
+    if (!activeUser?.uid) {
       setIsLoadingAppointments(false);
       return;
     }
 
     setIsLoadingAppointments(true);
-    fetchUserAppointments(activeUser.uid, activeUser.email || undefined)
-      .then(apps => {
-        setAppointments(apps);
-      })
-      .catch(err => {
-        console.warn('Error loading user consultations:', err);
-      })
-      .finally(() => {
+    const unsubscribe = subscribeToUserAppointments(
+      activeUser.uid,
+      activeUser.email || undefined,
+      (liveApps) => {
+        setAppointments(liveApps);
         setIsLoadingAppointments(false);
-      });
-  }, [activeUser]);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [activeUser?.uid, activeUser?.email]);
 
   // Load documents
   useEffect(() => {
@@ -434,7 +437,7 @@ export const ClientPortal: React.FC = () => {
           }`}
         >
           <Calendar className="w-4 h-4 text-emerald-400" />
-          <span>Ongoing Consultations</span>
+          <span>My Appointments</span>
           <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
             activePortalTab === 'consultations' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
           }`}>
@@ -513,6 +516,14 @@ export const ClientPortal: React.FC = () => {
       {/* TAB 1: OVERVIEW */}
       {activePortalTab === 'overview' && (
         <div className="space-y-6 animate-in fade-in duration-150">
+          {/* My Appointments Real-Time Status Dashboard Section */}
+          <MyAppointmentsSection
+            userId={activeUser.uid}
+            userEmail={activeUser.email}
+            userName={activeUser.displayName}
+            onViewDocumentsForRef={handleFilterDocsByConsultation}
+          />
+
           {/* Purchased Products & Digital Toolkits Vault */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-200/90 shadow-sm space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -966,9 +977,16 @@ export const ClientPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: ONGOING CONSULTATIONS */}
+      {/* TAB 2: MY APPOINTMENTS & ONGOING CONSULTATIONS */}
       {activePortalTab === 'consultations' && (
         <div className="space-y-6 animate-in fade-in duration-150">
+          <MyAppointmentsSection
+            userId={activeUser.uid}
+            userEmail={activeUser.email}
+            userName={activeUser.displayName}
+            onViewDocumentsForRef={handleFilterDocsByConsultation}
+          />
+
           <ClientBookingDashboard
             title="Scheduled Consultations & Booking Manager"
             subtitle="View upcoming appointments, track real-time /workspace calendar sync and 3-hour advance reminders, or cancel bookings if necessary."
