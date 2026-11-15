@@ -178,6 +178,7 @@ export function FooterNewsletter() {
             topics: selectedTopics,
             sourceCategory: 'footer_compliance',
             turnstileToken,
+            'cf-turnstile-response': turnstileToken,
           }),
         });
         if (subRes.status === 403) {

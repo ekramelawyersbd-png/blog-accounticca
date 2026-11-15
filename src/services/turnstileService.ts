@@ -1,13 +1,20 @@
 /**
  * Cloudflare Turnstile Client Configuration & Verification Helper
  *
- * Uses `VITE_TURNSTILE_SITE_KEY` on authorized production domains,
- * and automatically uses Cloudflare's official Always-Passes testing sitekey
- * (`1x00000000000000000000AA`) on local/preview development hostnames.
+ * Uses the project's Turnstile widget site key (`0x4AAAAAAGCW2H9ASNhKzhcu` or `VITE_TURNSTILE_SITE_KEY`),
+ * with automatic fallback in TurnstileWidget if a preview domain is not yet added to the widget's domain allowlist.
  */
 
+export const DEFAULT_TURNSTILE_SITE_KEY = '0x4AAAAAAGCXo5pLXTP4rONr';
 export const CLOUDFLARE_TEST_SITE_KEY = '1x00000000000000000000AA';
 export const CLOUDFLARE_DUMMY_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX';
+
+const STALE_SITE_KEYS = new Set([
+  'your_turnstile_site_key',
+  'YOUR_SITE_KEY',
+  '0x4AAAAAAGBkPsSQei2rRiGP',
+  '0x4AAAAAAGCW2H9ASNhKzhcu',
+]);
 
 export function isPreviewOrLocalHostname(): boolean {
   if (typeof window === 'undefined' || !window.location?.hostname) {
@@ -24,10 +31,6 @@ export function isPreviewOrLocalHostname(): boolean {
 }
 
 export function getTurnstileSiteKey(): string {
-  if (isPreviewOrLocalHostname()) {
-    return CLOUDFLARE_TEST_SITE_KEY;
-  }
-
   const configured =
     typeof import.meta !== 'undefined' &&
     import.meta.env &&
@@ -35,15 +38,11 @@ export function getTurnstileSiteKey(): string {
       ? import.meta.env.VITE_TURNSTILE_SITE_KEY.trim()
       : '';
 
-  if (
-    configured &&
-    configured !== 'your_turnstile_site_key' &&
-    configured !== 'YOUR_SITE_KEY'
-  ) {
+  if (configured && !STALE_SITE_KEYS.has(configured)) {
     return configured;
   }
 
-  return CLOUDFLARE_TEST_SITE_KEY;
+  return DEFAULT_TURNSTILE_SITE_KEY;
 }
 
 export function isUsingTestTurnstileKey(): boolean {
@@ -63,7 +62,8 @@ export async function verifyTurnstileTokenClient(
   token: string,
   action?: string
 ): Promise<TurnstileVerificationResult> {
-  if (!token || !token.trim()) {
+  const cleanToken = typeof token === 'string' ? token.trim() : '';
+  if (!cleanToken) {
     return {
       success: false,
       message: 'Please complete the Cloudflare Turnstile security check first.',
@@ -74,7 +74,12 @@ export async function verifyTurnstileTokenClient(
     const response = await fetch('/api/security/turnstile/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token.trim(), action }),
+      body: JSON.stringify({
+        token: cleanToken,
+        turnstileToken: cleanToken,
+        'cf-turnstile-response': cleanToken,
+        action,
+      }),
     });
 
     const data = await response.json().catch(() => ({}));

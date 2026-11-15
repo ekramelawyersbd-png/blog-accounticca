@@ -261,6 +261,7 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
           subject: values.subject.trim(),
           message: values.message.trim(),
           turnstileToken,
+          'cf-turnstile-response': turnstileToken,
         }),
       });
 

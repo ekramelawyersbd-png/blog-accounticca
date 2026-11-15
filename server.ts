@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -257,32 +258,37 @@ app.get('/api/health', (_req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     brevoRelay: getBrevoRelayConfig(),
-    turnstileConfigured: Boolean(process.env.TURNSTILE_SECRET_KEY?.trim()),
+    turnstileConfigured: Boolean(
+      process.env.TURNSTILE_SECRET?.trim() || process.env.TURNSTILE_SECRET_KEY?.trim()
+    ),
+    turnstileSiteKey: DEFAULT_TURNSTILE_SITE_KEY,
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cloudflare Turnstile Human Verification API
 // ─────────────────────────────────────────────────────────────────────────────
+const DEFAULT_TURNSTILE_SITE_KEY = '0x4AAAAAAGCXo5pLXTP4rONr';
 const CLOUDFLARE_TEST_SITE_KEY = '1x00000000000000000000AA';
 const CLOUDFLARE_TEST_SECRET_KEY = '1x0000000000000000000000000000000AA';
+const STALE_TURNSTILE_SITE_KEYS = new Set([
+  'your_turnstile_site_key',
+  'YOUR_SITE_KEY',
+  '0x4AAAAAAGBkPsSQei2rRiGP',
+  '0x4AAAAAAGCW2H9ASNhKzhcu',
+]);
+const redeemedTurnstileTokens = new Map<string, number>();
 
-function isPreviewOrLocalHost(hostname?: string): boolean {
-  if (!hostname) return false;
-  const h = hostname.toLowerCase().split(':')[0];
-  return (
-    h === 'localhost' ||
-    h === '127.0.0.1' ||
-    h.endsWith('.run.app') ||
-    h.endsWith('.web.app') ||
-    h.endsWith('.firebaseapp.com')
-  );
+function cleanupRedeemedTurnstileTokens(): void {
+  const now = Date.now();
+  for (const [tok, expiresAt] of redeemedTurnstileTokens.entries()) {
+    if (expiresAt <= now) {
+      redeemedTurnstileTokens.delete(tok);
+    }
+  }
 }
 
-function resolveServerTurnstileSiteKey(hostname?: string): string {
-  if (isPreviewOrLocalHost(hostname)) {
-    return CLOUDFLARE_TEST_SITE_KEY;
-  }
+function resolveServerTurnstileSiteKey(): string {
   const candidates = [
     process.env.VITE_TURNSTILE_SITE_KEY,
     process.env.TURNSTILE_SITE_KEY,
@@ -290,15 +296,11 @@ function resolveServerTurnstileSiteKey(hostname?: string): string {
   ];
   for (const val of candidates) {
     const trimmed = typeof val === 'string' ? val.trim() : '';
-    if (
-      trimmed &&
-      trimmed !== 'your_turnstile_site_key' &&
-      trimmed !== 'YOUR_SITE_KEY'
-    ) {
+    if (trimmed && !STALE_TURNSTILE_SITE_KEYS.has(trimmed)) {
       return trimmed;
     }
   }
-  return CLOUDFLARE_TEST_SITE_KEY;
+  return DEFAULT_TURNSTILE_SITE_KEY;
 }
 
 function resolveServerTurnstileSecretKey(token: string): {
@@ -312,6 +314,7 @@ function resolveServerTurnstileSecretKey(token: string): {
   }
 
   const candidates = [
+    process.env.TURNSTILE_SECRET,
     process.env.TURNSTILE_SECRET_KEY,
     process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
   ];
@@ -328,6 +331,20 @@ function resolveServerTurnstileSecretKey(token: string): {
   return { secret: CLOUDFLARE_TEST_SECRET_KEY, usingTestKey: true };
 }
 
+function extractTurnstileToken(body: any): string | undefined {
+  if (!body || typeof body !== 'object') return undefined;
+  if (body['cf-turnstile-response'] !== undefined) {
+    return String(body['cf-turnstile-response'] || '');
+  }
+  if (body.turnstileToken !== undefined) {
+    return String(body.turnstileToken || '');
+  }
+  if (body.token !== undefined) {
+    return String(body.token || '');
+  }
+  return undefined;
+}
+
 function resolveClientIp(req: express.Request): string | undefined {
   const cfConnectingIp = req.headers['cf-connecting-ip'];
   if (typeof cfConnectingIp === 'string' && cfConnectingIp.trim()) {
@@ -342,7 +359,8 @@ function resolveClientIp(req: express.Request): string | undefined {
 
 async function verifyTurnstileToken(
   token: string,
-  remoteIp?: string
+  remoteIp?: string,
+  expectedAction?: string
 ): Promise<{
   success: boolean;
   message?: string;
@@ -351,34 +369,87 @@ async function verifyTurnstileToken(
   hostname?: string;
   usingTestKey: boolean;
 }> {
-  const cleanToken = String(token || '').trim();
+  const cleanToken = typeof token === 'string' ? token.trim() : '';
   const { secret, usingTestKey } = resolveServerTurnstileSecretKey(cleanToken);
 
-  if (!cleanToken) {
+  if (!cleanToken || cleanToken.length > 2048) {
     return {
       success: false,
-      message: 'Missing Cloudflare Turnstile verification token.',
+      message: 'Missing or invalid Cloudflare Turnstile verification token.',
       errorCodes: ['missing-input-response'],
       usingTestKey,
     };
   }
 
+  cleanupRedeemedTurnstileTokens();
+  if (!cleanToken.includes('DUMMY.TOKEN') && redeemedTurnstileTokens.has(cleanToken)) {
+    return {
+      success: false,
+      message: 'Cloudflare Turnstile token has already been used. Please complete a fresh challenge.',
+      errorCodes: ['timeout-or-duplicate'],
+      usingTestKey,
+    };
+  }
+
+  const expectedHostnames = new Set(
+    (process.env.TURNSTILE_HOSTNAMES ?? '')
+      .split(',')
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
   try {
-    const form = new URLSearchParams();
-    form.append('secret', secret);
-    form.append('response', cleanToken);
-    if (remoteIp && !usingTestKey) {
-      form.append('remoteip', remoteIp);
-    }
+    const form = new URLSearchParams({
+      secret,
+      response: cleanToken,
+      ...(remoteIp && !usingTestKey ? { remoteip: remoteIp } : {}),
+    });
 
     const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: form.toString(),
+      signal: AbortSignal.timeout(10_000),
+      body: form,
     });
 
+    if (!verifyRes.ok) {
+      throw new Error(`siteverify ${verifyRes.status}`);
+    }
+
     const data: any = await verifyRes.json().catch(() => ({}));
-    if (data?.success) {
+    if (data?.success === true) {
+      if (
+        !usingTestKey &&
+        expectedAction &&
+        typeof data.action === 'string' &&
+        data.action.length > 0 &&
+        data.action !== expectedAction
+      ) {
+        return {
+          success: false,
+          message: 'Cloudflare Turnstile action mismatch.',
+          errorCodes: ['action-mismatch'],
+          usingTestKey,
+        };
+      }
+
+      if (
+        !usingTestKey &&
+        expectedHostnames.size > 0 &&
+        (!data.hostname || !expectedHostnames.has(String(data.hostname).toLowerCase()))
+      ) {
+        return {
+          success: false,
+          message: 'Cloudflare Turnstile hostname mismatch.',
+          errorCodes: ['hostname-mismatch'],
+          usingTestKey,
+        };
+      }
+
+      if (!cleanToken.includes('DUMMY.TOKEN')) {
+        redeemedTurnstileTokens.set(cleanToken, Date.now() + 10 * 60 * 1000);
+      }
+
       return {
         success: true,
         action: data.action,
@@ -411,9 +482,8 @@ async function verifyTurnstileToken(
   }
 }
 
-app.get('/api/security/turnstile/config', (req, res) => {
-  const hostHeader = typeof req.headers.host === 'string' ? req.headers.host : req.hostname;
-  const siteKey = resolveServerTurnstileSiteKey(hostHeader);
+app.get('/api/security/turnstile/config', (_req, res) => {
+  const siteKey = resolveServerTurnstileSiteKey();
   res.json({
     success: true,
     enabled: true,
@@ -423,8 +493,12 @@ app.get('/api/security/turnstile/config', (req, res) => {
 });
 
 app.post('/api/security/turnstile/verify', async (req, res) => {
-  const token = String(req.body?.token || req.body?.turnstileToken || '').trim();
-  const result = await verifyTurnstileToken(token, resolveClientIp(req));
+  const token = extractTurnstileToken(req.body) || '';
+  const expectedAction =
+    typeof req.body?.action === 'string' && req.body.action.trim()
+      ? req.body.action.trim()
+      : undefined;
+  const result = await verifyTurnstileToken(token, resolveClientIp(req), expectedAction);
   if (!result.success) {
     res.status(403).json(result);
     return;
@@ -569,9 +643,10 @@ app.post('/api/admin/logout', (req, res) => {
 // Auth, Email & Brevo Relay Endpoints
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/auth/reset-password', async (req, res) => {
-  if (req.body?.turnstileToken !== undefined) {
+  const resetTurnstileToken = extractTurnstileToken(req.body);
+  if (resetTurnstileToken !== undefined) {
     const turnstileCheck = await verifyTurnstileToken(
-      String(req.body.turnstileToken || ''),
+      resetTurnstileToken,
       resolveClientIp(req)
     );
     if (!turnstileCheck.success) {
@@ -847,10 +922,12 @@ app.post('/api/email/brevo-test', async (req, res) => {
 });
 
 app.post('/api/subscribe-newsletter', async (req, res) => {
-  if (req.body?.turnstileToken !== undefined) {
+  const newsletterTurnstileToken = extractTurnstileToken(req.body);
+  if (newsletterTurnstileToken !== undefined) {
     const turnstileCheck = await verifyTurnstileToken(
-      String(req.body.turnstileToken || ''),
-      resolveClientIp(req)
+      newsletterTurnstileToken,
+      resolveClientIp(req),
+      'newsletter_subscribe'
     );
     if (!turnstileCheck.success) {
       res.status(403).json({
@@ -1877,9 +1954,10 @@ app.get('/api/email/calculation-logs', (_req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/appointments/notify', async (req, res) => {
   const payload = req.body || {};
-  if (payload.turnstileToken !== undefined) {
+  const apptTurnstileToken = extractTurnstileToken(payload);
+  if (apptTurnstileToken !== undefined) {
     const turnstileCheck = await verifyTurnstileToken(
-      String(payload.turnstileToken || ''),
+      apptTurnstileToken,
       resolveClientIp(req)
     );
     if (!turnstileCheck.success) {
@@ -2107,10 +2185,12 @@ app.get('/api/contact/support-config', (_req, res) => {
 app.post('/api/contact/support', async (req, res) => {
   try {
     const body = req.body || {};
-    if (body.turnstileToken !== undefined) {
+    const supportTurnstileToken = extractTurnstileToken(body);
+    if (supportTurnstileToken !== undefined) {
       const turnstileCheck = await verifyTurnstileToken(
-        String(body.turnstileToken || ''),
-        resolveClientIp(req)
+        supportTurnstileToken,
+        resolveClientIp(req),
+        'support_contact'
       );
       if (!turnstileCheck.success) {
         res.status(403).json({
@@ -2259,9 +2339,10 @@ app.post('/api/contact/support', async (req, res) => {
 });
 
 app.post('/api/contact/submit', async (req, res) => {
-  if (req.body?.turnstileToken !== undefined) {
+  const contactTurnstileToken = extractTurnstileToken(req.body);
+  if (contactTurnstileToken !== undefined) {
     const turnstileCheck = await verifyTurnstileToken(
-      String(req.body.turnstileToken || ''),
+      contactTurnstileToken,
       resolveClientIp(req)
     );
     if (!turnstileCheck.success) {
@@ -2300,9 +2381,10 @@ app.get('/api/careers/applications', (req, res) => {
 });
 
 app.post('/api/careers/apply', async (req, res) => {
-  if (req.body?.turnstileToken !== undefined) {
+  const careerTurnstileToken = extractTurnstileToken(req.body);
+  if (careerTurnstileToken !== undefined) {
     const turnstileCheck = await verifyTurnstileToken(
-      String(req.body.turnstileToken || ''),
+      careerTurnstileToken,
       resolveClientIp(req)
     );
     if (!turnstileCheck.success) {

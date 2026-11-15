@@ -3,7 +3,6 @@ import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
 import {
   getTurnstileSiteKey,
-  isPreviewOrLocalHostname,
   CLOUDFLARE_TEST_SITE_KEY,
   CLOUDFLARE_DUMMY_TOKEN,
 } from '../../services/turnstileService';
@@ -40,17 +39,21 @@ export function TurnstileWidget({
 
   useEffect(() => {
     let mounted = true;
-    if (!isPreviewOrLocalHostname() && siteKey === CLOUDFLARE_TEST_SITE_KEY) {
-      fetch('/api/security/turnstile/config')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (mounted && data?.siteKey && typeof data.siteKey === 'string' && data.siteKey !== siteKey) {
-            setSiteKey(data.siteKey);
-            setInstanceKey((prev) => prev + 1);
-          }
-        })
-        .catch(() => {});
-    }
+    fetch('/api/security/turnstile/config')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (
+          mounted &&
+          data?.siteKey &&
+          typeof data.siteKey === 'string' &&
+          data.siteKey !== siteKey &&
+          siteKey !== CLOUDFLARE_TEST_SITE_KEY
+        ) {
+          setSiteKey(data.siteKey);
+          setInstanceKey((prev) => prev + 1);
+        }
+      })
+      .catch(() => {});
     return () => {
       mounted = false;
     };
@@ -73,7 +76,11 @@ export function TurnstileWidget({
     setStatus('pending');
     setErrorCode(null);
     onVerifyRef.current(null);
-    setInstanceKey((prev) => prev + 1);
+    if (turnstileRef.current) {
+      turnstileRef.current.reset();
+    } else {
+      setInstanceKey((prev) => prev + 1);
+    }
   };
 
   const isDark = theme === 'dark';
@@ -160,6 +167,8 @@ export function TurnstileWidget({
               size,
               appearance,
               refreshExpired: 'auto',
+              responseField: true,
+              responseFieldName: 'cf-turnstile-response',
             }}
             onSuccess={(token) => {
               setStatus('verified');

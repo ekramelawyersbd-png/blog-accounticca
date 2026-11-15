@@ -168,9 +168,11 @@ export function Auth() {
         const result = await authService.requestPasswordReset(email.trim());
         setSuccessMessage(result.message);
         setError(null);
+        setTurnstileResetSignal((prev) => prev + 1);
       } catch (err: any) {
         setError(formatAuthError(err));
         setSuccessMessage(null);
+        setTurnstileResetSignal((prev) => prev + 1);
       } finally {
         setIsLoading(false);
       }
@@ -221,6 +223,7 @@ export function Auth() {
           }
         }
         if (isWorkspaceTarget) {
+          setTurnstileResetSignal((prev) => prev + 1);
           setError('Access denied. To enter /workspace, you must login with ID: hmekram@gmail.com and Password: 123ekraM.com.');
           return;
         }
@@ -267,6 +270,7 @@ export function Auth() {
         navigate(from === '/auth' || from === '/login' ? '/client-portal' : from, { replace: true });
       }
     } catch (err: any) {
+      setTurnstileResetSignal((prev) => prev + 1);
       setError(formatAuthError(err));
     } finally {
       setIsLoading(false);
