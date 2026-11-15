@@ -267,7 +267,22 @@ app.get('/api/health', (_req, res) => {
 const CLOUDFLARE_TEST_SITE_KEY = '1x00000000000000000000AA';
 const CLOUDFLARE_TEST_SECRET_KEY = '1x0000000000000000000000000000000AA';
 
-function resolveServerTurnstileSiteKey(): string {
+function isPreviewOrLocalHost(hostname?: string): boolean {
+  if (!hostname) return false;
+  const h = hostname.toLowerCase().split(':')[0];
+  return (
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h.endsWith('.run.app') ||
+    h.endsWith('.web.app') ||
+    h.endsWith('.firebaseapp.com')
+  );
+}
+
+function resolveServerTurnstileSiteKey(hostname?: string): string {
+  if (isPreviewOrLocalHost(hostname)) {
+    return CLOUDFLARE_TEST_SITE_KEY;
+  }
   const candidates = [
     process.env.VITE_TURNSTILE_SITE_KEY,
     process.env.TURNSTILE_SITE_KEY,
@@ -396,8 +411,9 @@ async function verifyTurnstileToken(
   }
 }
 
-app.get('/api/security/turnstile/config', (_req, res) => {
-  const siteKey = resolveServerTurnstileSiteKey();
+app.get('/api/security/turnstile/config', (req, res) => {
+  const hostHeader = typeof req.headers.host === 'string' ? req.headers.host : req.hostname;
+  const siteKey = resolveServerTurnstileSiteKey(hostHeader);
   res.json({
     success: true,
     enabled: true,

@@ -1,14 +1,33 @@
 /**
  * Cloudflare Turnstile Client Configuration & Verification Helper
  *
- * Uses `VITE_TURNSTILE_SITE_KEY` when provided in environment configuration,
- * and falls back to Cloudflare's official Always-Passes testing sitekey
- * (`1x00000000000000000000AA`) during local/preview development.
+ * Uses `VITE_TURNSTILE_SITE_KEY` on authorized production domains,
+ * and automatically uses Cloudflare's official Always-Passes testing sitekey
+ * (`1x00000000000000000000AA`) on local/preview development hostnames.
  */
 
 export const CLOUDFLARE_TEST_SITE_KEY = '1x00000000000000000000AA';
+export const CLOUDFLARE_DUMMY_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX';
+
+export function isPreviewOrLocalHostname(): boolean {
+  if (typeof window === 'undefined' || !window.location?.hostname) {
+    return false;
+  }
+  const h = window.location.hostname.toLowerCase();
+  return (
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h.endsWith('.run.app') ||
+    h.endsWith('.web.app') ||
+    h.endsWith('.firebaseapp.com')
+  );
+}
 
 export function getTurnstileSiteKey(): string {
+  if (isPreviewOrLocalHostname()) {
+    return CLOUDFLARE_TEST_SITE_KEY;
+  }
+
   const configured =
     typeof import.meta !== 'undefined' &&
     import.meta.env &&
@@ -16,7 +35,15 @@ export function getTurnstileSiteKey(): string {
       ? import.meta.env.VITE_TURNSTILE_SITE_KEY.trim()
       : '';
 
-  return configured || CLOUDFLARE_TEST_SITE_KEY;
+  if (
+    configured &&
+    configured !== 'your_turnstile_site_key' &&
+    configured !== 'YOUR_SITE_KEY'
+  ) {
+    return configured;
+  }
+
+  return CLOUDFLARE_TEST_SITE_KEY;
 }
 
 export function isUsingTestTurnstileKey(): boolean {

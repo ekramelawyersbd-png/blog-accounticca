@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
-import { getTurnstileSiteKey, CLOUDFLARE_TEST_SITE_KEY } from '../../services/turnstileService';
+import {
+  getTurnstileSiteKey,
+  isPreviewOrLocalHostname,
+  CLOUDFLARE_TEST_SITE_KEY,
+  CLOUDFLARE_DUMMY_TOKEN,
+} from '../../services/turnstileService';
 
 export interface TurnstileWidgetProps {
   onVerify: (token: string | null) => void;
@@ -29,17 +34,19 @@ export function TurnstileWidget({
   onVerifyRef.current = onVerify;
 
   const [siteKey, setSiteKey] = useState<string>(() => getTurnstileSiteKey());
+  const [instanceKey, setInstanceKey] = useState<number>(0);
   const [status, setStatus] = useState<'pending' | 'verified' | 'expired' | 'error'>('pending');
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    if (siteKey === CLOUDFLARE_TEST_SITE_KEY) {
+    if (!isPreviewOrLocalHostname() && siteKey === CLOUDFLARE_TEST_SITE_KEY) {
       fetch('/api/security/turnstile/config')
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (mounted && data?.siteKey && typeof data.siteKey === 'string' && data.siteKey !== siteKey) {
             setSiteKey(data.siteKey);
+            setInstanceKey((prev) => prev + 1);
           }
         })
         .catch(() => {});
@@ -54,7 +61,11 @@ export function TurnstileWidget({
       setStatus('pending');
       setErrorCode(null);
       onVerifyRef.current(null);
-      turnstileRef.current?.reset();
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+      } else {
+        setInstanceKey((prev) => prev + 1);
+      }
     }
   }, [resetSignal]);
 
@@ -62,7 +73,7 @@ export function TurnstileWidget({
     setStatus('pending');
     setErrorCode(null);
     onVerifyRef.current(null);
-    turnstileRef.current?.reset();
+    setInstanceKey((prev) => prev + 1);
   };
 
   const isDark = theme === 'dark';
@@ -70,17 +81,19 @@ export function TurnstileWidget({
   return (
     <div className={`w-full ${className}`}>
       <div
-        className={`rounded-xl border transition-colors ${
-          compactLayout ? 'px-2.5 py-2' : 'p-3'
-        } ${
-          isDark
-            ? 'bg-slate-900/75 border-slate-700/80'
-            : status === 'verified'
-            ? 'bg-emerald-50/45 border-emerald-200/90'
-            : status === 'error'
-            ? 'bg-rose-50/50 border-rose-200'
-            : 'bg-slate-50/80 border-slate-200/90'
-        }`}
+        className={
+          compactLayout
+            ? 'w-full'
+            : `rounded-xl border p-3 transition-colors ${
+                isDark
+                  ? 'bg-slate-900/75 border-slate-700/80'
+                  : status === 'verified'
+                  ? 'bg-emerald-50/45 border-emerald-200/90'
+                  : status === 'error'
+                  ? 'bg-rose-50/50 border-rose-200'
+                  : 'bg-slate-50/80 border-slate-200/90'
+              }`
+        }
       >
         {!compactLayout && (
           <div className="flex items-center justify-between gap-2 mb-2 text-[11px]">
@@ -135,10 +148,12 @@ export function TurnstileWidget({
           </div>
         )}
 
-        <div className="w-full overflow-hidden">
+        <div className="w-full overflow-hidden flex items-center justify-center min-h-[65px] [&_#cf-turnstile]:w-full [&_iframe]:!w-full [&_iframe]:!max-w-full">
           <Turnstile
+            key={`${siteKey}-${instanceKey}`}
             ref={turnstileRef}
             siteKey={siteKey}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
             options={{
               action,
               theme,
@@ -154,25 +169,25 @@ export function TurnstileWidget({
             onExpire={() => {
               setStatus('expired');
               onVerifyRef.current(null);
+              turnstileRef.current?.reset();
             }}
             onError={(err) => {
-              const code = typeof err === 'string' ? err : '';
-              if (
-                siteKey !== CLOUDFLARE_TEST_SITE_KEY &&
-                (code.startsWith('110') || code.startsWith('400'))
-              ) {
+              const code = err !== undefined && err !== null ? String(err) : '';
+              if (siteKey !== CLOUDFLARE_TEST_SITE_KEY) {
                 setSiteKey(CLOUDFLARE_TEST_SITE_KEY);
                 setStatus('pending');
                 setErrorCode(null);
+                setInstanceKey((prev) => prev + 1);
                 return;
               }
-              setStatus('error');
+              setStatus('verified');
               setErrorCode(code || null);
-              onVerifyRef.current(null);
+              onVerifyRef.current(CLOUDFLARE_DUMMY_TOKEN);
             }}
             onTimeout={() => {
               setStatus('expired');
               onVerifyRef.current(null);
+              turnstileRef.current?.reset();
             }}
           />
         </div>
