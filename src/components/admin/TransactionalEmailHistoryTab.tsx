@@ -18,6 +18,7 @@ import {
   Terminal,
   RotateCcw
 } from 'lucide-react';
+import { getAdminAuthHeaders } from '../../contexts/ShopAuthContext';
 
 export type EmailDeliveryStatus = 'delivered' | 'pending' | 'failed';
 export type EmailLogCategory = 'registration' | 'booking' | 'payment' | 'system';
@@ -153,7 +154,9 @@ export const TransactionalEmailHistoryTab: React.FC = () => {
   const fetchEmailHistory = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/email/history?limit=150');
+      const res = await fetch('/api/email/history?limit=150', {
+        headers: getAdminAuthHeaders()
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.logs)) {
@@ -212,7 +215,7 @@ export const TransactionalEmailHistoryTab: React.FC = () => {
     try {
       const res = await fetch(`/api/email/history/${encodeURIComponent(record.id)}/resend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ recipientEmail: record.recipientEmail })
       });
       const data = await res.json();
@@ -244,7 +247,7 @@ export const TransactionalEmailHistoryTab: React.FC = () => {
     try {
       const res = await fetch(`/api/email/history/${encodeURIComponent(record.id)}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ deliveryStatus: nextStatus })
       });
       const data = await res.json();
@@ -265,7 +268,7 @@ export const TransactionalEmailHistoryTab: React.FC = () => {
     try {
       const res = await fetch('/api/email/brevo-test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ recipientEmail: brevoRelay.senderEmail })
       });
       const data = await res.json();

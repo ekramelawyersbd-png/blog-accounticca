@@ -847,17 +847,18 @@ export const CareerMtoPage: React.FC = () => {
           'Multiple Openings',
           'Bachelor Degree (BBA / Law / Acc / Fin)',
           'Panthapath, Dhaka',
-          'Deadline: 31 October 2026',
+          'Status: Time Out (Closed)',
         ]}
         actions={
           <>
             <button
               type="button"
-              onClick={() => handleTabChange('apply')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+              disabled
+              aria-disabled="true"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 border border-slate-300 cursor-not-allowed"
             >
-              <FileText className="h-4 w-4" aria-hidden="true" />
-              <span>Apply Online Now (অনলাইন আবেদন)</span>
+              <Clock className="h-4 w-4 text-rose-600" aria-hidden="true" />
+              <span>Time Out — Application Closed</span>
             </button>
             <Link
               to="/Careers"
@@ -914,7 +915,7 @@ export const CareerMtoPage: React.FC = () => {
           },
           {
             icon: <Calendar className="h-4 w-4" aria-hidden="true" />,
-            label: 'Submission deadline: 31 October 2026 · Panthapath, Dhaka',
+            label: 'Status: Time Out (Closed) · Open tracks close 30 Nov 2026',
           },
         ]}
       >

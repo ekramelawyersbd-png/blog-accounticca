@@ -15,12 +15,12 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  subscribeToNewsletter, 
-  checkSubscriberStatus,
+import {
+  subscribeToNewsletter,
   DESIGNATION_LABELS,
-  ProfessionalDesignation 
+  ProfessionalDesignation,
 } from '../services/newsletterService';
+import { TurnstileWidget } from './security/TurnstileWidget';
 
 export interface NewsletterSignupProps {
   currentCategory?: string;
@@ -66,6 +66,8 @@ export function NewsletterSignup({
   const [errorMessage, setErrorMessage] = useState('');
   const [alreadySubscribedEmail, setAlreadySubscribedEmail] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   // Pre-fill user information if logged in
   useEffect(() => {
@@ -128,10 +130,16 @@ export function NewsletterSignup({
     setErrorMessage('');
 
     const cleanEmail = email.trim().toLowerCase();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (!cleanEmail || !emailPattern.test(cleanEmail)) {
       setStatus('error');
       setErrorMessage('Please enter a valid professional email address.');
+      return;
+    }
+
+    if (!turnstileToken) {
+      setStatus('error');
+      setErrorMessage('Please complete the Cloudflare Turnstile security check before subscribing.');
       return;
     }
 
@@ -139,7 +147,6 @@ export function NewsletterSignup({
     setStatus('idle');
 
     try {
-      // Direct Firestore persistence
       await subscribeToNewsletter({
         email: cleanEmail,
         name: name.trim() || undefined,
@@ -147,20 +154,23 @@ export function NewsletterSignup({
         organization: organization.trim() || undefined,
         topics: selectedTopics,
         source: variant === 'sidebar' ? 'sidebar' : variant === 'footer' ? 'footer' : 'article',
+        sourceCategory: variant === 'footer' ? 'footer_compliance' : undefined,
         sourceArticleId,
         sourceArticleTitle,
-        frequency: 'both'
+        frequency: 'both',
+        consentAccepted: true,
+        turnstileToken,
       });
 
       setAlreadySubscribedEmail(cleanEmail);
       setStatus('success');
+      setTurnstileResetSignal((prev) => prev + 1);
     } catch (err: any) {
-      console.error('Firestore newsletter subscription failure:', err);
+      console.error('Newsletter subscription failure:', err);
+      setTurnstileResetSignal((prev) => prev + 1);
       setStatus('error');
       setErrorMessage(
-        err.message?.includes('network') 
-          ? 'Network connectivity issue. Please check your connection and try again.'
-          : 'Unable to register subscription at this time. Please try again.'
+        err?.message || 'Unable to register subscription at this time. Please try again.'
       );
     } finally {
       setIsSubmitting(false);
@@ -173,6 +183,7 @@ export function NewsletterSignup({
     setEmail('');
     setName('');
     setShowOptions(false);
+    setTurnstileResetSignal((prev) => prev + 1);
   };
 
   // -------------------------------------------------------------
@@ -326,12 +337,27 @@ export function NewsletterSignup({
               )}
             </div>
 
+            <TurnstileWidget
+              compactLayout
+              theme="light"
+              size="flexible"
+              action="sidebar_newsletter"
+              onVerify={(token) => {
+                setTurnstileToken(token);
+                if (token && status === 'error' && errorMessage.includes('Turnstile')) {
+                  setStatus('idle');
+                  setErrorMessage('');
+                }
+              }}
+              resetSignal={turnstileResetSignal}
+            />
+
             {/* Submit Button */}
             <button
               id="sidebar-newsletter-submit"
               type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 text-xs"
+              disabled={isSubmitting || !turnstileToken}
+              className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -416,8 +442,8 @@ export function NewsletterSignup({
               />
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-sm"
+                disabled={isSubmitting || !turnstileToken}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
               >
                 {isSubmitting ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -429,6 +455,21 @@ export function NewsletterSignup({
                 )}
               </button>
             </div>
+
+            <TurnstileWidget
+              compactLayout
+              theme="dark"
+              size="flexible"
+              action="footer_newsletter"
+              onVerify={(token) => {
+                setTurnstileToken(token);
+                if (token && status === 'error' && errorMessage.includes('Turnstile')) {
+                  setStatus('idle');
+                  setErrorMessage('');
+                }
+              }}
+              resetSignal={turnstileResetSignal}
+            />
 
             <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
               <span>Practitioner-curated updates</span>
@@ -635,8 +676,8 @@ export function NewsletterSignup({
               <button
                 id="newsletter-submit-btn"
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full h-full min-h-[48px] bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 text-white font-bold py-3 px-4 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 text-xs"
+                disabled={isSubmitting || !turnstileToken}
+                className="w-full h-full min-h-[48px] bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -651,6 +692,23 @@ export function NewsletterSignup({
                 )}
               </button>
             </div>
+          </div>
+
+          <div className="mb-4">
+            <TurnstileWidget
+              compactLayout
+              theme="light"
+              size="flexible"
+              action="newsletter_subscribe"
+              onVerify={(token) => {
+                setTurnstileToken(token);
+                if (token && status === 'error' && errorMessage.includes('Turnstile')) {
+                  setStatus('idle');
+                  setErrorMessage('');
+                }
+              }}
+              resetSignal={turnstileResetSignal}
+            />
           </div>
 
           {/* Privacy & Cadence Disclaimer */}

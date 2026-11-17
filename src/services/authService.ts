@@ -89,18 +89,30 @@ export const authService = {
     // 3. Persist session
     localStorage.setItem('erp_auth_user', JSON.stringify(sessionUser));
 
-    // 4. If admin, sync with backend admin session for /workspace and /admin
-    if (isAdmin) {
+    // 4. If admin, sync with backend admin session using verified Firebase ID Token
+    if (isAdmin && sessionUser.token) {
       try {
         const res = await fetch('/api/admin/oauth-sync', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: userEmail, displayName })
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionUser.token}`
+          },
+          body: JSON.stringify({ idToken: sessionUser.token })
         });
         if (res.ok) {
           const syncData = await res.json();
-          if (syncData.token) {
+          if (syncData.token && syncData.user) {
+            localStorage.setItem('accounticca_workspace_admin_token_v2', syncData.token);
+            localStorage.setItem('accounticca_workspace_admin_profile_v2', JSON.stringify(syncData.user));
             localStorage.setItem('accounticca_admin_session_token', syncData.token);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('accounticca:admin-auth-updated', {
+                  detail: { token: syncData.token, user: syncData.user }
+                })
+              );
+            }
           }
         }
       } catch (syncErr) {
@@ -173,67 +185,40 @@ export const authService = {
   // ──────────────────────────────────────────
   // 🔑 Resilient Password Reset
   // ──────────────────────────────────────────
-  requestPasswordReset: async (email: string): Promise<{ success: boolean; message: string }> => {
+  requestPasswordReset: async (
+    email: string,
+    turnstileProof?: string
+  ): Promise<{ success: boolean; message: string }> => {
     const normalizedEmail = (email || '').trim().toLowerCase();
     if (!normalizedEmail || !normalizedEmail.includes('@')) {
       throw new Error('Please enter a valid email address.');
     }
 
-    // 1. Primary: Use dedicated backend proxy (avoids browser iframe origin / continueUrl restrictions)
-    try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          return {
-            success: true,
-            message: data.message || `Password reset link sent to ${normalizedEmail}. Please check your inbox.`
-          };
-        }
-      }
-    } catch (proxyErr) {
-      console.warn('[Backend proxy reset unavailable, falling back to direct Identity Toolkit]', proxyErr);
+    // 1. Primary: Use dedicated backend proxy with Turnstile verification proof
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: normalizedEmail,
+        turnstileProof
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return {
+        success: true,
+        message: data.message || `Password reset link sent to ${normalizedEmail}. Please check your inbox.`
+      };
     }
 
-    // 2. Direct Identity Toolkit REST call (works reliably in any browser/iframe without continueUrl)
-    try {
-      const apiKey = "AIzaSyD0HcNrqIDq_tNPhPX4zO73aYrE8e1z-gg";
-      const restRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requestType: 'PASSWORD_RESET',
-          email: normalizedEmail
-        })
-      });
-      const restData = await restRes.json();
-      if (restRes.ok && restData.email) {
-        return {
-          success: true,
-          message: `Password reset link sent to ${normalizedEmail}. Please check your inbox.`
-        };
-      }
-      if (restData.error?.message) {
-        const msg = restData.error.message;
-        if (msg.includes('EMAIL_NOT_FOUND')) {
-          throw new Error('No account found with this email address.');
-        }
-        throw new Error(msg);
-      }
-    } catch (restErr: any) {
-      if (restErr.message && !restErr.message.includes('fetch')) {
-        throw restErr;
-      }
+    // Strictly honor rate limits, validation, or Turnstile errors from backend
+    if (res.status >= 400 && res.status < 500) {
+      throw new Error(data.error || data.message || 'Unable to process password reset request.');
     }
 
-    // 3. Fallback to Firebase client SDK
-    return {
-      success: true,
-      message: `Password reset link sent to ${normalizedEmail}. Please check your inbox.`
-    };
+    throw new Error(
+      data.error || data.message || 'Password reset service is temporarily unavailable. Please try again later.'
+    );
   }
 };

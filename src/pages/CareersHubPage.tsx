@@ -58,7 +58,7 @@ const FAQS: FaqItem[] = [
   },
   {
     q: 'What is the selection and interview timeline?',
-    a: 'Our HR & Management review applications on a rolling basis until October 31, 2026. Shortlisted candidates are invited for an in-person assessment and interview at our Panthapath office within 5 to 7 business days of submission.'
+    a: 'Our HR & Management review applications for open tracks (Customer Care Executive and Sales & Marketing Executive) on a rolling basis until November 30, 2026. Applications for Accountant and Management Trainee Officer (MTO) have reached Time Out and are now closed. Shortlisted candidates are invited for an in-person assessment and interview at our Panthapath office within 5 to 7 business days of submission.'
   }
 ];
 
@@ -138,7 +138,7 @@ export const CareersHubPage: React.FC = () => {
     <>
       <ServiceSEO
         title="Careers & Current Openings | E-Lawyers Legal & Business Consultancy Firm"
-        description="Join E-Lawyers Legal & Business Consultancy Firm in Panthapath, Dhaka. Explore career opportunities and apply online for Management Trainee Officer (MTO), Accountant (Accounts Division), and Customer Care Executive (Female). Deadline: Oct 31, 2026."
+        description="Join E-Lawyers Legal & Business Consultancy Firm in Panthapath, Dhaka. Open positions: Sales & Marketing Executive and Customer Care Executive (Female). Deadline: 30 Nov 2026. Accountant and MTO recruitment are Time Out (closed)."
         canonicalUrl="/Careers"
         serviceType="Job Recruitment & Career Opportunities"
       />
@@ -150,8 +150,8 @@ export const CareersHubPage: React.FC = () => {
         accentHeadline="E-Lawyers Chambers"
         description="Join our Accounts, Taxation, Corporate Legal, and Client Services divisions at BTI Centara Grand, Panthapath, Dhaka. Select your track below to view requirements or submit an application."
         metaItems={[
-          '4 Active Career Tracks',
-          'Application Deadline: 31 October 2026',
+          '2 Open Tracks · 2 Time Out',
+          'Application Deadline: 30 Nov 2026',
           'Panthapath, Dhaka (In-Person)',
         ]}
         actions={
@@ -185,14 +185,14 @@ export const CareersHubPage: React.FC = () => {
               icon: <Phone className="h-3.5 w-3.5" aria-hidden="true" />,
             },
             {
-              label: 'MTO Application',
-              to: '/Careers/mto?tab=apply',
+              label: 'Customer Care Form',
+              to: '/Careers/customer-care?tab=apply',
               variant: 'neutral',
-              icon: <GraduationCap className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
+              icon: <Headphones className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />,
             },
           ],
           footerIcon: <Clock className="h-4 w-4" aria-hidden="true" />,
-          footerText: 'Official Deadline: 31 October 2026 · No Application Fee Charged',
+          footerText: 'Open Tracks Deadline: 30 Nov 2026 · No Application Fee Charged',
         }}
         trustItems={[
           {
@@ -225,34 +225,34 @@ export const CareersHubPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Card 1: MTO */}
-              <Link
-                to="/Careers/mto?tab=apply"
-                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
+              {/* Card 1: MTO (Time Out) */}
+              <div
+                aria-disabled="true"
+                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-100/80 p-5 opacity-85"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-slate-600">
                       <GraduationCap className="h-5 w-5" />
                     </div>
-                    <span className="text-xs font-semibold text-emerald-800">Multiple Vacancies</span>
+                    <span className="text-xs font-bold text-rose-700">Time Out</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                    <h3 className="text-sm font-bold text-slate-700">
                       Management Trainee Officer (MTO)
                     </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
                       Bachelor&apos;s in Accounting, Finance, BBA, Management or Law.
                     </p>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
-                  <span>Apply Online</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-bold text-rose-700">
+                  <span>Time Out · Closed</span>
+                  <Clock className="h-4 w-4" />
                 </div>
-              </Link>
+              </div>
 
-              {/* Card 2: Sales & Marketing */}
+              {/* Card 2: Sales & Marketing (Open) */}
               <Link
                 to="/Careers/sales-marketing?tab=apply"
                 className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
@@ -262,7 +262,7 @@ export const CareersHubPage: React.FC = () => {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                       <TrendingUp className="h-5 w-5" />
                     </div>
-                    <span className="text-xs font-semibold text-emerald-800">Multiple Vacancies</span>
+                    <span className="text-xs font-semibold text-emerald-800">Open · Multiple Vacancies</span>
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
@@ -274,39 +274,39 @@ export const CareersHubPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
-                  <span>Apply Online</span>
+                  <span>Apply Online · 30 Nov 2026</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </Link>
 
-              {/* Card 3: Accountant */}
-              <Link
-                to="/Careers/accountant?tab=apply"
-                className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
+              {/* Card 3: Accountant (Time Out) */}
+              <div
+                aria-disabled="true"
+                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-100/80 p-5 opacity-85"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-slate-600">
                       <Briefcase className="h-5 w-5" />
                     </div>
-                    <span className="text-xs font-semibold text-emerald-800">2 Vacancies</span>
+                    <span className="text-xs font-bold text-rose-700">Time Out</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                    <h3 className="text-sm font-bold text-slate-700">
                       Accountant
                     </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
                       Accounting, Finance or Related Degree · Corporate Accounts.
                     </p>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
-                  <span>Apply Online</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-bold text-rose-700">
+                  <span>Time Out · Closed</span>
+                  <Clock className="h-4 w-4" />
                 </div>
-              </Link>
+              </div>
 
-              {/* Card 4: Customer Care */}
+              {/* Card 4: Customer Care (Open) */}
               <Link
                 to="/Careers/customer-care?tab=apply"
                 className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50/50 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/40"
@@ -316,7 +316,7 @@ export const CareersHubPage: React.FC = () => {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                       <Headphones className="h-5 w-5" />
                     </div>
-                    <span className="text-xs font-semibold text-emerald-800">2 Vacancies · Female</span>
+                    <span className="text-xs font-semibold text-emerald-800">Open · 2 Vacancies · Female</span>
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
@@ -328,7 +328,7 @@ export const CareersHubPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-slate-200/70 pt-3 text-xs font-semibold text-emerald-800">
-                  <span>Apply Online</span>
+                  <span>Apply Online · 30 Nov 2026</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
               </Link>
@@ -415,28 +415,28 @@ export const CareersHubPage: React.FC = () => {
 
           {/* Quick Direct Link Row - Forward Progression Cards */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-5">
-            <Link
-              to="/Careers/mto?tab=apply"
-              className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 via-slate-50 to-white hover:to-amber-50 border-2 border-amber-300/80 hover:border-amber-400 transition-all duration-300 ease-out shadow-xs hover:shadow-lg hover:shadow-amber-900/10 flex items-center justify-between group hover:-translate-y-1 hover:scale-[1.015] will-change-transform"
+            <div
+              aria-disabled="true"
+              className="p-3.5 rounded-2xl bg-slate-100 border-2 border-slate-200 shadow-xs flex items-center justify-between opacity-80 cursor-not-allowed"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10243a] to-[#1c3c5d] text-amber-300 flex items-center justify-center font-bold shadow-xs group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
+                <div className="w-10 h-10 rounded-xl bg-slate-300 text-slate-600 flex items-center justify-center font-bold">
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded">
-                      Step 1 of 8
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded">
+                      Time Out
                     </span>
-                    <span className="text-[11px] text-amber-900 font-bold uppercase tracking-wider">MTO Batch</span>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">MTO Batch</span>
                   </div>
-                  <div className="text-xs sm:text-sm font-black text-[#10243a] group-hover:text-amber-800 transition-colors mt-0.5">
-                    MTO Trainee (অনলাইন আবেদন)
+                  <div className="text-xs sm:text-sm font-black text-slate-600 mt-0.5">
+                    MTO Trainee (Time Out)
                   </div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-amber-800 group-hover:translate-x-1.5 transition-transform duration-300 flex-shrink-0" />
-            </Link>
+              <Clock className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            </div>
 
             <Link
               to="/Careers/sales-marketing?tab=apply"
@@ -449,7 +449,7 @@ export const CareersHubPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-900 bg-emerald-100 px-1.5 py-0.5 rounded">
-                      Step 1 of 8
+                      Open · Step 1 of 8
                     </span>
                     <span className="text-[11px] text-emerald-900 font-bold uppercase tracking-wider">Growth</span>
                   </div>
@@ -461,28 +461,28 @@ export const CareersHubPage: React.FC = () => {
               <ArrowRight className="w-4 h-4 text-emerald-800 group-hover:translate-x-1.5 transition-transform duration-300 flex-shrink-0" />
             </Link>
 
-            <Link
-              to="/Careers/accountant?tab=apply"
-              className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-50/90 via-slate-50 to-white hover:to-teal-50 border-2 border-teal-200/90 hover:border-teal-400 transition-all duration-300 ease-out shadow-xs hover:shadow-lg hover:shadow-teal-900/10 flex items-center justify-between group hover:-translate-y-1 hover:scale-[1.015] will-change-transform"
+            <div
+              aria-disabled="true"
+              className="p-3.5 rounded-2xl bg-slate-100 border-2 border-slate-200 shadow-xs flex items-center justify-between opacity-80 cursor-not-allowed"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#167d83] to-[#0c4e52] text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                  <Briefcase className="w-5 h-5 text-emerald-300" />
+                <div className="w-10 h-10 rounded-xl bg-slate-300 text-slate-600 flex items-center justify-center font-bold">
+                  <Briefcase className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-teal-800 bg-teal-100/80 px-1.5 py-0.5 rounded">
-                      Step 1 of 8
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-rose-800 bg-rose-100 px-1.5 py-0.5 rounded">
+                      Time Out
                     </span>
-                    <span className="text-[11px] text-teal-900 font-bold uppercase tracking-wider">Fast-Track</span>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Accounts</span>
                   </div>
-                  <div className="text-xs sm:text-sm font-black text-[#10243a] group-hover:text-[#167d83] transition-colors mt-0.5">
-                    Apply as Accountant (হিসাবরক্ষক)
+                  <div className="text-xs sm:text-sm font-black text-slate-600 mt-0.5">
+                    Accountant (Time Out)
                   </div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-teal-700 group-hover:translate-x-1.5 transition-transform duration-300 flex-shrink-0" />
-            </Link>
+              <Clock className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            </div>
 
             <Link
               to="/Careers/customer-care?tab=apply"
@@ -495,7 +495,7 @@ export const CareersHubPage: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded">
-                      Step 1 of 8
+                      Open · Step 1 of 8
                     </span>
                     <span className="text-[11px] text-amber-900 font-bold uppercase tracking-wider">Customer Care</span>
                   </div>
@@ -528,9 +528,9 @@ export const CareersHubPage: React.FC = () => {
                       <Briefcase className="w-3.5 h-3.5 text-[#ddc38f]" />
                       Accounts Division (B2B Services)
                     </span>
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-950/80 px-3.5 py-1.5 rounded-full border border-emerald-400/50 shadow-xs">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      ২ জন · Full-Time · Urgent Hiring
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-200 bg-rose-950/85 px-3.5 py-1.5 rounded-full border border-rose-400/50 shadow-xs">
+                      <Clock className="w-3.5 h-3.5 text-rose-300" />
+                      Time Out · Application Closed
                     </span>
                   </div>
 
@@ -701,8 +701,8 @@ export const CareersHubPage: React.FC = () => {
                         <div className="text-[11px] text-slate-600">Direct guidance by Senior Advocates &amp; Chartered Accountants</div>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-teal-800 bg-white px-2.5 py-1 rounded-md border border-teal-200 whitespace-nowrap shadow-2xs">
-                      2 Openings
+                    <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 whitespace-nowrap shadow-2xs">
+                      Time Out
                     </span>
                   </div>
                 </div>
@@ -710,14 +710,15 @@ export const CareersHubPage: React.FC = () => {
 
               {/* High-Impact Call-To-Action (CTA) Dock */}
               <div className="p-6 bg-slate-50/90 border-t border-slate-200 space-y-3 mt-auto">
-                <Link
-                  to="/Careers/accountant?tab=apply"
-                  className="w-full py-4 px-5 bg-gradient-to-r from-[#167d83] via-[#126b70] to-[#0c4e52] hover:from-[#198d94] hover:to-[#106267] text-white font-black text-sm sm:text-base rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group-hover:scale-[1.01] border border-teal-300/30"
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="w-full py-4 px-5 bg-slate-200 text-slate-600 font-black text-sm sm:text-base rounded-2xl border border-slate-300 shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed"
                 >
-                  <FileText className="w-5 h-5 text-emerald-300" />
-                  <span>Apply Online — Accountant Form (অনলাইন আবেদন)</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                  <Clock className="w-5 h-5 text-rose-600" />
+                  <span>Time Out — Application Closed (সময় শেষ)</span>
+                </button>
 
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <Link
@@ -726,8 +727,8 @@ export const CareersHubPage: React.FC = () => {
                   >
                     View Job Circular (বিজ্ঞপ্তি ও সিলেবাস)
                   </Link>
-                  <span className="text-[11px] text-slate-500 font-semibold bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
-                    Deadline: Oct 31, 2026
+                  <span className="text-[11px] text-rose-700 font-bold bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 whitespace-nowrap">
+                    Status: Time Out
                   </span>
                 </div>
               </div>
@@ -944,8 +945,8 @@ export const CareersHubPage: React.FC = () => {
                   >
                     View Job Circular (সম্পূর্ণ বিজ্ঞপ্তি)
                   </Link>
-                  <span className="text-[11px] text-slate-500 font-semibold bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
-                    Deadline: Oct 31, 2026
+                  <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap">
+                    Deadline: 30 Nov 2026
                   </span>
                 </div>
               </div>
@@ -967,9 +968,9 @@ export const CareersHubPage: React.FC = () => {
                       <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                       Accounts, Tax, Legal &amp; Consultancy
                     </span>
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-950/80 px-3.5 py-1.5 rounded-full border border-amber-400/50 shadow-xs">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                      Multiple Openings · Full-Time
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-200 bg-rose-950/85 px-3.5 py-1.5 rounded-full border border-rose-400/50 shadow-xs">
+                      <Clock className="w-3.5 h-3.5 text-rose-300" />
+                      Time Out · Application Closed
                     </span>
                   </div>
 
@@ -1140,8 +1141,8 @@ export const CareersHubPage: React.FC = () => {
                         <div className="text-[11px] text-slate-600">Cross-departmental rotation &amp; leadership growth</div>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-amber-900 bg-white px-2.5 py-1 rounded-md border border-amber-200 whitespace-nowrap shadow-2xs">
-                      Multiple Openings
+                    <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 whitespace-nowrap shadow-2xs">
+                      Time Out
                     </span>
                   </div>
                 </div>
@@ -1149,14 +1150,15 @@ export const CareersHubPage: React.FC = () => {
 
               {/* High-Impact Call-To-Action (CTA) Dock */}
               <div className="p-6 bg-slate-50/90 border-t border-slate-200 space-y-3 mt-auto">
-                <Link
-                  to="/Careers/mto?tab=apply"
-                  className="w-full py-4 px-5 bg-gradient-to-r from-[#10243a] via-[#1c3c5d] to-[#10243a] hover:from-[#193b61] hover:to-[#10243a] text-amber-300 font-black text-sm sm:text-base rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group-hover:scale-[1.01] border border-amber-300/40"
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="w-full py-4 px-5 bg-slate-200 text-slate-600 font-black text-sm sm:text-base rounded-2xl border border-slate-300 shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed"
                 >
-                  <FileText className="w-5 h-5 text-amber-400" />
-                  <span>Apply Online — MTO Form (অনলাইন আবেদন)</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                  <Clock className="w-5 h-5 text-rose-600" />
+                  <span>Time Out — Application Closed (সময় শেষ)</span>
+                </button>
 
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <Link
@@ -1165,8 +1167,8 @@ export const CareersHubPage: React.FC = () => {
                   >
                     View Job Circular (সম্পূর্ণ বিজ্ঞপ্তি)
                   </Link>
-                  <span className="text-[11px] text-slate-500 font-semibold bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
-                    Deadline: Oct 31, 2026
+                  <span className="text-[11px] text-rose-700 font-bold bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200 whitespace-nowrap">
+                    Status: Time Out
                   </span>
                 </div>
               </div>
@@ -1386,8 +1388,8 @@ export const CareersHubPage: React.FC = () => {
                   >
                     View Job Circular (সম্পূর্ণ বিজ্ঞপ্তি)
                   </Link>
-                  <span className="text-[11px] text-slate-500 font-semibold bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
-                    Deadline: Oct 31, 2026
+                  <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap">
+                    Deadline: 30 Nov 2026
                   </span>
                 </div>
               </div>
@@ -1510,22 +1512,18 @@ export const CareersHubPage: React.FC = () => {
                 </tr>
                 <tr className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3 px-4 font-bold text-slate-700 bg-slate-50/50">Application Deadline</td>
-                  <td className="py-3 px-4 font-bold text-amber-800">October 31, 2026</td>
-                  <td className="py-3 px-4 font-bold text-amber-800">October 31, 2026</td>
-                  <td className="py-3 px-4 font-bold text-amber-800">October 31, 2026</td>
-                  <td className="py-3 px-4 font-bold text-amber-800">October 31, 2026</td>
+                  <td className="py-3 px-4 font-bold text-rose-700">Time Out (Closed)</td>
+                  <td className="py-3 px-4 font-bold text-emerald-700">30 Nov 2026 (Open)</td>
+                  <td className="py-3 px-4 font-bold text-rose-700">Time Out (Closed)</td>
+                  <td className="py-3 px-4 font-bold text-emerald-700">30 Nov 2026 (Open)</td>
                 </tr>
                 <tr className="bg-slate-50/90">
                   <td className="py-3.5 px-4 font-bold text-slate-700">Online Application Form</td>
                   <td className="py-3.5 px-4">
-                    <Link
-                      to="/Careers/mto?tab=apply"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10243a] text-amber-300 text-xs font-bold hover:bg-slate-800 transition-colors shadow-xs"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Open MTO Form</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </Link>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-not-allowed">
+                      <Clock className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Time Out</span>
+                    </span>
                   </td>
                   <td className="py-3.5 px-4">
                     <Link
@@ -1538,14 +1536,10 @@ export const CareersHubPage: React.FC = () => {
                     </Link>
                   </td>
                   <td className="py-3.5 px-4">
-                    <Link
-                      to="/Careers/accountant?tab=apply"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#167d83] text-white text-xs font-bold hover:bg-[#106267] transition-colors shadow-xs"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-teal-200" />
-                      <span>Open Accountant Form</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </Link>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 text-slate-600 text-xs font-bold cursor-not-allowed">
+                      <Clock className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Time Out</span>
+                    </span>
                   </td>
                   <td className="py-3.5 px-4">
                     <Link

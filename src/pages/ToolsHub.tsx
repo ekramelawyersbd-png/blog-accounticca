@@ -27,7 +27,8 @@ import {
   Clock,
   FileText,
   CheckSquare,
-  Mail
+  Mail,
+  MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { recordToolSigning } from '../services/toolSigningService';
@@ -446,6 +447,18 @@ export const TOOLS_CATALOG: ToolItem[] = [
     color: 'bg-amber-600 text-white',
     statutoryBasis: 'LMS Digital Verification Registry',
     badge: 'Public Registry',
+  },
+  {
+    id: 'bangladesh-tax-map',
+    anchorId: 'bangladesh-tax-map-tool',
+    name: 'Bangladesh Regional Tax Office (DCT) & Jurisdiction Map',
+    description: 'Interactive clickable map of all 8 Bangladesh divisions showing NBR Tax Zones, DCT Circle contacts, Sec 163 minimum tax slabs, and regional PSR mandates.',
+    category: 'Audit, Workspace & Docs',
+    path: '/tools/bangladesh-tax-map',
+    icon: MapPin,
+    color: 'bg-emerald-700 text-white',
+    statutoryBasis: 'NBR Tax Zones · Sec 163 & Regional PSR',
+    badge: 'Interactive Map',
   },
   {
     id: 'seo-performance-audit',

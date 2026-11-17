@@ -77,12 +77,14 @@ export async function submitCareerApplicationToApi(
   hrEmails: string[];
   hrNotified: boolean;
   candidateNotified: boolean;
+  liveDelivered: boolean;
   emailTransport: string;
+  smtpNotice?: string | null;
   submittedAt: string;
 }> {
   const nowIso = new Date().toISOString();
   const nowDisplay = new Date().toLocaleString();
-  const defaultHrEmails = ['career@elawyersbd.com', 'ekram.elawyersbd@gmail.com'];
+  const defaultHrEmails = ['admin@blog.accounticca.com'];
 
   let workspaceAccessToken: string | undefined;
   let spreadsheetId: string | undefined;
@@ -107,20 +109,20 @@ export async function submitCareerApplicationToApi(
     institution: payload.institution || 'University',
     salary: payload.salary || 'Negotiable',
     submittedAt: nowIso,
-    hrNotified: true,
+    hrNotified: false,
     hrEmails: defaultHrEmails,
-    candidateNotified: true,
-    emailTransport: 'E-Lawyers Cloud Recruitment Gateway',
+    candidateNotified: false,
+    emailTransport: 'Pending server Brevo confirmation',
     status: 'Received',
     data: payload
   };
 
-  // Always save locally first so status lookup & offline recovery work immediately
+  // Save locally first so status lookup works immediately
   saveLocalCareerApplication(localRecord);
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     const res = await fetch('/api/careers/apply', {
       method: 'POST',
@@ -135,18 +137,33 @@ export async function submitCareerApplicationToApi(
 
     clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const data = await res.json();
-      const confirmedRefId = data.applicationRefId || payload.applicationRefId;
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      throw new Error(data?.error || `Submission failed with status ${res.status}.`);
+    }
+
+    if (data) {
+      const confirmedRefId = data.applicationRefId || data.referenceId || payload.applicationRefId;
+      const hrNotified = Boolean(data.hrNotified);
+      const candidateNotified = Boolean(data.candidateNotified);
+      const liveDelivered = hrNotified && candidateNotified;
       const confirmedReceipt = {
         referenceId: confirmedRefId,
         candidateName: data.candidateName || payload.fullName,
         candidateEmail: data.candidateEmail || payload.email,
         hrEmails: Array.isArray(data.hrEmails) && data.hrEmails.length > 0 ? data.hrEmails : defaultHrEmails,
-        hrNotified: data.hrNotified !== false,
-        candidateNotified: data.candidateNotified !== false,
-        emailTransport: data.emailTransport || 'E-Lawyers Cloud Recruitment Gateway',
-        submittedAt: nowDisplay
+        hrNotified,
+        candidateNotified,
+        liveDelivered,
+        emailTransport: data.emailTransport || 'brevo_smtp_relay',
+        smtpNotice: data.smtpNotice || null,
+        submittedAt: data.submittedAt ? new Date(data.submittedAt).toLocaleString() : nowDisplay
       };
 
       saveLocalCareerApplication({
@@ -159,20 +176,28 @@ export async function submitCareerApplicationToApi(
         emailTransport: confirmedReceipt.emailTransport
       });
 
+      const bothSent = confirmedReceipt.hrNotified && confirmedReceipt.candidateNotified;
       dispatchFormSubmissionToast({
-        title: 'Application Submitted Successfully!',
+        title: bothSent
+          ? 'Application Submitted & Emails Sent!'
+          : 'Application Saved (Email Relay Notice)',
         position: `${payload.position || 'Career Application'} · E-Lawyers`,
-        message: `Thank you, ${confirmedReceipt.candidateName}. Your application has been recorded and dispatched to our HR Recruitment Desk.`,
+        message: bothSent
+          ? `Thank you, ${confirmedReceipt.candidateName}. Confirmation sent to ${confirmedReceipt.candidateEmail} and our HR inbox via Brevo.`
+          : `Application ${confirmedReceipt.referenceId} saved. ${confirmedReceipt.smtpNotice || 'Brevo email delivery requires configured credentials.'}`,
         referenceId: confirmedReceipt.referenceId,
         recipientEmail: confirmedReceipt.candidateEmail,
-        type: 'success',
+        type: bothSent ? 'success' : 'info',
         durationMs: 9000,
       });
 
       return confirmedReceipt;
     }
-  } catch (err) {
-    console.warn('[Career Application API fallback active]:', err);
+  } catch (err: any) {
+    console.warn('[Career Application API error]:', err);
+    if (err instanceof Error && err.message && !err.message.includes('aborted') && !err.message.includes('Failed to fetch')) {
+      throw err;
+    }
   }
 
   const fallbackReceipt = {
@@ -180,19 +205,21 @@ export async function submitCareerApplicationToApi(
     candidateName: payload.fullName,
     candidateEmail: payload.email,
     hrEmails: defaultHrEmails,
-    hrNotified: true,
-    candidateNotified: true,
-    emailTransport: 'E-Lawyers Cloud Recruitment Gateway (Verified)',
+    hrNotified: false,
+    candidateNotified: false,
+    liveDelivered: false,
+    emailTransport: 'offline_local_saved (server unreachable)',
+    smtpNotice: 'Could not reach the Brevo mail server endpoint. Application saved locally only.',
     submittedAt: nowDisplay
   };
 
   dispatchFormSubmissionToast({
-    title: 'Application Submitted Successfully!',
+    title: 'Application Saved Locally (Offline)',
     position: `${payload.position || 'Career Application'} · E-Lawyers`,
-    message: `Thank you, ${fallbackReceipt.candidateName}. Your application has been recorded and dispatched to our HR Recruitment Desk.`,
+    message: `Could not reach the server to dispatch Brevo emails. Your Reference ID is ${fallbackReceipt.referenceId}.`,
     referenceId: fallbackReceipt.referenceId,
     recipientEmail: fallbackReceipt.candidateEmail,
-    type: 'success',
+    type: 'info',
     durationMs: 9000,
   });
 

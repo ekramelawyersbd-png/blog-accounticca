@@ -56,6 +56,7 @@ export interface TurnstileVerificationResult {
   action?: string;
   hostname?: string;
   usingTestKey?: boolean;
+  verificationProof?: string;
 }
 
 export async function verifyTurnstileTokenClient(
@@ -99,6 +100,8 @@ export async function verifyTurnstileTokenClient(
       action: data.action,
       hostname: data.hostname,
       usingTestKey: Boolean(data.usingTestKey),
+      verificationProof:
+        typeof data.verificationProof === 'string' ? data.verificationProof : undefined,
     };
   } catch (err: any) {
     return {

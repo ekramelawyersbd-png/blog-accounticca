@@ -11,12 +11,9 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { auth } from '../../lib/firebase';
 import { trackUxEngagementEvent } from '../../services/firebaseAnalyticsService';
 import { TurnstileWidget } from '../security/TurnstileWidget';
-
-const COLLECTION_NAME = 'newsletterSubscribers';
 
 const COMPLIANCE_TOPICS = [
   { id: 'tax_vat', label: 'Tax & VAT SROs' },
@@ -144,67 +141,52 @@ export function FooterNewsletter() {
 
     setIsSubmitting(true);
 
-    // Create deterministic doc ID from email
     const safeDocId = `sub_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`.substring(0, 100);
-    const docRef = doc(db, COLLECTION_NAME, safeDocId);
     const nowIso = new Date().toISOString();
 
-    const recordPayload = {
-      email: cleanEmail,
-      topics: selectedTopics,
-      source: 'footer',
-      category: 'business_compliance',
-      status: 'active',
-      subscribedAt: nowIso,
-      userId: auth.currentUser?.uid || null,
-      updatedAt: serverTimestamp(),
-    };
-
     try {
-      // Direct Firestore persistence (resilient fallback if rules/network block client write)
-      try {
-        await setDoc(docRef, recordPayload, { merge: true });
-      } catch (firestoreErr) {
-        console.warn('Firestore direct write warning (continuing via API & local registry):', firestoreErr);
+      const subRes = await fetch('/api/subscribe-newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          topics: selectedTopics,
+          source: 'footer',
+          sourceCategory: 'footer_compliance',
+          consentAccepted: true,
+          userId: auth.currentUser?.uid || undefined,
+          turnstileToken,
+          'cf-turnstile-response': turnstileToken,
+        }),
+      });
+      const subData = await subRes.json().catch(() => ({}));
+
+      if (!subRes.ok || !subData?.persisted) {
+        setTurnstileResetSignal((prev) => prev + 1);
+        setErrorMessage(
+          subData?.error ||
+            subData?.message ||
+            (subRes.status === 403
+              ? 'Cloudflare Turnstile verification failed. Please retry.'
+              : 'Unable to save subscription to the durable database right now. Please try again.')
+        );
+        return;
       }
 
-      // Dispatch Brevo SMTP welcome & compliance confirmation email
-      try {
-        const subRes = await fetch('/api/subscribe-newsletter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: cleanEmail,
-            topics: selectedTopics,
-            sourceCategory: 'footer_compliance',
-            turnstileToken,
-            'cf-turnstile-response': turnstileToken,
-          }),
-        });
-        if (subRes.status === 403) {
-          const errBody = await subRes.json().catch(() => ({}));
-          setTurnstileResetSignal((prev) => prev + 1);
-          setErrorMessage(errBody?.error || 'Cloudflare Turnstile verification failed. Please retry.');
-          setIsSubmitting(false);
-          return;
-        }
-      } catch {
-        // Non-blocking if offline
-      }
-
-      // Cache locally
+      // Cache locally only after durable Firestore persistence succeeded
       try {
         localStorage.setItem(
           'accounticca_newsletter_subscriber',
           JSON.stringify({
-            id: safeDocId,
+            id: subData.subscriberId || safeDocId,
             email: cleanEmail,
+            status: 'active',
             subscribedAt: nowIso,
             topics: selectedTopics,
           })
         );
       } catch {
-        // ignore
+        // ignore storage errors
       }
 
       // Log privacy-safe `newsletter_success` event (no PII sent)
@@ -219,22 +201,26 @@ export function FooterNewsletter() {
       });
 
       setAlreadySubscribedEmail(cleanEmail);
-      // Automatically clear input field & reset Turnstile
       setEmail('');
       setTurnstileResetSignal((prev) => prev + 1);
-      // Set inline success message
-      setInlineSuccess(`Subscription confirmed! We've saved ${cleanEmail} to our compliance registry and dispatched a confirmation via Brevo SMTP.`);
-      // Trigger floating success toast notification
+      setInlineSuccess(
+        subData.emailDelivered
+          ? `Subscription confirmed! We've saved ${cleanEmail} to our compliance registry and dispatched a confirmation via Brevo SMTP.`
+          : `Subscription saved! We've registered ${cleanEmail} in our compliance database.`
+      );
       setSuccessToast({
         email: cleanEmail,
-        message: 'Saved to Firestore & confirmation dispatched via Brevo SMTP!'
+        message: subData.emailDelivered
+          ? 'Saved to Firestore & confirmation dispatched via Brevo SMTP!'
+          : 'Saved securely to Firestore compliance registry!'
       });
     } catch (err: any) {
       console.error('Newsletter subscription failure:', err);
+      setTurnstileResetSignal((prev) => prev + 1);
       setErrorMessage(
         err.message?.includes('offline')
-          ? 'Network is offline. Your subscription will sync once reconnected.'
-          : 'Unable to save subscription. Please try again.'
+          ? 'Network is offline. Please reconnect and try again.'
+          : 'Unable to save subscription right now. Please check your connection and try again.'
       );
     } finally {
       setIsSubmitting(false);

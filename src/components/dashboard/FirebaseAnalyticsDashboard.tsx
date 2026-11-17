@@ -335,7 +335,7 @@ export const FirebaseAnalyticsDashboard: React.FC<FirebaseAnalyticsDashboardProp
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-extrabold uppercase tracking-wider">
               <Flame className="w-3.5 h-3.5 text-amber-400" />
-              <span>Firebase Analytics &bull; Measurement ID: G-P4WQ33CP7G</span>
+              <span>Firebase Analytics &bull; Measurement ID: G-ZHZ01KNB7B</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               Compliance Content &amp; Tool Engagement Intelligence

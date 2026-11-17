@@ -33,7 +33,8 @@ import {
   MoreVertical,
   Bell,
   Download,
-  Phone
+  Phone,
+  MapPin
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../../lib/utils';
@@ -183,6 +184,12 @@ export function Navbar() {
       path: '/tools', 
       description: 'Calculators, compliance checklists & utilities',
       icon: Wrench 
+    },
+    { 
+      name: 'Regional Tax Office (DCT) Map', 
+      path: '/tools/bangladesh-tax-map', 
+      description: 'Interactive Bangladesh map of NBR Tax Zones & regional compliance rules',
+      icon: MapPin 
     },
     { 
       name: 'Tax Calculator 2026-27', 

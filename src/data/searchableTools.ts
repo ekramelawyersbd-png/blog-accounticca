@@ -371,5 +371,17 @@ export const searchableTaxTools: SearchableTool[] = [
     badge: 'VAT, TDS & Customs',
     tags: ['rate finder', 'vat rate', 'tds rate', 'vds rate', 'customs duty', 'hs code', 'hs tariff', 'duty calculator', 'tti', 'sro 240', 'tax finder', 'rate database'],
     featured: true
+  },
+  {
+    id: 'bangladesh-tax-map',
+    name: 'Bangladesh Regional Tax Office (DCT) & Jurisdiction Map',
+    shortName: 'Regional DCT Tax Map',
+    category: 'Compliance Reference',
+    description: 'Interactive clickable map of Bangladesh divisions displaying NBR Tax Zone Commissionerates, DCT Circle contact details, and regional compliance mandates.',
+    path: '/tools/bangladesh-tax-map',
+    iconName: 'Building2',
+    badge: 'All 8 Divisions',
+    tags: ['bangladesh map', 'tax office', 'dct', 'tax zone', 'circle', 'dhaka', 'chattogram', 'rajshahi', 'khulna', 'sylhet', 'rangpur', 'barishal', 'mymensingh', 'ltu', 'jurisdiction', 'minimum tax'],
+    featured: true
   }
 ];

@@ -25,6 +25,7 @@ import {
   type TransactionalEmailTemplate,
 } from '../../utils/transactionalEmailTemplates';
 import { dispatchFormSubmissionToast } from '../ui/FormSubmissionToast';
+import { getAdminAuthHeaders } from '../../contexts/ShopAuthContext';
 
 export interface ServerTemplatePreviewData {
   templateId: string;
@@ -235,7 +236,7 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
       try {
         const res = await fetch(`/api/email/templates/${activeTemplate.id}/preview`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
           signal: controller.signal,
           body: JSON.stringify({
             name: activeTemplate.name,
@@ -330,7 +331,7 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
     try {
       const res = await fetch(`/api/email/templates/${activeTemplate.id}/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: activeTemplate.name,
           enabled: activeTemplate.enabled,

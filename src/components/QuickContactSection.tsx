@@ -17,8 +17,6 @@ import {
   MapPin,
   AlertCircle
 } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { dispatchFormSubmissionToast, FormSuccessNotification } from './ui/FormSubmissionToast';
@@ -112,58 +110,66 @@ export function QuickContactSection() {
       ? 'E-Lawyers Chambers'
       : 'Accounticca Advisory';
 
-    try {
-      await addDoc(collection(db, 'contact_messages'), {
-        referenceId,
-        fullName: inquiryName.trim(),
-        phone: inquiryPhone.trim(),
-        email: inquiryEmail.trim() || 'N/A',
-        service: inquiryService,
-        urgency: inquiryUrgency,
-        division,
-        message: `[Urgency: ${inquiryUrgency}]\n${inquiryMessage.trim()}`,
-        status: 'new',
-        source: 'homepage_quick_intake',
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.warn('Firestore quick backup error:', err);
-    }
+    let persisted = false;
+    let resolvedRefId = referenceId;
+    let submitErrorMessage: string | null = null;
 
-    // Best-effort backend contact sync
     try {
       const workspaceAccessToken = getAccessToken();
       const spreadsheetId = getStoredContactSheetId();
-      await fetch('/api/contact/submit', {
+      const res = await fetch('/api/contact/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           referenceId,
           requestType: 'Homepage Quick Inquiry',
           division,
+          department: division,
           clientName: inquiryName.trim(),
-          email: inquiryEmail.trim() || 'info@accounticca.com',
+          email: inquiryEmail.trim(),
           phone: inquiryPhone.trim(),
           serviceArea: inquiryService,
+          urgency: inquiryUrgency,
+          source: 'homepage_quick_intake',
           messageOrNotes: `[Urgency: ${inquiryUrgency}] ${inquiryMessage.trim()}`,
           status: 'New Inquiry',
+          turnstileProof: verifyRes.verificationProof,
           workspaceAccessToken: workspaceAccessToken || undefined,
           spreadsheetId: spreadsheetId || undefined,
         }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.persisted) {
+        persisted = true;
+        if (typeof data.referenceId === 'string' && data.referenceId.trim()) {
+          resolvedRefId = data.referenceId.trim();
+        }
+      } else {
+        submitErrorMessage =
+          data?.error ||
+          data?.message ||
+          'Unable to save your inquiry to the durable database right now. Please try again.';
+      }
     } catch {
-      // silent fallback
+      submitErrorMessage =
+        'Network error while submitting your inquiry. Please check your connection and try again.';
     }
 
     setIsSubmittingInquiry(false);
     setTurnstileResetSignal((prev) => prev + 1);
-    setSubmittedInquiryRef(referenceId);
+
+    if (!persisted) {
+      setFormError(submitErrorMessage || 'Inquiry could not be saved durably. Please retry.');
+      return;
+    }
+
+    setSubmittedInquiryRef(resolvedRefId);
 
     dispatchFormSubmissionToast({
       title: 'Written Brief Submitted!',
       position: `${inquiryService} · ${division}`,
       message: `Thank you, ${inquiryName.trim()}. Our senior desk will review your brief and respond shortly.`,
-      referenceId,
+      referenceId: resolvedRefId,
       recipientEmail: inquiryEmail.trim() || undefined,
       type: 'success',
     });
@@ -193,25 +199,12 @@ export function QuickContactSection() {
     }
     const refNumber = Math.floor(20000 + Math.random() * 80000);
     const referenceId = `APT-2026-${refNumber}`;
+    const division =
+      apptPractice.includes('Law') || apptPractice.includes('Contracts') || apptPractice.includes('BIDA')
+        ? 'E-Lawyers Chambers'
+        : 'Accounticca Advisory';
 
-    try {
-      await addDoc(collection(db, 'consultation_appointments'), {
-        referenceId,
-        fullName: apptName.trim(),
-        phone: apptPhone.trim(),
-        email: apptEmail.trim() || 'N/A',
-        practiceArea: apptPractice,
-        consultationMode: apptMode === 'chamber' ? 'In-Chamber (Panthapath, Dhaka)' : 'Virtual Consultation (Zoom / Meet)',
-        preferredDate: apptDate,
-        preferredTimeSlot: apptTimeSlot,
-        status: 'confirmed',
-        source: 'homepage_quick_intake',
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.warn('Firestore appointment save error:', err);
-    }
-
+    let appointmentEmailPayload: Record<string, any> | undefined;
     if (apptEmail.trim().includes('@')) {
       try {
         const appointmentTime = `${apptDate} at ${apptTimeSlot} (BST)`;
@@ -238,43 +231,90 @@ export function QuickContactSection() {
         );
 
         if (generatedEmail.enabled) {
-          await fetch('/api/appointments/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              referenceId,
-              templateId: generatedEmail.templateId,
-              clientName: apptName.trim(),
-              email: apptEmail.trim(),
-              phone: apptPhone.trim(),
-              practiceArea: apptPractice,
-              serviceType: apptPractice,
-              mode: apptMode === 'chamber' ? 'chamber' : 'virtual',
-              date: apptDate,
-              timeSlot: apptTimeSlot,
-              appointmentTime,
-              status: 'Confirmed',
-              ccEmails: ['info@accounticca.com'],
-              subject: generatedEmail.subject,
-              html: generatedEmail.html,
-              text: generatedEmail.text,
-            }),
-          });
+          appointmentEmailPayload = {
+            templateId: generatedEmail.templateId,
+            ccEmails: ['info@accounticca.com'],
+            subject: generatedEmail.subject,
+            html: generatedEmail.html,
+            text: generatedEmail.text,
+          };
         }
       } catch {
-        // Non-blocking email notification fallback
+        // Non-blocking email template fallback
       }
+    }
+
+    let persisted = false;
+    let resolvedRefId = referenceId;
+    let submitErrorMessage: string | null = null;
+
+    try {
+      const workspaceAccessToken = getAccessToken();
+      const spreadsheetId = getStoredContactSheetId();
+      const submitRes = await fetch('/api/contact/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          referenceId,
+          requestType: 'Consultation Meeting',
+          division,
+          department: division,
+          clientName: apptName.trim(),
+          email: apptEmail.trim(),
+          phone: apptPhone.trim(),
+          serviceArea: apptPractice,
+          expertiseTopic: apptPractice,
+          source: 'homepage_quick_intake',
+          consultationMode:
+            apptMode === 'chamber'
+              ? 'In-Chamber (Panthapath, Dhaka)'
+              : 'Virtual Consultation (Zoom / Meet)',
+          preferredDate: apptDate,
+          preferredTimeSlot: apptTimeSlot,
+          messageOrNotes: `Homepage Quick Appointment Request — ${apptPractice} on ${apptDate} (${apptTimeSlot})`,
+          status: 'Confirmed',
+          syncConsultationDoc: true,
+          turnstileProof: verifyRes.verificationProof,
+          appointmentEmailPayload,
+          appointmentMetadata: {
+            mode: apptMode === 'chamber' ? 'in_person' : 'virtual',
+          },
+          workspaceAccessToken: workspaceAccessToken || undefined,
+          spreadsheetId: spreadsheetId || undefined,
+        }),
+      });
+      const submitData = await submitRes.json().catch(() => ({}));
+      if (submitRes.ok && submitData?.persisted) {
+        persisted = true;
+        if (typeof submitData.referenceId === 'string' && submitData.referenceId.trim()) {
+          resolvedRefId = submitData.referenceId.trim();
+        }
+      } else {
+        submitErrorMessage =
+          submitData?.error ||
+          submitData?.message ||
+          'Unable to save consultation booking to the durable database right now. Please try again.';
+      }
+    } catch {
+      submitErrorMessage =
+        'Network error while booking your consultation. Please check your connection and try again.';
     }
 
     setIsSubmittingAppt(false);
     setTurnstileResetSignal((prev) => prev + 1);
-    setSubmittedApptRef(referenceId);
+
+    if (!persisted) {
+      setFormError(submitErrorMessage || 'Appointment booking could not be saved durably. Please retry.');
+      return;
+    }
+
+    setSubmittedApptRef(resolvedRefId);
 
     dispatchFormSubmissionToast({
       title: 'Consultation Slot Reserved!',
       position: `${apptPractice} · ${apptDate}`,
       message: `Confirmed for ${apptName.trim()} (${apptTimeSlot}).`,
-      referenceId,
+      referenceId: resolvedRefId,
       recipientEmail: apptEmail.trim() || undefined,
       type: 'success',
     });

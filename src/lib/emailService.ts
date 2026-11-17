@@ -37,6 +37,9 @@ export interface BrevoRelaySummary {
   liveRelayActive: boolean;
   configured: boolean;
   hasCredentials: boolean;
+  hasSmtpCredentials: boolean;
+  hasApiCredentials: boolean;
+  keyFormat: 'xkeysib_api' | 'xsmtpsib_smtp' | 'configured_other' | 'missing';
   mode: string;
   status: string;
   lastError: string | null;
@@ -94,12 +97,13 @@ export function getBrevoSmtpConfig(): BrevoSmtpConfig {
   const host = (process.env.BREVO_SMTP_HOST || process.env.SMTP_HOST || 'smtp-relay.brevo.com').trim();
   const parsedPort = parseInt(process.env.BREVO_SMTP_PORT || process.env.SMTP_PORT || '587', 10);
   const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 587;
-  const login = (process.env.BREVO_SMTP_USER || process.env.SMTP_USER || '9dabe5001@smtp-brevo.com').trim();
-  const smtpKey = (process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS || '').trim();
-  const apiKey = (
+  const stripWrappingQuotes = (val: string) => val.trim().replace(/^["']|["']$/g, '').trim();
+  const login = stripWrappingQuotes(process.env.BREVO_SMTP_USER || process.env.SMTP_USER || '9dabe5001@smtp-brevo.com');
+  const smtpKey = stripWrappingQuotes(process.env.BREVO_SMTP_KEY || process.env.SMTP_PASS || '');
+  const apiKey = stripWrappingQuotes(
     process.env.BREVO_API_KEY ||
     (smtpKey.startsWith('xkeysib-') ? smtpKey : '')
-  ).trim();
+  );
   const senderName = (process.env.BREVO_SENDER_NAME || 'ACCOUNTICCA x E-Lawyers').trim();
   const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'ekram@elawyersbd.com').trim();
   const supportEmail = (
@@ -144,6 +148,15 @@ export function getSupportEmailRecipient(): string {
 export function getBrevoRelayConfig(): BrevoRelaySummary {
   const cfg = getBrevoSmtpConfig();
 
+  const activeKey = cfg.apiKey || cfg.smtpKey;
+  const keyFormat: BrevoRelaySummary['keyFormat'] = !activeKey
+    ? 'missing'
+    : activeKey.startsWith('xkeysib-')
+    ? 'xkeysib_api'
+    : activeKey.startsWith('xsmtpsib-')
+    ? 'xsmtpsib_smtp'
+    : 'configured_other';
+
   return {
     host: cfg.host,
     port: cfg.port,
@@ -156,9 +169,12 @@ export function getBrevoRelayConfig(): BrevoRelaySummary {
     liveRelayActive: cfg.hasCredentials && !lastBrevoDeliveryError,
     configured: cfg.hasCredentials,
     hasCredentials: cfg.hasCredentials,
+    hasSmtpCredentials: cfg.hasSmtpCredentials,
+    hasApiCredentials: cfg.hasApiCredentials,
+    keyFormat,
     mode: !cfg.hasCredentials
       ? 'brevo_unconfigured (missing BREVO_SMTP_KEY or BREVO_API_KEY)'
-      : cfg.hasApiCredentials && !cfg.hasSmtpCredentials
+      : cfg.hasApiCredentials && (!cfg.hasSmtpCredentials || cfg.smtpKey.startsWith('xkeysib-'))
       ? 'brevo_rest_api_v3'
       : `brevo_smtp_relay (${cfg.host}:${cfg.port})`,
     status: !cfg.hasCredentials
@@ -513,6 +529,7 @@ export async function dispatchBrevoEmail(options: {
   html: string;
   text?: string;
   ccEmails?: string[];
+  replyTo?: string;
   allowFallback?: boolean;
 }): Promise<{
   messageId: string;

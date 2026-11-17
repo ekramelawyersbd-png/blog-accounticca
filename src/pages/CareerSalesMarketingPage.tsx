@@ -305,7 +305,9 @@ export const CareerSalesMarketingPage: React.FC = () => {
     hrEmails: string[];
     hrNotified: boolean;
     candidateNotified: boolean;
+    liveDelivered?: boolean;
     emailTransport: string;
+    smtpNotice?: string | null;
     submittedAt: string;
   } | null>(null);
 
@@ -826,12 +828,16 @@ export const CareerSalesMarketingPage: React.FC = () => {
       setSubmissionReceipt(receipt);
 
       showActionFeedback(
-        `Application ${receipt.referenceId} submitted and HR notification confirmed.`
+        receipt.hrNotified && receipt.candidateNotified
+          ? `Application ${receipt.referenceId} submitted! Confirmation emails sent to ${receipt.candidateEmail} and our HR inbox via Brevo.`
+          : `Application ${receipt.referenceId} recorded. ${receipt.smtpNotice || 'Brevo email dispatch status is shown below.'}`
       );
 
       setTimeout(() => {
         resultCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 50);
+    } catch (err: any) {
+      triggerError(err?.message || 'Unable to submit application. Please verify your details and try again.');
     } finally {
       setIsSubmittingApplication(false);
     }
@@ -859,7 +865,7 @@ export const CareerSalesMarketingPage: React.FC = () => {
           'Multiple Openings',
           'Bachelor Degree (BBA / Marketing / Any)',
           'Salary + Performance Incentive',
-          'Deadline: 31 October 2026',
+          'Deadline: 30 Nov 2026',
         ]}
         actions={
           <>
@@ -912,7 +918,7 @@ export const CareerSalesMarketingPage: React.FC = () => {
           },
           {
             icon: <Calendar className="h-4 w-4" aria-hidden="true" />,
-            label: 'Application deadline: 31 October 2026 · Rolling interviews',
+            label: 'Application deadline: 30 Nov 2026 · Rolling interviews',
           },
         ]}
       >
@@ -2363,9 +2369,31 @@ export const CareerSalesMarketingPage: React.FC = () => {
                     Thank you, <strong>{submissionReceipt.candidateName}</strong>! Your application for <strong>Sales &amp; Marketing Executive</strong> has been successfully accepted by the E-Lawyers Recruitment Gateway.
                   </p>
                   <p>
-                    Our recruitment team will review your qualifications and contact you at <strong>{submissionReceipt.candidateEmail}</strong> for the next interview and sales pitch assessment phase.
+                    {submissionReceipt.candidateNotified
+                      ? <>An acknowledgement email has been sent via Brevo to <strong>{submissionReceipt.candidateEmail}</strong>, and our HR team ({submissionReceipt.hrEmails.join(', ')}) has been notified.</>
+                      : <>Our recruitment team will review your qualifications and contact you at <strong>{submissionReceipt.candidateEmail}</strong> for the next interview and sales pitch assessment phase.</>}
                   </p>
                 </div>
+
+                <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                    <span className="text-slate-500 block">
+                      Applicant Email {submissionReceipt.candidateNotified ? '(Sent via Brevo)' : '(Pending)'}
+                    </span>
+                    <strong className="text-slate-900">{submissionReceipt.candidateEmail}</strong>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                    <span className="text-slate-500 block">
+                      Our HR Inbox {submissionReceipt.hrNotified ? '(Sent via Brevo)' : '(Pending)'}
+                    </span>
+                    <strong className="text-slate-900">{submissionReceipt.hrEmails.join(', ')}</strong>
+                  </div>
+                </div>
+                {submissionReceipt.smtpNotice && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                    <strong>Brevo Relay Notice:</strong> {submissionReceipt.smtpNotice}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3">
                   <button

@@ -1,4 +1,5 @@
 import { getAccessToken } from './workspaceAuth';
+import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 import { workspaceSheetsApi } from './workspaceService';
 
 export const RECRUITMENT_SHEET_STORAGE_KEY = 'elaw_recruitment_spreadsheet_id';
@@ -377,7 +378,9 @@ export async function syncAllApplicationsToSheet(
   await initializeRecruitmentSheetHeaders(targetId, authToken);
 
   // 2. Fetch all local server applications
-  const serverRes = await fetch('/api/careers/applications');
+  const serverRes = await fetch('/api/careers/applications', {
+    headers: getAdminAuthHeaders()
+  });
   if (!serverRes.ok) {
     throw new Error('Failed to fetch applications from recruitment server.');
   }

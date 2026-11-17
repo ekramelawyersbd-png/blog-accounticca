@@ -34,6 +34,7 @@ import { TaxSlabsExplorerPage } from './pages/tools/TaxSlabsExplorerPage';
 import { RateFinderPage } from './pages/tools/RateFinderPage';
 import { VatApportionmentCalculatorPage } from './pages/VatApportionmentCalculatorPage';
 import { SeoPerformanceAuditPage } from './pages/tools/SeoPerformanceAuditPage';
+import { BangladeshTaxMapPage } from './pages/tools/BangladeshTaxMapPage';
 import { VatCalculator } from './pages/VatCalculator';
 import { CompanyRegistrationFee } from './pages/CompanyRegistrationFee';
 import { StampDutyCalculator } from './pages/StampDutyCalculator';
@@ -348,6 +349,8 @@ export default function App() {
                 <Route path="tools/vat-apportionment-calculator" element={<VatApportionmentCalculatorPage />} />
                 <Route path="vat-apportionment-calculator" element={<VatApportionmentCalculatorPage />} />
                 <Route path="tools/seo-performance-audit" element={<SeoPerformanceAuditPage />} />
+                <Route path="tools/bangladesh-tax-map" element={<BangladeshTaxMapPage />} />
+                <Route path="tax-offices-map" element={<BangladeshTaxMapPage />} />
                 <Route path="tools/seo-audit" element={<Navigate to="/tools/seo-performance-audit" replace />} />
                 <Route path="seo-audit" element={<Navigate to="/tools/seo-performance-audit" replace />} />
                 <Route path="rate-finder" element={<Navigate to="/tools/rate-finder" replace />} />

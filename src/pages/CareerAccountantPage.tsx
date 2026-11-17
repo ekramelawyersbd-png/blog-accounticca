@@ -1011,8 +1011,8 @@ export const CareerAccountantPage: React.FC = () => {
   return (
     <>
       <ServiceSEO
-        title="We’re Hiring! Accountant (Accounts Division) | E-Lawyers Careers"
-        description="Build your accounting career with E-Lawyers Legal & Business Consultancy Firm. Full-Time Accountant positions (2 vacancies) in Panthapath, Dhaka. Fresh graduates welcome. Deadline: October 31, 2026."
+        title="Accountant (Accounts Division) — Time Out | E-Lawyers Careers"
+        description="Accountant recruitment (2 vacancies) at E-Lawyers Legal & Business Consultancy Firm in Panthapath, Dhaka has reached Time Out and is currently closed. Open positions remain available until 30 Nov 2026."
         serviceType="Job Recruitment Posting & Application"
         canonicalUrl="/Careers/accountant"
       />
@@ -1024,23 +1024,24 @@ export const CareerAccountantPage: React.FC = () => {
         ]}
         eyebrow="E-Lawyers Legal & Business Consultancy Firm · Accounts Division"
         headline="Accountant"
-        accentHeadline="Job Announcement & Application"
-        description="Build Your Accounting Career. Gain Practical Experience. Grow with E-Lawyers. Our expanding Accounts Division invites dedicated applicants and fresh graduates for 2 full-time Accountant positions in Dhaka."
+        accentHeadline="Time Out (Closed)"
+        description="Applications for the Accountant (Accounts Division) position have reached Time Out and are now closed. You may still review the circular details or apply for open tracks until 30 Nov 2026."
         metaItems={[
           'Full-Time · Accounts Division',
           '2 Vacancies',
           'Panthapath, Dhaka',
-          'Deadline: October 31, 2026',
+          'Status: Time Out (Closed)',
         ]}
         actions={
           <>
             <button
               type="button"
-              onClick={() => switchTab('apply')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 cursor-pointer"
+              disabled
+              aria-disabled="true"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 border border-slate-300 cursor-not-allowed"
             >
-              <FileText className="h-4 w-4" aria-hidden="true" />
-              <span>Apply for This Position</span>
+              <Clock className="h-4 w-4 text-rose-600" aria-hidden="true" />
+              <span>Time Out — Application Closed</span>
             </button>
             <button
               type="button"
@@ -1071,7 +1072,7 @@ export const CareerAccountantPage: React.FC = () => {
             },
           ],
           footerIcon: <Calendar className="h-4 w-4" aria-hidden="true" />,
-          footerText: 'Application Deadline: October 31, 2026 · Fresh Graduates Welcome',
+          footerText: 'Status: Time Out (Closed) · Open tracks deadline: 30 Nov 2026',
         }}
         trustItems={[
           {
@@ -1164,9 +1165,9 @@ export const CareerAccountantPage: React.FC = () => {
                 <div className="text-xs text-[#526276] mt-1">Fresh graduates welcome</div>
               </div>
               <div className="bg-white border border-[#dfe6ec] rounded-xl p-4">
-                <div className="text-xs text-[#68788a] font-medium">Application Deadline</div>
-                <div className="text-sm font-bold text-[#b42318] font-mono tabular-nums mt-0.5">October 31, 2026</div>
-                <div className="text-xs text-[#526276] mt-1">Direct online application</div>
+                <div className="text-xs text-[#68788a] font-medium">Application Status</div>
+                <div className="text-sm font-bold text-[#b42318] font-mono tabular-nums mt-0.5">Time Out (Closed)</div>
+                <div className="text-xs text-[#526276] mt-1">Submissions closed</div>
               </div>
               <div className="bg-white border border-[#dfe6ec] rounded-xl p-4">
                 <div className="text-xs text-[#68788a] font-medium">Work Location</div>
