@@ -35,9 +35,8 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 import { getAccessToken } from '../services/workspaceAuth';
 import { workspaceCalendarApi } from '../services/workspaceService';
 import {
@@ -268,10 +267,10 @@ export const ClientBookingDashboard: React.FC<ClientBookingDashboardProps> = ({
       const targetEmail = user?.email || appointments[0]?.email || 'ekram@elawyersbd.com';
       const res = await fetch('/api/email/brevo-test', {
         method: 'POST',
-        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipientEmail: targetEmail }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
       if (res.ok && data.success) {
         if (data.previewUrl) {
           setLastBrevoPreviewUrl(data.previewUrl);
@@ -285,7 +284,7 @@ export const ClientBookingDashboard: React.FC<ClientBookingDashboardProps> = ({
       } else {
         setToastBanner({
           type: 'warning',
-          title: res.status === 401 || res.status === 403 ? 'Administrator Sign-In Required' : 'Brevo SMTP Test Notice',
+          title: 'Brevo SMTP Test Notice',
           message: data.error || 'Unable to complete test dispatch.',
         });
       }
@@ -431,20 +430,11 @@ export const ClientBookingDashboard: React.FC<ClientBookingDashboardProps> = ({
     setIsLookingUp(true);
     setLookupMessage(null);
 
-    if (!user?.uid) {
-      setIsLookingUp(false);
-      setLookupMessage({
-        type: 'info',
-        text: 'Sign in with your client account to query remote bookings, or view bookings saved on this device.',
-      });
-      return;
-    }
-
     try {
       const isRefId = trimmed.toUpperCase().startsWith('APT-');
       const appointmentsRef = collection(db, 'appointments');
       const q = isRefId
-        ? query(appointmentsRef, where('userId', '==', user.uid), where('referenceId', '==', trimmed.toUpperCase()))
+        ? query(appointmentsRef, where('referenceId', '==', trimmed.toUpperCase()))
         : query(appointmentsRef, where('email', '==', trimmed.toLowerCase()));
 
       const snap = await getDocs(q);
@@ -627,20 +617,9 @@ export const ClientBookingDashboard: React.FC<ClientBookingDashboardProps> = ({
         }
       );
 
-      let firebaseIdToken: string | undefined;
-      if (auth.currentUser) {
-        try {
-          firebaseIdToken = await auth.currentUser.getIdToken();
-        } catch {
-          // ignore
-        }
-      }
       const res = await fetch('/api/appointments/notify', {
         method: 'POST',
-        headers: getAdminAuthHeaders({
-          'Content-Type': 'application/json',
-          ...(firebaseIdToken ? { Authorization: `Bearer ${firebaseIdToken}` } : {}),
-        }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           referenceId: apt.referenceId,
           templateId: generatedEmail.templateId,

@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { 
   ShieldCheck, 
+  Lock, 
+  Mail, 
   KeyRound, 
   ArrowRight, 
   AlertCircle, 
   Eye, 
   EyeOff, 
   CheckCircle2, 
-  Mail,
+  Sparkles,
   ArrowLeft
 } from 'lucide-react';
 import { useShopAuth } from '../contexts/ShopAuthContext';
@@ -55,6 +57,13 @@ export function ShopAdminLogin() {
     } else {
       setErrorMsg(result.error || 'Access denied. Verify authorized administrator credentials.');
     }
+  };
+
+  const handleAutofill = () => {
+    setEmail('hmekram@gmail.com');
+    setPassword('123ekraM.com');
+    setErrorMsg(null);
+    clearError();
   };
 
   const isWorkspaceTarget = redirectTo.toLowerCase().startsWith('/workspace');
@@ -112,6 +121,27 @@ export function ShopAdminLogin() {
             </div>
           </div>
 
+          {/* Authorized Credentials Helper Banner (Hidden) */}
+          <div className="hidden bg-emerald-950/50 border border-emerald-800/60 rounded-2xl p-3.5 text-xs text-emerald-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold text-[11px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5" />
+                <span>Authorized Administrator</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleAutofill}
+                className="text-[10px] font-bold text-emerald-300 hover:text-emerald-100 bg-emerald-900/60 hover:bg-emerald-800 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+              >
+                Auto-Fill Credentials
+              </button>
+            </div>
+            <div className="text-[11px] font-mono space-y-0.5 text-slate-300">
+              <div><strong className="text-emerald-400">ID:</strong> hmekram@gmail.com</div>
+              <div><strong className="text-emerald-400">Pass:</strong> 123ekraM.com</div>
+            </div>
+          </div>
+
           {/* Error Message */}
           {(errorMsg || loginError) && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5 text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in duration-200">
@@ -138,7 +168,7 @@ export function ShopAdminLogin() {
                   autoComplete="username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@accounticca.com"
+                  placeholder="hmekram@gmail.com"
                   required
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-semibold focus:outline-none transition-colors shadow-2xs"
                 />

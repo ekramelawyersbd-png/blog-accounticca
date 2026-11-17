@@ -28,6 +28,8 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredContactSheetId } from '../services/contactSheetsSync';
 import { AppointmentBookingForm } from '../components/AppointmentBookingForm';
@@ -968,12 +970,29 @@ export function Contact() {
     const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
     const enrichedMessage = `[Urgency: ${urgency}]\n${form.message.trim()}`;
 
-    // Save to Durable Backend Firestore Ledger, Notion CRM & Real-Time Workspace Google Sheet Sync
-    let synced = false;
-    let persisted = false;
-    let resolvedRefId = referenceId;
-    let submitErrorMessage: string | null = null;
+    // 1. Best-effort Firestore save
+    try {
+      await addDoc(collection(db, 'contact_messages'), {
+        referenceId,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        fullName,
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        companyName: form.companyName.trim() || 'Direct Client / Individual',
+        service: form.service,
+        urgency,
+        division,
+        message: enrichedMessage,
+        status: 'new',
+        createdAt: serverTimestamp(),
+      });
+    } catch (fsErr) {
+      console.warn('Firestore inquiry backup notice:', fsErr);
+    }
 
+    // 2. Save to Backend Ledger & Real-Time Workspace Google Sheet Sync
+    let synced = false;
     try {
       const workspaceAccessToken = getAccessToken();
       const spreadsheetId = getStoredContactSheetId();
@@ -984,62 +1003,34 @@ export function Contact() {
           referenceId,
           requestType: 'Service Inquiry',
           division,
-          department: division,
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
           clientName: fullName,
           email: form.email.trim(),
           phone: form.phone.trim(),
           companyName: form.companyName.trim() || 'Direct Client / Individual',
           serviceArea: form.service,
           expertiseTopic: `General Service Inquiry (${urgency})`,
-          subject: `[${referenceId}] ${form.service} — ${urgency}`,
-          urgency,
-          source: 'main_contact_page',
           consultationMode: 'N/A (Written Inquiry)',
           preferredDate: 'Immediate / Written',
           preferredTimeSlot: 'N/A',
           assignedPartner: `${division} (${recipient})`,
           messageOrNotes: enrichedMessage,
           status: 'New Inquiry',
-          turnstileProof: verifyRes.verificationProof,
           workspaceAccessToken: workspaceAccessToken || undefined,
           spreadsheetId: spreadsheetId || undefined,
         }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data?.persisted) {
-        persisted = true;
+      if (res.ok) {
+        const data = await res.json();
         synced = Boolean(data.sheetSynced);
-        if (typeof data.referenceId === 'string' && data.referenceId.trim()) {
-          resolvedRefId = data.referenceId.trim();
-        }
-      } else {
-        submitErrorMessage =
-          data?.error ||
-          data?.message ||
-          'Unable to save your inquiry to the durable database right now. Please try again.';
       }
-    } catch {
-      submitErrorMessage =
-        'Network error while saving your inquiry. Please check your connection and try again.';
-    }
-
-    if (!persisted) {
-      setIsSubmittingInquiry(false);
-      setTurnstileResetSignal((prev) => prev + 1);
-      setInquiryState((prev) => ({
-        ...prev,
-        stepValidationMessage:
-          submitErrorMessage || 'Inquiry could not be saved durably. Please retry.',
-      }));
-      return;
+    } catch (apiErr) {
+      console.warn('Backend contact ledger notice:', apiErr);
     }
 
     const cc = isJointInquiry ? `&cc=${encodeURIComponent(ELAWYERS_EMAIL)}` : '';
-    const subject = `[${resolvedRefId}] Consultation Inquiry — ${form.service}`;
+    const subject = `[${referenceId}] Consultation Inquiry — ${form.service}`;
     const body = [
-      `Reference ID: ${resolvedRefId}`,
+      `Reference ID: ${referenceId}`,
       `Priority / Urgency: ${urgency}`,
       'New consultation inquiry',
       '',
@@ -1053,19 +1044,18 @@ export function Contact() {
       form.message.trim(),
     ].join('\n');
 
-    setSubmittedInquiryRef(resolvedRefId);
+    setSubmittedInquiryRef(referenceId);
     setInquirySheetSynced(synced);
     setEmailDraftUrl(
       `mailto:${recipient}?subject=${encodeURIComponent(subject)}${cc}&body=${encodeURIComponent(body)}`,
     );
     setIsSubmittingInquiry(false);
-    setTurnstileResetSignal((prev) => prev + 1);
 
     dispatchFormSubmissionToast({
       title: 'Consultation Inquiry Submitted!',
       position: `${form.service} · ${division}`,
       message: `Thank you, ${fullName}. Your inquiry has been routed to our specialist desk for review.`,
-      referenceId: resolvedRefId,
+      referenceId,
       recipientEmail: form.email.trim(),
       type: 'success',
     });
@@ -1407,16 +1397,13 @@ export function Contact() {
               </div>
             </div>
 
-            {((submitAttempted && hasErrors) || stepValidationMessage) && (
+            {submitAttempted && hasErrors && (
               <div
                 role="alert"
                 className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
               >
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>
-                  {stepValidationMessage ||
-                    'Please review the highlighted fields before submitting your inquiry.'}
-                </span>
+                <span>Please review the highlighted fields before submitting your inquiry.</span>
               </div>
             )}
 

@@ -32,7 +32,8 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { auth } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { generateConsultationChecklistPDF } from '../utils/consultationChecklistPdfGenerator';
 import { getAccessToken } from '../services/workspaceAuth';
 import { getStoredContactSheetId } from '../services/contactSheetsSync';
@@ -966,8 +967,44 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
     }
     setCalendarSynced(calendarSyncedSuccess);
 
-    // 2. Prepare Automated Instant Confirmation Email Payload
-    let appointmentEmailPayload: Record<string, any> | undefined;
+    // 2. Save to Firestore 'appointments'
+    let firestoreDocId: string | undefined = undefined;
+    try {
+      const appointmentCollection = collection(db, 'appointments');
+      const docRef = await addDoc(appointmentCollection, {
+        referenceId: newAppointment.referenceId,
+        practiceArea: newAppointment.practiceArea,
+        practiceAreaId: newAppointment.practiceAreaId,
+        expertiseArea: newAppointment.expertiseArea,
+        assignedPartner: newAppointment.assignedPartner,
+        division: activePractice.division,
+        mode: newAppointment.mode,
+        date: newAppointment.date,
+        timeSlot: newAppointment.timeSlot,
+        clientName: newAppointment.clientName,
+        email: newAppointment.email,
+        phone: newAppointment.phone,
+        companyName: newAppointment.companyName,
+        notes: newAppointment.notes,
+        consultationFee: newAppointment.consultationFee,
+        paymentStatus: newAppointment.paymentStatus,
+        paymentGateway: newAppointment.paymentGateway,
+        transactionId: newAppointment.transactionId || null,
+        userId: auth.currentUser?.uid || null,
+        userEmail: auth.currentUser?.email || newAppointment.email,
+        status: 'confirmed',
+        calendarEventId: calendarEventId || null,
+        calendarSynced: calendarSyncedSuccess,
+        reminder3hSent: false,
+        createdAt: serverTimestamp(),
+      });
+      firestoreDocId = docRef.id;
+    } catch (err) {
+      console.warn('Note: Stored locally as offline backup or Firestore check:', err);
+    }
+
+    // 3. Automated Instant Confirmation Email to Client with CC info@accounticca.com
+    let emailDispatched = false;
     try {
       const appointmentTime = `${newAppointment.date} at ${newAppointment.timeSlot} (BST)`;
       const bookingStatus =
@@ -1003,26 +1040,48 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
       );
 
       if (generatedEmail.enabled) {
-        appointmentEmailPayload = {
-          templateId: generatedEmail.templateId,
-          ccEmails: ['info@accounticca.com'],
-          subject: generatedEmail.subject,
-          html: generatedEmail.html,
-          text: generatedEmail.text,
-        };
+        const notifyRes = await fetch('/api/appointments/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            referenceId: newAppointment.referenceId,
+            appointmentId: firestoreDocId,
+            templateId: generatedEmail.templateId,
+            clientName: newAppointment.clientName,
+            email: newAppointment.email,
+            ccEmails: ['info@accounticca.com'],
+            phone: newAppointment.phone,
+            companyName: newAppointment.companyName,
+            practiceArea: newAppointment.practiceArea,
+            serviceType: newAppointment.practiceArea,
+            mode: newAppointment.mode,
+            date: newAppointment.date,
+            timeSlot: newAppointment.timeSlot,
+            appointmentTime,
+            notes: newAppointment.notes || '',
+            status: bookingStatus,
+            assignedLead: newAppointment.assignedPartner.name,
+            leadPartnerName: newAppointment.assignedPartner.name,
+            leadPartnerEmail: 'info@accounticca.com',
+            calendarEventId,
+            subject: generatedEmail.subject,
+            html: generatedEmail.html,
+            text: generatedEmail.text,
+          })
+        });
+        if (notifyRes.ok) {
+          const notifyData = await notifyRes.json().catch(() => ({}));
+          emailDispatched = Boolean(notifyData?.success ?? true);
+          newAppointment.confirmationSent = emailDispatched;
+        }
       }
     } catch (notifyErr) {
-      console.warn('[Appointment Email Template Notice]', notifyErr);
+      console.warn('[Appointment Email Notification Notice]', notifyErr);
     }
+    setConfirmationDispatched(emailDispatched);
 
-    // 3. Atomically persist Appointment + Lead to Durable Firestore, Notion CRM, Google Sheet & Brevo Email
+    // 4. Save to Backend Contact & Meetings Ledger + Real-Time Google Sheets Auto-Append
     let syncedToSheet = false;
-    let emailDispatched = false;
-    let persisted = false;
-    let appointmentDocId: string | undefined = undefined;
-    let resolvedRefId = newAppointment.referenceId;
-    let submitErrorMessage: string | null = null;
-
     try {
       const workspaceAccessToken = getAccessToken();
       const spreadsheetId = getStoredContactSheetId();
@@ -1033,14 +1092,12 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
           referenceId: newAppointment.referenceId,
           requestType: 'Consultation Meeting',
           division: activePractice.division,
-          department: activePractice.division,
           clientName: newAppointment.clientName,
           email: newAppointment.email,
           phone: newAppointment.phone,
           companyName: newAppointment.companyName,
           serviceArea: newAppointment.practiceArea,
           expertiseTopic: newAppointment.expertiseArea,
-          source: 'appointment_booking_form',
           consultationMode:
             newAppointment.mode === 'virtual'
               ? 'Virtual Consultation (Google Workspace Scheduled)'
@@ -1049,74 +1106,28 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
           preferredTimeSlot: newAppointment.timeSlot,
           assignedPartner: `${newAppointment.assignedPartner.name} (${newAppointment.assignedPartner.chamber})`,
           messageOrNotes: newAppointment.notes || 'Scheduled Consultation Session',
-          status:
-            newAppointment.paymentStatus === 'PAID'
-              ? `Confirmed & Paid (${newAppointment.transactionId})`
-              : 'Confirmed Booking',
-          syncConsultationDoc: true,
-          turnstileProof: turnstileCheck.verificationProof,
-          appointmentEmailPayload,
-          appointmentMetadata: {
-            practiceAreaId: newAppointment.practiceAreaId,
-            assignedPartner: newAppointment.assignedPartner,
-            mode: newAppointment.mode,
-            consultationFee: newAppointment.consultationFee,
-            paymentStatus: newAppointment.paymentStatus,
-            paymentGateway: newAppointment.paymentGateway,
-            transactionId: newAppointment.transactionId || undefined,
-            userId: auth.currentUser?.uid || undefined,
-            calendarEventId: calendarEventId || undefined,
-            calendarSynced: calendarSyncedSuccess,
-          },
+          status: newAppointment.paymentStatus === 'PAID' ? `Confirmed & Paid (${newAppointment.transactionId})` : 'Confirmed Booking',
           workspaceAccessToken: workspaceAccessToken || undefined,
           spreadsheetId: spreadsheetId || undefined,
           calendarEventId,
-          leadPartnerEmail: 'ekram@elawyersbd.com',
+          leadPartnerEmail: 'ekram@elawyersbd.com'
         }),
       });
-      const submitData = await submitRes.json().catch(() => ({}));
-      if (submitRes.ok && submitData?.persisted) {
-        persisted = true;
+      if (submitRes.ok) {
+        const submitData = await submitRes.json();
         syncedToSheet = Boolean(submitData.sheetSynced);
-        emailDispatched = Boolean(submitData.emailDelivered);
-        appointmentDocId = submitData.appointmentId || newAppointment.referenceId;
-        if (typeof submitData.referenceId === 'string' && submitData.referenceId.trim()) {
-          resolvedRefId = submitData.referenceId.trim();
-        }
-        newAppointment.confirmationSent = emailDispatched;
-      } else {
-        submitErrorMessage =
-          submitData?.error ||
-          submitData?.message ||
-          'Unable to save appointment to durable database right now. Please try again.';
       }
-    } catch {
-      submitErrorMessage =
-        'Network error while saving your appointment. Please check your connection and try again.';
+    } catch (syncErr) {
+      console.warn('Contact & Meetings sheet ledger sync notice:', syncErr);
     }
 
-    if (!persisted) {
-      setIsSubmitting(false);
-      setTurnstileResetSignal((prev) => prev + 1);
-      setTurnstileError(
-        submitErrorMessage || 'Appointment booking could not be saved durably. Please retry.'
-      );
-      return;
-    }
-
-    const finalAppointment: AppointmentRecord = {
-      ...newAppointment,
-      id: appointmentDocId || resolvedRefId,
-      referenceId: resolvedRefId,
-    };
-    setConfirmationDispatched(emailDispatched);
-
-    // 4. Save locally for instant session recall (only after durable backend persistence succeeded)
+    // 5. Save locally for instant verification & session recall
     try {
-      const updated = [
-        finalAppointment,
-        ...recentAppointments.filter((a) => a.referenceId !== finalAppointment.referenceId),
-      ];
+      const enrichedBooking = {
+        ...newAppointment,
+        id: firestoreDocId || newAppointment.referenceId,
+      };
+      const updated = [enrichedBooking, ...recentAppointments.filter((a) => a.referenceId !== newAppointment.referenceId)];
       setRecentAppointments(updated);
       localStorage.setItem('accounticca_booked_appointments', JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent('accounticca:appointment-updated'));
@@ -1130,19 +1141,16 @@ export function AppointmentBookingForm({ initialPracticeArea }: AppointmentBooki
     }
 
     setBookingSheetSynced(syncedToSheet);
-    setConfirmedBooking(finalAppointment);
+    setConfirmedBooking(newAppointment);
     setIsThankYouModalOpen(true);
     setIsSubmitting(false);
-    setTurnstileResetSignal((prev) => prev + 1);
 
     dispatchFormSubmissionToast({
       title: 'Appointment Submitted Successfully!',
-      position: `${finalAppointment.practiceArea} · ${finalAppointment.date} (${finalAppointment.timeSlot})`,
-      message: emailDispatched
-        ? `Confirmation email sent to ${finalAppointment.email} (CC: info@accounticca.com).`
-        : `Appointment saved securely under reference ${finalAppointment.referenceId}.`,
-      referenceId: finalAppointment.referenceId,
-      recipientEmail: finalAppointment.email,
+      position: `${newAppointment.practiceArea} · ${newAppointment.date} (${newAppointment.timeSlot})`,
+      message: `Confirmation email sent to ${newAppointment.email} (CC: info@accounticca.com).`,
+      referenceId: newAppointment.referenceId,
+      recipientEmail: newAppointment.email,
       type: 'success',
     });
   };

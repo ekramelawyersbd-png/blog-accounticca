@@ -112,7 +112,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               {
                 email: currentEmail,
                 displayName: activeUser.displayName || displayName,
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                role
               },
               { merge: true }
             );

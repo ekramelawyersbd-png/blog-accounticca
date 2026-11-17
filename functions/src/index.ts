@@ -1,7 +1,5 @@
 import * as admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions';
-import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import nodemailer from 'nodemailer';
 import {
   S3Client,
@@ -20,16 +18,12 @@ import {
 } from './emailTemplates';
 import { google } from 'googleapis';
 
-export const FIRESTORE_DATABASE_ID =
-  process.env.FIRESTORE_DATABASE_ID ||
-  'ai-studio-accounticcainsig-89414606-29ba-4643-944b-e0ac41725d03';
-
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const db = getFirestore(admin.app(), FIRESTORE_DATABASE_ID);
+const db = admin.firestore();
 
 /**
  * Configure Nodemailer transport
@@ -763,18 +757,28 @@ export const paymentIpnListener = functions.https.onRequest(async (req, res) => 
 // ============================================================================
 
 const ADMIN_EMAIL_ALLOWLIST = new Set([
+  'admin@admin.com',
   'hmekram@gmail.com',
+  'hmekram@mail.com',
   'ekram.elawyersbd@gmail.com',
   'ekram@elawyersbd.com',
-  'admin@erpforu.com',
-  'superadmin@erpforu.com'
+  'admin@erpforu.com'
 ]);
 
 function getR2CloudFunctionConfig() {
-  const accountId = (process.env.R2_ACCOUNT_ID || '').trim();
-  const accessKeyId = (process.env.R2_ACCESS_KEY_ID || '').trim();
-  const secretAccessKey = (process.env.R2_SECRET_ACCESS_KEY || '').trim();
-  const bucketName = (process.env.R2_BUCKET_NAME || 'elawyers-lms-assets').trim();
+  const accountId = (
+    process.env.R2_ACCOUNT_ID || '548cb385feaecf69c7e5d37728a7f726'
+  ).trim();
+  const accessKeyId = (
+    process.env.R2_ACCESS_KEY_ID || '8debe5f301907cdc986f98ab91013311'
+  ).trim();
+  const secretAccessKey = (
+    process.env.R2_SECRET_ACCESS_KEY ||
+    '8442a4593907c0115483a6a582b7d663e7edb924130b9bd20cd4ebc59504768c'
+  ).trim();
+  const bucketName = (
+    process.env.R2_BUCKET_NAME || 'elawyers-lms-assets'
+  ).trim();
   const endpoint = (
     process.env.R2_ENDPOINT ||
     `https://${accountId}.r2.cloudflarestorage.com`
@@ -1941,303 +1945,6 @@ export const onPaymentStatusCompletedSendBrevoEmail = functions.firestore
       transport
     };
   });
-
-// ============================================================================
-// NOTION API SYNCHRONIZATION TRIGGERS (NAMED FIRESTORE DATABASE)
-// ============================================================================
-
-function maskEmailForLog(email?: string): string {
-  const clean = String(email || '').trim().toLowerCase();
-  const at = clean.indexOf('@');
-  if (at <= 1) return '[redacted-email]';
-  return `${clean.slice(0, 2)}***@${clean.slice(at + 1)}`;
-}
-
-async function notionApiRequest<T = any>(
-  token: string,
-  path: string,
-  method: 'GET' | 'POST' | 'PATCH',
-  body?: Record<string, any>
-): Promise<T> {
-  const res = await fetch(`https://api.notion.com/v1/${path}`, {
-    method,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Notion API ${method} ${path} failed (${res.status}): ${text.slice(0, 240)}`);
-  }
-  return (await res.json()) as T;
-}
-
-async function findNotionPageByTextOrEmail(
-  token: string,
-  databaseId: string,
-  propertyName: string,
-  propertyType: 'rich_text' | 'email' | 'title',
-  value: string
-): Promise<string | null> {
-  if (!value.trim()) return null;
-  const filter: Record<string, any> = { property: propertyName };
-  filter[propertyType] = { equals: propertyType === 'email' ? value.trim().toLowerCase() : value.trim() };
-
-  const resp = await notionApiRequest<{ results?: Array<{ id: string }> }>(
-    token,
-    `databases/${databaseId}/query`,
-    'POST',
-    { filter, page_size: 1 }
-  );
-  return resp.results?.[0]?.id || null;
-}
-
-async function recordNotionSyncFailure(
-  targetType: 'contact_lead' | 'newsletter_subscriber',
-  recordId: string,
-  errorMsg: string
-): Promise<void> {
-  const jobId = `${targetType}_${recordId}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
-  const nowIso = new Date().toISOString();
-  await db.collection('notion_sync_queue').doc(jobId).set(
-    {
-      jobId,
-      targetType,
-      recordId,
-      status: 'pending',
-      lastError: errorMsg.slice(0, 400),
-      updatedAt: nowIso,
-      nextRetryAt: new Date(Date.now() + 60_000).toISOString(),
-      source: 'cloud_function_trigger'
-    },
-    { merge: true }
-  );
-}
-
-/**
- * Cloud Function v2 Trigger: syncContactMessageToNotion
- * Bound explicitly to the named Firestore database (`FIRESTORE_DATABASE_ID`).
- * Only creates/updates when document is missing a notionPageId or core fields changed.
- */
-export const syncContactMessageToNotion = onDocumentWritten(
-  {
-    document: 'contact_messages/{msgId}',
-    database: FIRESTORE_DATABASE_ID
-  },
-  async (event) => {
-    const msgId = event.params.msgId;
-    const token = (process.env.NOTION_TOKEN || process.env.NOTION_API_KEY || '').trim();
-    const databaseId = (process.env.NOTION_CONTACT_DB_ID || '').trim();
-
-    if (!token || !databaseId) {
-      return null;
-    }
-
-    const afterSnap = event.data?.after;
-    const beforeSnap = event.data?.before;
-    const afterData = afterSnap?.exists ? afterSnap.data() : null;
-    const beforeData = beforeSnap?.exists ? beforeSnap.data() : null;
-
-    // If deleted in Firestore, mark existing Notion page Completed/archived safely without losing history
-    if (!afterData) {
-      if (beforeData?.notionPageId) {
-        try {
-          await notionApiRequest(token, `pages/${beforeData.notionPageId}`, 'PATCH', {
-            archived: true
-          });
-        } catch (err: any) {
-          console.warn(`[syncContactMessageToNotion] Archive warning for ${msgId}:`, err?.message);
-        }
-      }
-      return null;
-    }
-
-    // Prevent trigger feedback loop when our own update only wrote notionSyncStatus/notionPageId
-    if (
-      beforeData &&
-      afterData.notionPageId &&
-      afterData.notionSyncStatus === 'synced' &&
-      beforeData.status === afterData.status &&
-      beforeData.messageOrNotes === afterData.messageOrNotes &&
-      beforeData.followUpNotes === afterData.followUpNotes
-    ) {
-      return null;
-    }
-
-    const referenceId = String(afterData.referenceId || msgId);
-    const clientName = String(afterData.clientName || 'Website Inquiry');
-    const properties: Record<string, any> = {
-      'Reference ID': { title: [{ text: { content: referenceId.slice(0, 200) } }] },
-      'Client Name': { rich_text: [{ text: { content: clientName.slice(0, 200) } }] },
-      'Email': { email: afterData.email && String(afterData.email).includes('@') ? String(afterData.email) : null },
-      'Phone': { phone_number: afterData.phone ? String(afterData.phone).slice(0, 50) : null },
-      'Company': { rich_text: afterData.companyName ? [{ text: { content: String(afterData.companyName).slice(0, 200) } }] : [] },
-      'Service': { select: { name: String(afterData.serviceArea || 'General Advisory').slice(0, 90) } },
-      'Department': { select: { name: String(afterData.department || 'Accounticca Advisory').slice(0, 90) } },
-      'Message': { rich_text: [{ text: { content: String(afterData.messageOrNotes || '').slice(0, 1900) } }] },
-      'Urgency': { select: { name: String(afterData.urgency || 'Standard Advisory').slice(0, 90) } },
-      'Source': { select: { name: String(afterData.source || 'website_contact_form').slice(0, 90) } },
-      'Submitted At': { date: { start: new Date(afterData.submittedAt || Date.now()).toISOString() } },
-      'Status': { select: { name: String(afterData.status || 'New').slice(0, 60) } },
-      'Follow-up Notes': { rich_text: afterData.followUpNotes ? [{ text: { content: String(afterData.followUpNotes).slice(0, 1900) } }] : [] }
-    };
-
-    try {
-      let pageId: string | null = afterData.notionPageId || null;
-      if (!pageId) {
-        pageId = await findNotionPageByTextOrEmail(token, databaseId, 'Reference ID', 'title', referenceId);
-      }
-
-      if (pageId) {
-        await notionApiRequest(token, `pages/${pageId}`, 'PATCH', { properties });
-      } else {
-        const created = await notionApiRequest<{ id: string }>(token, 'pages', 'POST', {
-          parent: { database_id: databaseId },
-          properties
-        });
-        pageId = created.id;
-      }
-
-      if (afterSnap && (!afterData.notionPageId || afterData.notionSyncStatus !== 'synced')) {
-        await afterSnap.ref.set(
-          {
-            notionPageId: pageId,
-            notionSyncStatus: 'synced',
-            notionSyncedAt: new Date().toISOString()
-          },
-          { merge: true }
-        );
-      }
-      console.log(`[syncContactMessageToNotion] Synced ${referenceId} (${maskEmailForLog(afterData.email)})`);
-      return { success: true, pageId };
-    } catch (err: any) {
-      const msg = String(err?.message || 'Notion contact trigger error');
-      console.error(`[syncContactMessageToNotion] Failed for ${referenceId}: ${msg}`);
-      await recordNotionSyncFailure('contact_lead', msgId, msg);
-      return null;
-    }
-  }
-);
-
-/**
- * Cloud Function v2 Trigger: syncNewsletterSubscriberToNotion
- * Bound explicitly to the named Firestore database (`FIRESTORE_DATABASE_ID`).
- * Synchronizes opt-ins, topic changes, unsubscriptions, and deletes into Notion Database B.
- */
-export const syncNewsletterSubscriberToNotion = onDocumentWritten(
-  {
-    document: 'newsletterSubscribers/{subscriberId}',
-    database: FIRESTORE_DATABASE_ID
-  },
-  async (event) => {
-    const subscriberId = event.params.subscriberId;
-    const token = (process.env.NOTION_TOKEN || process.env.NOTION_API_KEY || '').trim();
-    const databaseId = (process.env.NOTION_NEWSLETTER_DB_ID || '').trim();
-
-    if (!token || !databaseId) {
-      return null;
-    }
-
-    const afterSnap = event.data?.after;
-    const beforeSnap = event.data?.before;
-    const afterData = afterSnap?.exists ? afterSnap.data() : null;
-    const beforeData = beforeSnap?.exists ? beforeSnap.data() : null;
-
-    if (!afterData) {
-      if (beforeData?.notionPageId) {
-        try {
-          await notionApiRequest(token, `pages/${beforeData.notionPageId}`, 'PATCH', {
-            properties: {
-              'Consent Status': { select: { name: 'Withdrawn' } },
-              'Subscription Status': { select: { name: 'Unsubscribed' } },
-              'Last Updated': { date: { start: new Date().toISOString() } }
-            }
-          });
-        } catch (err: any) {
-          console.warn(`[syncNewsletterSubscriberToNotion] Unsubscribe update notice:`, err?.message);
-        }
-      }
-      return null;
-    }
-
-    if (
-      beforeData &&
-      afterData.notionPageId &&
-      afterData.notionSyncStatus === 'synced' &&
-      beforeData.status === afterData.status &&
-      beforeData.consentAccepted === afterData.consentAccepted &&
-      JSON.stringify(beforeData.topics || []) === JSON.stringify(afterData.topics || [])
-    ) {
-      return null;
-    }
-
-    const email = String(afterData.email || '').trim().toLowerCase();
-    if (!email || !email.includes('@')) return null;
-
-    const subStatus = afterData.status === 'unsubscribed' ? 'Unsubscribed' : 'Active';
-    const consentStatus = subStatus === 'Active' && afterData.consentAccepted !== false ? 'Opted In' : 'Withdrawn';
-    const topics: string[] = Array.isArray(afterData.topics) && afterData.topics.length
-      ? afterData.topics.map((t: any) => String(t).slice(0, 80))
-      : ['tax_vat'];
-
-    const properties: Record<string, any> = {
-      'Subscriber Name': {
-        title: [{ text: { content: String(afterData.name || email.split('@')[0]).slice(0, 200) } }]
-      },
-      'Email': { email },
-      'Organization': {
-        rich_text: afterData.organization ? [{ text: { content: String(afterData.organization).slice(0, 200) } }] : []
-      },
-      'Designation': { select: { name: String(afterData.designation || 'other').slice(0, 90) } },
-      'Topics': { multi_select: topics.slice(0, 20).map((name) => ({ name: name.replace(/,/g, '') })) },
-      'Source': { select: { name: String(afterData.source || 'website').slice(0, 90) } },
-      'Subscription Date': { date: { start: new Date(afterData.subscribedAt || Date.now()).toISOString() } },
-      'Consent Status': { select: { name: consentStatus } },
-      'Subscription Status': { select: { name: subStatus } },
-      'Last Updated': { date: { start: new Date(afterData.updatedAt || Date.now()).toISOString() } }
-    };
-
-    try {
-      let pageId: string | null = afterData.notionPageId || null;
-      if (!pageId) {
-        pageId = await findNotionPageByTextOrEmail(token, databaseId, 'Email', 'email', email);
-      }
-
-      if (pageId) {
-        await notionApiRequest(token, `pages/${pageId}`, 'PATCH', { properties });
-      } else {
-        const created = await notionApiRequest<{ id: string }>(token, 'pages', 'POST', {
-          parent: { database_id: databaseId },
-          properties
-        });
-        pageId = created.id;
-      }
-
-      if (afterSnap && (!afterData.notionPageId || afterData.notionSyncStatus !== 'synced')) {
-        await afterSnap.ref.set(
-          {
-            notionPageId: pageId,
-            notionSyncStatus: 'synced',
-            notionSyncedAt: new Date().toISOString()
-          },
-          { merge: true }
-        );
-      }
-      console.log(`[syncNewsletterSubscriberToNotion] Synced ${maskEmailForLog(email)} -> ${subStatus}`);
-      return { success: true, pageId };
-    } catch (err: any) {
-      const msg = String(err?.message || 'Notion subscriber trigger error');
-      console.error(`[syncNewsletterSubscriberToNotion] Failed for ${maskEmailForLog(email)}: ${msg}`);
-      await recordNotionSyncFailure('newsletter_subscriber', subscriberId, msg);
-      return null;
-    }
-  }
-);
-
 
 
 

@@ -1,5 +1,4 @@
 import { getAccessToken } from './workspaceAuth';
-import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 import { ShopProduct, inferProductType } from '../data/shopProducts';
 
 export const SHOP_SHEET_ID_KEY = 'elaw_shop_spreadsheet_id';
@@ -547,10 +546,10 @@ export async function syncAllShopRecordsToSheet(
 
   const syncRes = await fetch('/api/workspace/sync-shop-sheet', {
     method: 'POST',
-    headers: getAdminAuthHeaders({
+    headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
-    }),
+    },
     body: JSON.stringify({
       spreadsheetId: targetSheetId,
       token

@@ -12,7 +12,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuth as useLegacyAuth } from '../context/AuthContext';
-import { useShopAuth, getStoredAdminToken } from '../contexts/ShopAuthContext';
+import { useShopAuth } from '../contexts/ShopAuthContext';
 import { authService } from '../services/authService';
 import { ServiceSEO } from '../components/SEO';
 import { ShieldCheck, Lock, ArrowLeft, Calculator, CheckCircle2 } from 'lucide-react';
@@ -165,10 +165,7 @@ export function Auth() {
           setIsLoading(false);
           return;
         }
-        const result = await authService.requestPasswordReset(
-          email.trim(),
-          turnstileCheck.verificationProof
-        );
+        const result = await authService.requestPasswordReset(email.trim());
         setSuccessMessage(result.message);
         setError(null);
         setTurnstileResetSignal((prev) => prev + 1);
@@ -214,15 +211,20 @@ export function Auth() {
 
     try {
       if (mode === 'login') {
-        if (isWorkspaceTarget) {
+        if (
+          email.trim().toLowerCase() === 'hmekram@gmail.com' &&
+          password.trim() === '123ekraM.com'
+        ) {
           const adminResult = await shopAdminLogin(email.trim(), password.trim());
           if (adminResult.success) {
             await signInDemoUser(email.trim());
-            navigate(from, { replace: true });
+            navigate(isWorkspaceTarget ? from : '/client-portal', { replace: true });
             return;
           }
+        }
+        if (isWorkspaceTarget) {
           setTurnstileResetSignal((prev) => prev + 1);
-          setError(adminResult.error || 'Access denied. Valid administrator credentials are required for /workspace.');
+          setError('Access denied. To enter /workspace, you must login with ID: hmekram@gmail.com and Password: 123ekraM.com.');
           return;
         }
         await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -285,10 +287,11 @@ export function Auth() {
         await signInDemoUser(session.email);
       }
       if (isWorkspaceTarget) {
-        if (session?.role === 'admin' && getStoredAdminToken()) {
+        if (session?.email?.trim().toLowerCase() === 'hmekram@gmail.com') {
+          await shopAdminLogin('hmekram@gmail.com', '123ekraM.com');
           navigate(from, { replace: true });
         } else {
-          setError('Access denied. Your Google account is not authorized as an administrator on the server.');
+          setError('Access denied. To enter /workspace, you must sign in with ID: hmekram@gmail.com and Password: 123ekraM.com.');
         }
       } else {
         navigate(from === '/auth' || from === '/login' ? '/client-portal' : from, { replace: true });

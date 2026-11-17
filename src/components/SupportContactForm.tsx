@@ -267,30 +267,16 @@ export const SupportContactForm: React.FC<SupportContactFormProps> = ({
 
       const data = await response.json().catch(() => ({}));
 
-      if (response.status === 403 || response.status === 429) {
+      if (response.status === 403) {
         setTurnstileResetSignal((prev) => prev + 1);
         setFormErrorBanner(
-          data?.error ||
-            (response.status === 429
-              ? 'Too many support requests detected. Please wait a moment before retrying.'
-              : 'Cloudflare Turnstile verification failed. Please retry the security check.')
-        );
-        return;
-      }
-
-      if (response.status === 503 || data?.persisted === false) {
-        setTurnstileResetSignal((prev) => prev + 1);
-        setFormErrorBanner(
-          data?.error ||
-            data?.message ||
-            'Durable support database is temporarily unavailable. Your message could not be saved.'
+          data?.error || 'Cloudflare Turnstile verification failed. Please retry the security check.'
         );
         return;
       }
 
       if (response.status === 400 && data?.errors) {
         setErrors(data.errors as SupportFieldErrors);
-        setTurnstileResetSignal((prev) => prev + 1);
         setFormErrorBanner(
           data.error || 'Some fields need correction before your message can be sent.'
         );

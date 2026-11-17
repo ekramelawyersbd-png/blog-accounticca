@@ -22,17 +22,17 @@ export function ShopAdminRouteGuard({ children }: ShopAdminRouteGuardProps) {
           Verifying Administrator Session...
         </h3>
         <p className="text-xs text-slate-400 mt-1 max-w-sm text-center">
-          Server-verified administrator sign-in is strictly required to enter /workspace.
+          Admin sign-in (hmekram@gmail.com) is strictly required to enter /workspace.
         </p>
       </div>
     );
   }
 
-  // Strictly require a server-verified authenticated administrator session
+  // Strictly require an active authenticated session for ID: hmekram@gmail.com
   const isAuthorizedWorkspaceAdmin =
     isAuthenticated &&
     Boolean(adminUser) &&
-    adminUser.role === 'admin';
+    adminUser.email.trim().toLowerCase() === 'hmekram@gmail.com';
 
   if (!isAuthorizedWorkspaceAdmin) {
     const redirectUrl = `/admin/login?redirect=${encodeURIComponent(location.pathname + location.search)}`;

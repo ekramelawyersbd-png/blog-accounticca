@@ -1,6 +1,5 @@
 // UddoktaPay Payment Gateway Service (Paymenter Extension v2 Port)
 // Supports automated checkout via bKash, Nagad, Rocket, Upay, Visa, Mastercard, AMEX
-import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 
 export interface UddoktaPayConfigData {
   name: string;
@@ -181,7 +180,7 @@ export async function saveUddoktaPayConfig(updates: {
   try {
     const res = await fetch('/api/payment/uddoktapay/config', {
       method: 'POST',
-      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     });
     return await res.json();
@@ -192,9 +191,7 @@ export async function saveUddoktaPayConfig(updates: {
 
 export async function fetchUddoktaPayInvoices(): Promise<UddoktaPayInvoiceLedgerItem[]> {
   try {
-    const res = await fetch('/api/payment/uddoktapay/invoices', {
-      headers: getAdminAuthHeaders(),
-    });
+    const res = await fetch('/api/payment/uddoktapay/invoices');
     const data = await res.json();
     if (data && data.status && Array.isArray(data.invoices)) {
       return data.invoices;
@@ -292,7 +289,7 @@ export async function refundUddoktaPayPayment(
   try {
     const res = await fetch('/api/payment/uddoktapay/refund', {
       method: 'POST',
-      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         transaction_id: String(params.transaction_id).trim(),
         payment_method: String(params.payment_method).trim(),
@@ -335,7 +332,7 @@ export async function authVerifyUddoktaPay(params?: {
   try {
     const res = await fetch('/api/payment/uddoktapay/auth-verify', {
       method: 'POST',
-      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params || {}),
     });
     return await res.json();

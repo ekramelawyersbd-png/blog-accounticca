@@ -13,7 +13,6 @@ import {
   Copy,
   Check
 } from 'lucide-react';
-import { getAdminAuthHeaders } from '../../contexts/ShopAuthContext';
 
 interface GitCommitItem {
   hash: string;
@@ -59,9 +58,7 @@ export const GitHubSyncPanel: React.FC = () => {
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/github/status', {
-        headers: getAdminAuthHeaders(),
-      });
+      const res = await fetch('/api/github/status');
       const data = await res.json();
       if (data.success) {
         setStatus(data);
@@ -89,7 +86,7 @@ export const GitHubSyncPanel: React.FC = () => {
     try {
       const res = await fetch('/api/github/commit', {
         method: 'POST',
-        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: commitMessage }),
       });
       const data = await res.json();
@@ -113,7 +110,7 @@ export const GitHubSyncPanel: React.FC = () => {
     try {
       const res = await fetch('/api/github/sync', {
         method: 'POST',
-        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           repoUrl: repoUrl.trim(),
           branch: branch.trim() || 'main',

@@ -11,81 +11,6 @@
       },
       "required": ["email"]
     },
-    "AdminUser": {
-      "title": "AdminUser",
-      "description": "Authorized administrator registry record",
-      "type": "object",
-      "properties": {
-        "uid": { "type": "string", "maxLength": 128 },
-        "email": { "type": "string", "maxLength": 256 },
-        "role": { "type": "string", "maxLength": 64 },
-        "active": { "type": "boolean" }
-      },
-      "required": ["email", "role", "active"]
-    },
-    "ContactMessage": {
-      "title": "ContactMessage",
-      "description": "Server-validated client inquiry persisted from Contact, Quick Contact, Support, and Booking forms",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string", "maxLength": 128 },
-        "referenceId": { "type": "string", "maxLength": 128 },
-        "clientName": { "type": "string", "maxLength": 256 },
-        "email": { "type": "string", "maxLength": 256 },
-        "phone": { "type": "string", "maxLength": 64 },
-        "companyName": { "type": "string", "maxLength": 256 },
-        "serviceArea": { "type": "string", "maxLength": 160 },
-        "department": { "type": "string", "maxLength": 160 },
-        "subject": { "type": "string", "maxLength": 256 },
-        "messageOrNotes": { "type": "string", "maxLength": 5000 },
-        "urgency": { "type": "string", "maxLength": 128 },
-        "source": { "type": "string", "maxLength": 128 },
-        "status": { "type": "string", "maxLength": 64 },
-        "submittedAt": { "type": "string", "maxLength": 64 },
-        "followUpNotes": { "type": "string", "maxLength": 2000 },
-        "notionPageId": { "type": "string", "maxLength": 128 },
-        "notionSyncStatus": { "type": "string", "maxLength": 64 }
-      },
-      "required": ["id", "referenceId", "clientName", "serviceArea", "messageOrNotes", "source", "status"]
-    },
-    "NewsletterSubscriber": {
-      "title": "NewsletterSubscriber",
-      "description": "Normalized newsletter subscriber record with consent and synchronization state",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string", "maxLength": 128 },
-        "email": { "type": "string", "maxLength": 256 },
-        "name": { "type": "string", "maxLength": 256 },
-        "organization": { "type": "string", "maxLength": 256 },
-        "designation": { "type": "string", "maxLength": 128 },
-        "topics": { "type": "array", "items": { "type": "string" } },
-        "frequency": { "type": "string", "maxLength": 64 },
-        "source": { "type": "string", "maxLength": 64 },
-        "status": { "type": "string", "maxLength": 64 },
-        "consentAccepted": { "type": "boolean" },
-        "consentStatus": { "type": "string", "maxLength": 64 },
-        "subscribedAt": { "type": "string", "maxLength": 64 },
-        "updatedAt": { "type": "string", "maxLength": 64 },
-        "notionPageId": { "type": "string", "maxLength": 128 },
-        "notionSyncStatus": { "type": "string", "maxLength": 64 }
-      },
-      "required": ["id", "email", "status", "consentAccepted"]
-    },
-    "NotionSyncQueueJob": {
-      "title": "NotionSyncQueueJob",
-      "description": "Durable retry queue entry for failed Notion synchronization operations",
-      "type": "object",
-      "properties": {
-        "jobId": { "type": "string", "maxLength": 128 },
-        "targetType": { "type": "string", "maxLength": 64 },
-        "recordId": { "type": "string", "maxLength": 128 },
-        "attempts": { "type": "number" },
-        "status": { "type": "string", "maxLength": 64 },
-        "lastError": { "type": "string", "maxLength": 512 },
-        "nextRetryAt": { "type": "string", "maxLength": 64 }
-      },
-      "required": ["jobId", "targetType", "recordId", "status"]
-    },
     "Comment": {
       "title": "Comment",
       "description": "Professional commentary and Q&A discussion on legal and tax articles",
@@ -232,22 +157,6 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "User profile records"
-    },
-    "/admins/{adminId}": {
-      "schema": { "$ref": "#/entities/AdminUser" },
-      "description": "Authorized administrator registry"
-    },
-    "/contact_messages/{msgId}": {
-      "schema": { "$ref": "#/entities/ContactMessage" },
-      "description": "Server-validated client inquiry records (admin-only reads)"
-    },
-    "/newsletterSubscribers/{subscriberId}": {
-      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
-      "description": "Newsletter subscriber ledger synced with Brevo and Notion (admin-only reads)"
-    },
-    "/notion_sync_queue/{jobId}": {
-      "schema": { "$ref": "#/entities/NotionSyncQueueJob" },
-      "description": "Durable Notion retry queue for transient integration failures"
     },
     "/comments/{commentId}": {
       "schema": { "$ref": "#/entities/Comment" },

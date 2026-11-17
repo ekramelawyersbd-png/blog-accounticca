@@ -21,7 +21,6 @@ import type {
   TransactionalEmailTemplate,
 } from '../../utils/transactionalEmailTemplates';
 import { dispatchFormSubmissionToast } from '../ui/FormSubmissionToast';
-import { getAdminAuthHeaders } from '../../contexts/ShopAuthContext';
 
 export type ScheduledDispatchStatus =
   | 'scheduled'
@@ -194,8 +193,7 @@ export const ScheduledEmailQueuePanel: React.FC<ScheduledEmailQueuePanelProps> =
       setIsLoadingQueue(true);
       try {
         const res = await fetch(
-          `/api/email/schedules${processDue ? '?processDue=true' : ''}`,
-          { headers: getAdminAuthHeaders() }
+          `/api/email/schedules${processDue ? '?processDue=true' : ''}`
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -270,7 +268,7 @@ export const ScheduledEmailQueuePanel: React.FC<ScheduledEmailQueuePanelProps> =
     try {
       const res = await fetch('/api/email/schedules', {
         method: 'POST',
-        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           templateId: selectedTemplate.id,
           name: usesDraft ? draftOverride?.name : selectedTemplate.name,
@@ -326,7 +324,6 @@ export const ScheduledEmailQueuePanel: React.FC<ScheduledEmailQueuePanelProps> =
     try {
       const res = await fetch(`/api/email/schedules/${item.id}/dispatch-now`, {
         method: 'POST',
-        headers: getAdminAuthHeaders(),
       });
       const data = await res.json().catch(() => ({}));
       setBannerMessage({
@@ -359,7 +356,6 @@ export const ScheduledEmailQueuePanel: React.FC<ScheduledEmailQueuePanelProps> =
     try {
       const res = await fetch(`/api/email/schedules/${item.id}/cancel`, {
         method: 'POST',
-        headers: getAdminAuthHeaders(),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -388,10 +384,7 @@ export const ScheduledEmailQueuePanel: React.FC<ScheduledEmailQueuePanelProps> =
     if (busyItemId) return;
     setBusyItemId(item.id);
     try {
-      await fetch(`/api/email/schedules/${item.id}`, {
-        method: 'DELETE',
-        headers: getAdminAuthHeaders(),
-      });
+      await fetch(`/api/email/schedules/${item.id}`, { method: 'DELETE' });
       await fetchSchedules(false);
     } finally {
       setBusyItemId(null);
@@ -403,10 +396,7 @@ export const ScheduledEmailQueuePanel: React.FC<ScheduledEmailQueuePanelProps> =
     setIsProcessingDue(true);
     setBannerMessage(null);
     try {
-      const res = await fetch('/api/email/schedules/process-due', {
-        method: 'POST',
-        headers: getAdminAuthHeaders(),
-      });
+      const res = await fetch('/api/email/schedules/process-due', { method: 'POST' });
       const data = await res.json().catch(() => ({}));
       setBannerMessage({
         type: 'success',

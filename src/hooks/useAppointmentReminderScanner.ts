@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
-import { getAdminAuthHeaders, getStoredAdminToken } from '../contexts/ShopAuthContext';
+import { db } from '../lib/firebase';
 
 /**
  * Client-Side Active Session Appointment Reminder Scanner
@@ -19,19 +18,14 @@ export function useAppointmentReminderScanner(enabled: boolean = true) {
 
     const runScan = async () => {
       if (isScanningRef.current) return;
-      const currentUser = auth.currentUser;
-      const adminToken = getStoredAdminToken();
-      if (!currentUser && !adminToken) {
-        return;
-      }
-
       isScanningRef.current = true;
 
       try {
         const appointmentsRef = collection(db, 'appointments');
-        const q = currentUser
-          ? query(appointmentsRef, where('userId', '==', currentUser.uid))
-          : query(appointmentsRef, where('status', '==', 'confirmed'));
+        const q = query(
+          appointmentsRef,
+          where('status', '==', 'confirmed')
+        );
 
         const snap = await getDocs(q);
         if (snap.empty) {
@@ -44,7 +38,6 @@ export function useAppointmentReminderScanner(enabled: boolean = true) {
 
         snap.forEach((d) => {
           const data = d.data();
-          if (String(data.status || '').toLowerCase() !== 'confirmed') return;
           // Skip if 3-hour reminder was already sent
           if (data.reminder3hSent === true || data.reminderSent === true) return;
 
@@ -94,22 +87,9 @@ export function useAppointmentReminderScanner(enabled: boolean = true) {
         });
 
         if (pendingAppointments.length > 0) {
-          let firebaseIdToken: string | undefined;
-          if (currentUser) {
-            try {
-              firebaseIdToken = await currentUser.getIdToken();
-            } catch {
-              // ignore token error
-            }
-          }
-          const headers = getAdminAuthHeaders({
-            'Content-Type': 'application/json',
-            ...(firebaseIdToken ? { Authorization: `Bearer ${firebaseIdToken}` } : {})
-          });
-
           const res = await fetch('/api/appointments/scan-reminders', {
             method: 'POST',
-            headers,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ appointments: pendingAppointments })
           });
 

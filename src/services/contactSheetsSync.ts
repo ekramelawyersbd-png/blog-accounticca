@@ -1,5 +1,4 @@
 import { getAccessToken } from './workspaceAuth';
-import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 
 export const CONTACT_SHEET_STORAGE_KEY = 'elaw_contact_spreadsheet_id';
 export const CONTACT_SHEET_TITLE_KEY = 'elaw_contact_spreadsheet_title';
@@ -388,10 +387,10 @@ export async function syncAllContactRequestsToSheet(
   // 2. Call server sync endpoint which reconciles and marks records synced
   const syncRes = await fetch('/api/workspace/sync-contact-sheet', {
     method: 'POST',
-    headers: getAdminAuthHeaders({
+    headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${authToken}`
-    }),
+    },
     body: JSON.stringify({
       spreadsheetId: targetId,
       token: authToken

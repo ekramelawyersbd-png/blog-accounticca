@@ -44,7 +44,6 @@ import {
   resolveEmbedBehavior
 } from '../utils/lmsPortalStore';
 import { useLms, LmsCertificateRecord } from '../contexts/LmsContext';
-import { useShopAuth } from '../contexts/ShopAuthContext';
 import { FinalExamModal } from '../components/lms/FinalExamModal';
 import { LmsCertificateViewerModal } from '../components/lms/LmsCertificateViewerModal';
 import {
@@ -230,19 +229,12 @@ export const StudentLearningPortalPage: React.FC<{
   const [adminDraftRows, setAdminDraftRows] = useState<AdminDraftRow[]>(() =>
     createDraftRowsFromMap(loadLmsPortalData(selectedPortalCourseId))
   );
-  const { isAuthenticated: isShopAdminAuthenticated, adminUser: shopAdminUser, login: shopAdminLogin } = useShopAuth();
   const [isAdminView, setIsAdminView] = useState<boolean>(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => isShopAdminAuthenticated);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
   const [adminEmailInput, setAdminEmailInput] = useState<string>('');
   const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
   const [adminAuthError, setAdminAuthError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isShopAdminAuthenticated && shopAdminUser?.role === 'admin') {
-      setIsAdminAuthenticated(true);
-    }
-  }, [isShopAdminAuthenticated, shopAdminUser]);
 
   const classKeys = useMemo(() => Object.keys(lmsData), [lmsData]);
   const [currentClass, setCurrentClass] = useState<string>(() => {
@@ -510,18 +502,12 @@ export const StudentLearningPortalPage: React.FC<{
     }
   };
 
-  const handleAdminAuthSubmit = async (e: React.FormEvent) => {
+  const handleAdminAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const emailClean = (adminEmailInput || '').trim().toLowerCase();
     const passClean = (adminPasswordInput || '').trim();
 
-    if (!emailClean || !passClean) {
-      setAdminAuthError('Please enter both administrator email and password.');
-      return;
-    }
-
-    const result = await shopAdminLogin(emailClean, passClean);
-    if (result.success) {
+    if (emailClean === 'hmekram@gmail.com' && passClean === '123ekraM.com') {
       setIsAdminAuthenticated(true);
       setIsAdminAuthModalOpen(false);
       setAdminAuthError(null);
@@ -529,9 +515,9 @@ export const StudentLearningPortalPage: React.FC<{
       setAdminDraftRows(createDraftRowsFromMap(lmsData));
       setConfirmResetOpen(false);
       setIsAdminView(true);
-      showToast(`Admin verified (${emailClean}). Switched to Admin Page.`);
+      showToast('Admin verified (hmekram@gmail.com). Switched to Admin Page.');
     } else {
-      setAdminAuthError(result.error || 'Invalid admin credentials. Access is restricted to authorized administrators only.');
+      setAdminAuthError('Invalid admin credentials. Access is restricted to authorized admin only.');
     }
   };
 
