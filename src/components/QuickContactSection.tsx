@@ -283,11 +283,11 @@ export function QuickContactSection() {
   return (
     <section 
       id="footer-contact-form-section" 
-      className="w-full scroll-mt-8 py-12 sm:py-16 px-4 sm:px-6 lg:px-10 xl:px-12 bg-white border-t border-slate-200/80"
+      className="w-full scroll-mt-8 py-12 sm:py-16 px-4 sm:px-6 lg:px-10 xl:px-12 bg-white border-t border-slate-200/80 overflow-x-clip"
     >
-      <div className="w-full max-w-full mx-auto">
+      <div className="w-full max-w-[1400px] mx-auto">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div className="w-full flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/90 border border-emerald-300 text-emerald-800 text-xs font-bold uppercase tracking-wider mb-2.5">
               <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
@@ -313,7 +313,7 @@ export function QuickContactSection() {
         </div>
 
         {/* Two-Column Chambers Hotline / Info + Tabbed Intake Form */}
-        <div className="w-[1320px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Direct Advisory Hotline Card + Chambers Location & Trust List */}
           <div className="lg:col-span-4 space-y-6">
             {/* Direct Advisory Hotline Card */}
