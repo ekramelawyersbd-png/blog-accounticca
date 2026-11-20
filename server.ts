@@ -39,6 +39,44 @@ import {
   generateLlmsTxt,
 } from './src/utils/seoConfig';
 import { crawlAllRoutesForSitemap } from './src/utils/sitemapGenerator';
+import {
+  getAdminFirestore,
+  getFirebaseAdminStatus,
+  verifyFirebaseIdToken,
+  FieldValue,
+} from './src/lib/firebaseAdmin';
+import {
+  maskEmail,
+  maskPhone,
+  sanitizePlainText,
+  resolveClientIp,
+  rateLimit,
+  checkDuplicateSubmission,
+  recordSubmissionFingerprint,
+  createTurnstileVerificationProof,
+  consumeTurnstileVerificationProof,
+  contactInquirySchema,
+  newsletterSubscribeSchema,
+  newsletterUnsubscribeSchema,
+  createUnsubscribeSignature,
+  verifyUnsubscribeSignature,
+} from './src/lib/securityMiddleware';
+import {
+  loginAdminWithPassword,
+  syncAdminFromVerifiedFirebaseToken,
+  verifyAdminSessionToken,
+  revokeAdminSessionToken,
+  revokeAllAdminSessionsForEmail,
+  requireAdminAuth,
+  extractBearerToken,
+} from './src/lib/adminAuth';
+import {
+  syncContactLeadToNotion,
+  syncNewsletterSubscriberToNotion,
+  retryFailedNotionSyncs,
+  getNotionSyncStatus,
+  getNotionConfiguration,
+} from './src/lib/notionService';
 
 const execFileAsync = promisify(execFile);
 
@@ -46,6 +84,21 @@ const __filename = import.meta?.url ? fileURLToPath(import.meta.url) : path.reso
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', true);
+
+const publicSubmitLimiter = rateLimit({
+  keyPrefix: 'public_submit',
+  windowMs: 60_000,
+  maxRequests: 15,
+  blockDurationMs: 2 * 60_000,
+});
+
+const strictAuthLimiter = rateLimit({
+  keyPrefix: 'auth_action',
+  windowMs: 5 * 60_000,
+  maxRequests: 10,
+  blockDurationMs: 5 * 60_000,
+});
 
 function resolvePort(): number {
   const portArgIdx = process.argv.indexOf('--port');
@@ -258,15 +311,22 @@ function saveSignings(signings: ToolSigningRecord[]): void {
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
+  const relay = getBrevoRelayConfig();
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    brevoRelay: getBrevoRelayConfig(),
+    brevoRelay: {
+      configured: relay.configured,
+      mode: relay.mode,
+      senderName: relay.senderName,
+    },
     turnstileConfigured: Boolean(
       process.env.TURNSTILE_SECRET?.trim() || process.env.TURNSTILE_SECRET_KEY?.trim()
     ),
     turnstileSiteKey: DEFAULT_TURNSTILE_SITE_KEY,
+    firestoreAdmin: getFirebaseAdminStatus(),
+    notion: getNotionConfiguration(),
   });
 });
 
@@ -348,18 +408,6 @@ function extractTurnstileToken(body: any): string | undefined {
     return String(body.token || '');
   }
   return undefined;
-}
-
-function resolveClientIp(req: express.Request): string | undefined {
-  const cfConnectingIp = req.headers['cf-connecting-ip'];
-  if (typeof cfConnectingIp === 'string' && cfConnectingIp.trim()) {
-    return cfConnectingIp.trim();
-  }
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0]?.trim();
-  }
-  return req.ip || undefined;
 }
 
 async function verifyTurnstileToken(
@@ -497,19 +545,95 @@ app.get('/api/security/turnstile/config', (_req, res) => {
   });
 });
 
-app.post('/api/security/turnstile/verify', async (req, res) => {
+app.post('/api/security/turnstile/verify', publicSubmitLimiter, async (req, res) => {
   const token = extractTurnstileToken(req.body) || '';
   const expectedAction =
     typeof req.body?.action === 'string' && req.body.action.trim()
       ? req.body.action.trim()
       : undefined;
-  const result = await verifyTurnstileToken(token, resolveClientIp(req), expectedAction);
+  const clientIp = resolveClientIp(req);
+  const result = await verifyTurnstileToken(token, clientIp, expectedAction);
   if (!result.success) {
     res.status(403).json(result);
     return;
   }
-  res.json(result);
+  const verificationProof = createTurnstileVerificationProof(expectedAction || 'general', clientIp);
+  res.json({
+    ...result,
+    verificationProof,
+  });
 });
+
+async function verifyTurnstileOrProof(
+  req: express.Request,
+  expectedAction?: string
+): Promise<{ success: boolean; message?: string; errorCodes?: string[] }> {
+  const body = req.body || {};
+  const clientIp = resolveClientIp(req);
+  const rawProof =
+    typeof body.turnstileProof === 'string' && body.turnstileProof.trim()
+      ? body.turnstileProof.trim()
+      : undefined;
+
+  if (rawProof) {
+    const proofResult = consumeTurnstileVerificationProof(rawProof, clientIp);
+    if (!proofResult.valid) {
+      return {
+        success: false,
+        message: proofResult.reason || 'Cloudflare Turnstile verification proof is invalid or expired.',
+        errorCodes: ['invalid-proof'],
+      };
+    }
+    return { success: true };
+  }
+
+  const token = extractTurnstileToken(body);
+  if (!token || !token.trim()) {
+    return {
+      success: false,
+      message: 'Cloudflare Turnstile human verification is required.',
+      errorCodes: ['missing-input-response'],
+    };
+  }
+
+  const check = await verifyTurnstileToken(token, clientIp, expectedAction);
+  if (!check.success) {
+    return {
+      success: false,
+      message: check.message || 'Cloudflare Turnstile verification failed.',
+      errorCodes: check.errorCodes,
+    };
+  }
+
+  return { success: true };
+}
+
+async function resolveVerifiedCaller(req: express.Request): Promise<{
+  isAdmin: boolean;
+  uid?: string;
+  email?: string;
+}> {
+  const bearer = extractBearerToken(req);
+  if (!bearer) return { isAdmin: false };
+
+  const adminSession = verifyAdminSessionToken(bearer);
+  if (adminSession) {
+    return { isAdmin: true, email: adminSession.user.email };
+  }
+
+  if (bearer.split('.').length === 3 && !bearer.startsWith('accadm.')) {
+    const verified = await verifyFirebaseIdToken(bearer);
+    if (verified) {
+      const adminSync = await syncAdminFromVerifiedFirebaseToken(bearer);
+      return {
+        isAdmin: adminSync.success,
+        uid: verified.uid,
+        email: verified.email,
+      };
+    }
+  }
+  return { isAdmin: false };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Workspace Tool Signings API
@@ -571,100 +695,115 @@ app.post('/api/compliance/events', (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Strict Admin Authentication for /workspace and /admin
+// Cryptographic Admin Authentication for /workspace and /admin
 // ─────────────────────────────────────────────────────────────────────────────
-const AUTHORIZED_WORKSPACE_ADMIN_EMAIL = 'hmekram@gmail.com';
-const AUTHORIZED_WORKSPACE_ADMIN_PASS = '123ekraM.com';
-const activeAdminTokens = new Map<string, { email: string; role: 'admin'; name: string; title: string }>();
-
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', strictAuthLimiter, async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
-  const password = String(req.body?.password || '').trim();
-
-  if (email === AUTHORIZED_WORKSPACE_ADMIN_EMAIL && password === AUTHORIZED_WORKSPACE_ADMIN_PASS) {
-    const token = `ws-admin-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const user = {
-      email: AUTHORIZED_WORKSPACE_ADMIN_EMAIL,
-      role: 'admin' as const,
-      name: 'Adv. Ekram Hossain',
-      title: 'Authorized Workspace, LMS & Shop Administrator',
-    };
-    activeAdminTokens.set(token, user);
-    res.json({ success: true, token, user });
+  const password = String(req.body?.password || '');
+  const result = await loginAdminWithPassword(email, password, resolveClientIp(req));
+  if (!('token' in result)) {
+    res.status(result.status).json({ success: false, error: result.error });
     return;
   }
-
-  res.status(401).json({
-    success: false,
-    error: 'Invalid credentials. To enter /workspace, you must sign in with ID: hmekram@gmail.com and the authorized password.',
+  res.json({
+    success: true,
+    token: result.token,
+    user: result.user,
+    expiresAt: result.expiresAt,
   });
 });
 
-app.post('/api/admin/oauth-sync', (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  if (email === AUTHORIZED_WORKSPACE_ADMIN_EMAIL) {
-    const token = `ws-admin-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const user = {
-      email: AUTHORIZED_WORKSPACE_ADMIN_EMAIL,
-      role: 'admin' as const,
-      name: req.body?.displayName || 'Adv. Ekram Hossain',
-      title: 'Authorized Workspace, LMS & Shop Administrator',
-    };
-    activeAdminTokens.set(token, user);
-    res.json({ success: true, token, user });
-    return;
-  }
-  res.status(403).json({ success: false, error: 'Not an authorized workspace admin email.' });
-});
+app.post('/api/admin/oauth-sync', strictAuthLimiter, async (req, res) => {
+  const bodyToken = typeof req.body?.idToken === 'string' ? req.body.idToken.trim() : '';
+  const headerToken = extractBearerToken(req);
+  const idToken = bodyToken || headerToken;
 
-app.get('/api/admin/verify', (req, res) => {
-  const authHeader = String(req.headers.authorization || '');
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-
-  if (token && (activeAdminTokens.has(token) || token.startsWith('ws-admin-') || token.startsWith('local-admin-'))) {
-    const user = activeAdminTokens.get(token) || {
-      email: AUTHORIZED_WORKSPACE_ADMIN_EMAIL,
-      role: 'admin' as const,
-      name: 'Adv. Ekram Hossain',
-      title: 'Authorized Workspace, LMS & Shop Administrator',
-    };
-    res.json({ authenticated: true, user });
+  if (!idToken) {
+    res.status(401).json({
+      success: false,
+      error: 'A verified Firebase ID token is required for administrator OAuth synchronization.',
+    });
     return;
   }
 
-  res.status(401).json({ authenticated: false });
-});
-
-app.post('/api/admin/logout', (req, res) => {
-  const authHeader = String(req.headers.authorization || '');
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  if (token) {
-    activeAdminTokens.delete(token);
+  const result = await syncAdminFromVerifiedFirebaseToken(idToken);
+  if (!('token' in result)) {
+    res.status(result.status).json({ success: false, error: result.error });
+    return;
   }
-  res.json({ success: true });
+
+  res.json({
+    success: true,
+    token: result.token,
+    user: result.user,
+    expiresAt: result.expiresAt,
+  });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Auth, Email & Brevo Relay Endpoints
-// ─────────────────────────────────────────────────────────────────────────────
-app.post('/api/auth/reset-password', async (req, res) => {
-  const resetTurnstileToken = extractTurnstileToken(req.body);
-  if (resetTurnstileToken !== undefined) {
-    const turnstileCheck = await verifyTurnstileToken(
-      resetTurnstileToken,
-      resolveClientIp(req)
-    );
-    if (!turnstileCheck.success) {
-      res.status(403).json({
-        success: false,
-        message: turnstileCheck.message || 'Turnstile verification failed.',
+app.get('/api/admin/verify', async (req, res) => {
+  const bearer = extractBearerToken(req);
+  if (!bearer) {
+    res.status(401).json({ authenticated: false });
+    return;
+  }
+
+  const session = verifyAdminSessionToken(bearer);
+  if (session) {
+    res.json({
+      authenticated: true,
+      user: session.user,
+      expiresAt: new Date(session.exp).toISOString(),
+    });
+    return;
+  }
+
+  if (bearer.split('.').length === 3 && !bearer.startsWith('accadm.')) {
+    const oauthSync = await syncAdminFromVerifiedFirebaseToken(bearer);
+    if (oauthSync.success) {
+      res.json({
+        authenticated: true,
+        user: oauthSync.user,
+        expiresAt: oauthSync.expiresAt,
       });
       return;
     }
   }
 
+  res.status(401).json({ authenticated: false });
+});
+
+app.post('/api/admin/logout', async (req, res) => {
+  const bearer = extractBearerToken(req);
+  if (bearer) {
+    await revokeAdminSessionToken(bearer);
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/admin/invalidate-all', requireAdminAuth, async (req, res) => {
+  const adminUser = (req as any).adminUser;
+  await revokeAllAdminSessionsForEmail(adminUser.email);
+  res.json({
+    success: true,
+    message: `All active administrator sessions for ${maskEmail(adminUser.email)} have been invalidated.`,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth, Email & Brevo Relay Endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+app.post('/api/auth/reset-password', strictAuthLimiter, async (req, res) => {
+  const turnstileCheck = await verifyTurnstileOrProof(req, 'auth_forgot');
+  if (!turnstileCheck.success) {
+    res.status(403).json({
+      success: false,
+      message: turnstileCheck.message || 'Cloudflare Turnstile verification failed.',
+    });
+    return;
+  }
+
   const email = String(req.body?.email || '').trim().toLowerCase();
-  if (!email || !email.includes('@')) {
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
     return;
   }
@@ -816,10 +955,16 @@ app.post('/api/email/send-registration', async (req, res) => {
 });
 
 app.get('/api/email/brevo-status', (_req, res) => {
-  res.json(getBrevoRelayConfig());
+  const relay = getBrevoRelayConfig();
+  res.json({
+    configured: relay.configured,
+    mode: relay.mode,
+    senderName: relay.senderName,
+    senderEmail: relay.senderEmail,
+  });
 });
 
-app.get('/api/email/brevo-verify', async (_req, res) => {
+app.get('/api/email/brevo-verify', requireAdminAuth, async (_req, res) => {
   const result = await verifyBrevoSmtpConnection();
   res.status(result.ok ? 200 : 502).json({
     ...result,
@@ -827,7 +972,7 @@ app.get('/api/email/brevo-verify', async (_req, res) => {
   });
 });
 
-app.post('/api/email/brevo-test', async (req, res) => {
+app.post('/api/email/brevo-test', requireAdminAuth, async (req, res) => {
   const relay = getBrevoRelayConfig();
   const toEmail = String(
     req.body?.recipientEmail || req.body?.to || req.body?.email || relay.senderEmail
@@ -926,35 +1071,161 @@ app.post('/api/email/brevo-test', async (req, res) => {
   });
 });
 
-app.post('/api/subscribe-newsletter', async (req, res) => {
-  const newsletterTurnstileToken = extractTurnstileToken(req.body);
-  if (newsletterTurnstileToken !== undefined) {
-    const turnstileCheck = await verifyTurnstileToken(
-      newsletterTurnstileToken,
-      resolveClientIp(req),
-      'newsletter_subscribe'
-    );
-    if (!turnstileCheck.success) {
-      res.status(403).json({
-        success: false,
-        error: turnstileCheck.message || 'Turnstile verification failed.',
-      });
-      return;
-    }
-  }
+function buildSubscriberDocId(email: string): string {
+  const slug = email.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
+  return `sub_${slug}`.slice(0, 100);
+}
 
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const topics: string[] = Array.isArray(req.body?.topics) ? req.body.topics.map(String) : [];
+app.post('/api/subscribe-newsletter', publicSubmitLimiter, async (req, res) => {
+  const expectedAction =
+    req.body?.source === 'footer' || req.body?.sourceCategory === 'footer_compliance'
+      ? 'footer_newsletter'
+      : 'newsletter_subscribe';
 
-  if (!email || !email.includes('@')) {
-    res.status(400).json({ success: false, error: 'Valid subscriber email is required.' });
+  const turnstileCheck = await verifyTurnstileOrProof(req, expectedAction);
+  if (!turnstileCheck.success) {
+    res.status(403).json({
+      success: false,
+      persisted: false,
+      error: turnstileCheck.message || 'Cloudflare Turnstile verification failed.',
+    });
     return;
   }
 
+  const parsed = newsletterSubscribeSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      persisted: false,
+      error: parsed.error.issues[0]?.message || 'Invalid subscriber details.',
+    });
+    return;
+  }
+
+  const input = parsed.data;
+  if (input.consentAccepted === false) {
+    res.status(400).json({
+      success: false,
+      persisted: false,
+      error: 'Subscriber consent is required to activate dispatch updates.',
+    });
+    return;
+  }
+
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    res.status(503).json({
+      success: false,
+      persisted: false,
+      error:
+        'Durable subscriber database is unavailable (server Firebase Admin credentials not configured). Your subscription could not be saved.',
+    });
+    return;
+  }
+
+  const subscriberId = buildSubscriberDocId(input.email);
+  const nowIso = new Date().toISOString();
+  const docRef = adminDb.collection('newsletterSubscribers').doc(subscriberId);
+
+  let existingData: Record<string, any> = {};
+  try {
+    const snap = await docRef.get();
+    if (snap.exists) {
+      existingData = snap.data() || {};
+    }
+  } catch {
+    // proceed to write below and fail loudly if Firestore write rejects
+  }
+
+  const subscribedAt = String(existingData.subscribedAt || nowIso);
+  const cleanName = sanitizePlainText(input.name || existingData.name || '', 120) || null;
+  const cleanOrg = sanitizePlainText(input.organization || existingData.organization || '', 150) || null;
+  const cleanSource = sanitizePlainText(input.source || input.sourceCategory || 'website', 64);
+  const cleanTopics = input.topics.length > 0 ? input.topics : ['tax_vat', 'corporate_rjsc'];
+  const existingNotionPageId =
+    typeof existingData.notionPageId === 'string' ? existingData.notionPageId : null;
+
+  const firestoreDocPayload = {
+    id: subscriberId,
+    email: input.email,
+    name: cleanName,
+    organization: cleanOrg,
+    designation: input.designation || existingData.designation || 'other',
+    topics: cleanTopics,
+    frequency: input.frequency || 'both',
+    source: cleanSource,
+    sourceArticleId: input.sourceArticleId || null,
+    sourceArticleTitle: input.sourceArticleTitle || null,
+    status: 'active' as const,
+    consentStatus: 'Opted In' as const,
+    consentAcceptedAt: nowIso,
+    subscribedAt,
+    unsubscribedAt: null,
+    lastUpdated: nowIso,
+    userId: input.userId || null,
+    notionPageId: existingNotionPageId,
+    notionSyncStatus: 'pending',
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  try {
+    await docRef.set(firestoreDocPayload, { merge: true });
+  } catch (err: any) {
+    console.error(`[Newsletter] Firestore write error for ${maskEmail(input.email)}:`, err?.message);
+    res.status(503).json({
+      success: false,
+      persisted: false,
+      error: 'Failed to persist newsletter subscription to durable Firestore database.',
+    });
+    return;
+  }
+
+  // Synchronize to Notion Database B (Newsletter Subscribers)
+  const notionResult = await syncNewsletterSubscriberToNotion({
+    id: subscriberId,
+    name: cleanName,
+    email: input.email,
+    organization: cleanOrg,
+    designation: firestoreDocPayload.designation,
+    topics: cleanTopics,
+    source: cleanSource,
+    subscribedAt,
+    consentStatus: 'Opted In',
+    subscriptionStatus: 'Active',
+    lastUpdated: nowIso,
+    notionPageId: existingNotionPageId,
+  });
+
+  try {
+    await docRef.set(
+      {
+        notionPageId: notionResult.pageId || existingNotionPageId || null,
+        notionSyncStatus: notionResult.synced
+          ? 'synced'
+          : notionResult.configured
+          ? 'queued'
+          : 'unconfigured',
+        lastNotionSyncAttemptAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch {
+    // non-fatal metadata update
+  }
+
+  // Dispatch Brevo SMTP confirmation email with HMAC-signed 1-click unsubscribe link
+  const origin = (
+    process.env.APP_URL ||
+    `${req.protocol}://${req.get('host') || 'blog.accounticca.com'}`
+  ).replace(/\/$/, '');
+  const unsubscribeSig = createUnsubscribeSignature(input.email);
+  const unsubscribeUrl = `${origin}/api/newsletter/unsubscribe?email=${encodeURIComponent(
+    input.email
+  )}&sig=${encodeURIComponent(unsubscribeSig)}`;
+
   const relay = getBrevoRelayConfig();
   const referenceId = `NEWS-2026-${Math.floor(10000 + Math.random() * 90000)}`;
-  const sentAt = new Date().toISOString();
-  const topicText = topics.length > 0 ? topics.join(', ') : 'Bangladesh Tax, VAT, RJSC & NBR SRO Alerts';
+  const topicText = cleanTopics.join(', ');
 
   const subject = `[${referenceId}] Compliance Dispatch Subscription Confirmed — ${relay.senderName}`;
   const html = `
@@ -964,17 +1235,19 @@ app.post('/api/subscribe-newsletter', async (req, res) => {
         <h2 style="margin: 6px 0 0 0; font-size: 18px;">Newsletter Subscription Active (${referenceId})</h2>
       </div>
       <div style="padding: 24px; color: #1e293b; font-size: 14px; line-height: 1.6;">
-        <p>Thank you for subscribing to our compliance briefing for <strong>${email}</strong>.</p>
+        <p>Thank you for subscribing to our compliance briefing for <strong>${input.email}</strong>.</p>
         <p><strong>Selected Topics:</strong> ${topicText}</p>
         <p style="font-size: 12px; color: #64748b;">You will receive curated alerts covering NBR SRO updates, Income Tax Act 2023 circulars, VAT schedules, and RJSC filings.</p>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:18px 0;" />
+        <p style="font-size: 11px; color: #64748b;">No longer wish to receive updates? <a href="${unsubscribeUrl}" style="color:#059669;font-weight:600;">One-click Unsubscribe</a>.</p>
       </div>
     </div>
   `.trim();
-  const text = `Newsletter Subscription Confirmed (${referenceId}) for ${email}. Selected topics: ${topicText}.`;
+  const text = `Newsletter Subscription Confirmed (${referenceId}) for ${input.email}. Selected topics: ${topicText}. Unsubscribe: ${unsubscribeUrl}`;
 
   const sent = await dispatchBrevoEmail({
-    recipientEmail: email,
-    recipientName: 'Compliance Subscriber',
+    recipientEmail: input.email,
+    recipientName: cleanName || 'Compliance Subscriber',
     subject,
     html,
     text,
@@ -984,17 +1257,17 @@ app.post('/api/subscribe-newsletter', async (req, res) => {
     id: `news-${Date.now()}`,
     messageId: sent.messageId,
     referenceId,
-    clientName: 'Newsletter Subscriber',
-    recipientEmail: email,
+    clientName: cleanName || 'Newsletter Subscriber',
+    recipientEmail: input.email,
     practiceArea: topicText,
-    mode: 'Footer Newsletter',
-    date: sentAt.slice(0, 10),
-    timeSlot: new Date(sentAt).toLocaleTimeString(),
+    mode: cleanSource === 'footer' ? 'Footer Newsletter' : `Newsletter (${cleanSource})`,
+    date: nowIso.slice(0, 10),
+    timeSlot: new Date(nowIso).toLocaleTimeString(),
     status: sent.liveDelivered ? 'Delivered' : 'Failed',
     subject,
     html,
     text,
-    sentAt,
+    sentAt: nowIso,
     delivered: sent.liveDelivered,
     deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
     category: 'registration',
@@ -1004,13 +1277,212 @@ app.post('/api/subscribe-newsletter', async (req, res) => {
     smtpNotice: sent.smtpNotice,
   });
 
-  res.status(sent.liveDelivered ? 200 : 502).json({
-    success: sent.liveDelivered,
-    liveDelivered: sent.liveDelivered,
+  console.info(
+    `[Newsletter] Saved subscriber ${subscriberId} (${maskEmail(input.email)}) status=active notion=${notionResult.action || 'pending'} email=${sent.liveDelivered}`
+  );
+
+  res.status(200).json({
+    success: true,
+    persisted: true,
+    subscriberId,
+    status: 'active',
+    consentStatus: 'Opted In',
     referenceId,
     messageId: sent.messageId,
+    liveDelivered: sent.liveDelivered,
+    emailDelivered: sent.liveDelivered,
     transport: sent.transport,
     smtpNotice: sent.smtpNotice,
+    notionSynced: notionResult.synced,
+    notionStatus: notionResult.action || 'queued',
+    message: sent.liveDelivered
+      ? 'Subscribed to compliance updates and dispatched Brevo confirmation email.'
+      : 'Subscribed and saved in Firestore. Brevo confirmation email requires live SMTP credentials.',
+  });
+});
+
+async function performNewsletterUnsubscribe(
+  emailRaw: string,
+  reason: string
+): Promise<{
+  ok: boolean;
+  status: number;
+  error?: string;
+  subscriberId?: string;
+  notionSynced?: boolean;
+}> {
+  const parsed = newsletterUnsubscribeSchema.safeParse({ email: emailRaw, reason });
+  if (!parsed.success) {
+    return { ok: false, status: 400, error: parsed.error.issues[0]?.message || 'Invalid email.' };
+  }
+
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    return {
+      ok: false,
+      status: 503,
+      error: 'Durable database is unavailable (server Firebase Admin credentials not configured).',
+    };
+  }
+
+  const cleanEmail = parsed.data.email;
+  const subscriberId = buildSubscriberDocId(cleanEmail);
+  const nowIso = new Date().toISOString();
+  const docRef = adminDb.collection('newsletterSubscribers').doc(subscriberId);
+
+  let existing: Record<string, any> = {};
+  try {
+    const snap = await docRef.get();
+    if (snap.exists) {
+      existing = snap.data() || {};
+    }
+  } catch {
+    // ignore fetch issue
+  }
+
+  try {
+    await docRef.set(
+      {
+        id: subscriberId,
+        email: cleanEmail,
+        status: 'unsubscribed',
+        consentStatus: 'Withdrawn',
+        unsubscribeReason: sanitizePlainText(parsed.data.reason, 300),
+        unsubscribedAt: nowIso,
+        lastUpdated: nowIso,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.error(`[Newsletter] Unsubscribe Firestore write failed for ${maskEmail(cleanEmail)}:`, err?.message);
+    return { ok: false, status: 503, error: 'Failed to update unsubscribe status in Firestore.' };
+  }
+
+  const notionResult = await syncNewsletterSubscriberToNotion({
+    id: subscriberId,
+    name: existing.name || null,
+    email: cleanEmail,
+    organization: existing.organization || null,
+    designation: existing.designation || 'other',
+    topics: Array.isArray(existing.topics) ? existing.topics : [],
+    source: existing.source || 'unsubscribe_link',
+    subscribedAt: existing.subscribedAt || nowIso,
+    consentStatus: 'Withdrawn',
+    subscriptionStatus: 'Unsubscribed',
+    lastUpdated: nowIso,
+    notionPageId: existing.notionPageId || null,
+  });
+
+  try {
+    await docRef.set(
+      {
+        notionPageId: notionResult.pageId || existing.notionPageId || null,
+        notionSyncStatus: notionResult.synced ? 'synced' : notionResult.configured ? 'queued' : 'unconfigured',
+        lastUpdated: nowIso,
+      },
+      { merge: true }
+    );
+  } catch {
+    // non-fatal
+  }
+
+  return { ok: true, status: 200, subscriberId, notionSynced: notionResult.synced };
+}
+
+app.post('/api/newsletter/unsubscribe', publicSubmitLimiter, async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const sig = typeof req.body?.sig === 'string' ? req.body.sig.trim() : '';
+  const reason = sanitizePlainText(req.body?.reason || 'user_requested', 300);
+
+  if (sig && !verifyUnsubscribeSignature(email, sig)) {
+    res.status(403).json({ success: false, error: 'Invalid unsubscribe signature.' });
+    return;
+  }
+
+  const result = await performNewsletterUnsubscribe(email, reason);
+  if (!result.ok) {
+    res.status(result.status).json({ success: false, error: result.error });
+    return;
+  }
+
+  console.info(`[Newsletter] Unsubscribed ${maskEmail(email)} (notion=${result.notionSynced})`);
+  res.json({
+    success: true,
+    subscriberId: result.subscriberId,
+    status: 'unsubscribed',
+    consentStatus: 'Withdrawn',
+    notionSynced: result.notionSynced,
+    message: `${email} has been unsubscribed from compliance alerts.`,
+  });
+});
+
+app.get('/api/newsletter/unsubscribe', publicSubmitLimiter, async (req, res) => {
+  const email = String(req.query.email || '').trim().toLowerCase();
+  const sig = String(req.query.sig || '').trim();
+
+  if (!email || !sig || !verifyUnsubscribeSignature(email, sig)) {
+    res
+      .status(403)
+      .type('html')
+      .send(
+        '<!doctype html><html><body style="font-family:sans-serif;padding:40px;max-width:560px;margin:0 auto;"><h2>Invalid or expired unsubscribe link</h2><p>Please use the unsubscribe button inside your latest email or contact ekram@elawyersbd.com.</p></body></html>'
+      );
+    return;
+  }
+
+  const result = await performNewsletterUnsubscribe(email, 'one_click_email_link');
+  if (!result.ok) {
+    res
+      .status(result.status)
+      .type('html')
+      .send(
+        `<!doctype html><html><body style="font-family:sans-serif;padding:40px;max-width:560px;margin:0 auto;"><h2>Unable to complete unsubscribe</h2><p>${result.error}</p></body></html>`
+      );
+    return;
+  }
+
+  res
+    .status(200)
+    .type('html')
+    .send(
+      `<!doctype html><html><body style="font-family:sans-serif;padding:40px;max-width:560px;margin:0 auto;color:#0f172a;"><h2>Unsubscribed Successfully</h2><p><strong>${email}</strong> has been unsubscribed from Accounticca &amp; E-Lawyers compliance dispatches.</p><p><a href="/" style="color:#059669;font-weight:600;">Return to homepage</a></p></body></html>`
+    );
+});
+
+app.get('/api/newsletter/status', publicSubmitLimiter, async (req, res) => {
+  const caller = await resolveVerifiedCaller(req);
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    res.status(400).json({ success: false, error: 'Valid email is required.' });
+    return;
+  }
+
+  if (!caller.isAdmin && caller.email !== email) {
+    res.status(401).json({ success: false, error: 'Authentication required to inspect subscriber status.' });
+    return;
+  }
+
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    res.status(503).json({ success: false, error: 'Durable database unavailable.' });
+    return;
+  }
+
+  const subscriberId = buildSubscriberDocId(email);
+  const snap = await adminDb.collection('newsletterSubscribers').doc(subscriberId).get();
+  if (!snap.exists) {
+    res.json({ success: true, subscribed: false, status: null });
+    return;
+  }
+  const d = snap.data() || {};
+  res.json({
+    success: true,
+    subscribed: d.status === 'active',
+    status: d.status || 'active',
+    consentStatus: d.consentStatus || 'Opted In',
+    topics: Array.isArray(d.topics) ? d.topics : [],
+    lastUpdated: d.lastUpdated || null,
   });
 });
 
@@ -1022,11 +1494,15 @@ app.get('/api/email/templates', (_req, res) => {
   res.json({
     success: true,
     templates,
-    brevoRelay: getBrevoRelayConfig(),
+    brevoRelay: {
+      configured: getBrevoRelayConfig().configured,
+      mode: getBrevoRelayConfig().mode,
+      senderName: getBrevoRelayConfig().senderName,
+    },
   });
 });
 
-app.put('/api/email/templates/:id', (req, res) => {
+app.put('/api/email/templates/:id', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const templates = loadEmailTemplates();
   const idx = templates.findIndex((t) => t.id === id);
@@ -1063,7 +1539,7 @@ app.put('/api/email/templates/:id', (req, res) => {
   });
 });
 
-app.post('/api/email/templates/:id/reset', (req, res) => {
+app.post('/api/email/templates/:id/reset', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   if (id === 'all') {
     saveEmailTemplates(DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES);
@@ -1092,7 +1568,7 @@ app.post('/api/email/templates/:id/reset', (req, res) => {
   });
 });
 
-app.post('/api/email/templates/:id/test', async (req, res) => {
+app.post('/api/email/templates/:id/test', requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const templates = loadEmailTemplates();
   const baseTpl = templates.find((t) => t.id === id) || DEFAULT_TRANSACTIONAL_EMAIL_TEMPLATES[0];
@@ -1164,7 +1640,7 @@ app.post('/api/email/templates/:id/test', async (req, res) => {
   });
 });
 
-app.post('/api/email/templates/:id/preview', (req, res) => {
+app.post('/api/email/templates/:id/preview', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const templates = loadEmailTemplates();
   const baseTpl = templates.find((t) => t.id === id);
@@ -1203,7 +1679,7 @@ app.post('/api/email/templates/:id/preview', (req, res) => {
   });
 });
 
-app.post('/api/email/templates/:id/send', async (req, res) => {
+app.post('/api/email/templates/:id/send', requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const templates = loadEmailTemplates();
   const baseTpl = templates.find((t) => t.id === id);
@@ -1465,7 +1941,7 @@ async function processDueScheduledEmails(): Promise<{
   return { processedCount, sentCount, failedCount };
 }
 
-app.get('/api/email/schedules', async (req, res) => {
+app.get('/api/email/schedules', requireAdminAuth, async (req, res) => {
   if (req.query.processDue === 'true') {
     await processDueScheduledEmails();
   }
@@ -1485,7 +1961,7 @@ app.get('/api/email/schedules', async (req, res) => {
   });
 });
 
-app.post('/api/email/schedules', (req, res) => {
+app.post('/api/email/schedules', requireAdminAuth, (req, res) => {
   const body = req.body || {};
   const templateId = String(body.templateId || '').trim();
   const recipientEmail = String(body.recipientEmail || '').trim();
@@ -1599,7 +2075,7 @@ app.post('/api/email/schedules', (req, res) => {
   });
 });
 
-app.post('/api/email/schedules/process-due', async (_req, res) => {
+app.post('/api/email/schedules/process-due', requireAdminAuth, async (_req, res) => {
   const summary = await processDueScheduledEmails();
   const schedules = loadScheduledEmails();
   res.json({
@@ -1613,7 +2089,7 @@ app.post('/api/email/schedules/process-due', async (_req, res) => {
   });
 });
 
-app.post('/api/email/schedules/:id/dispatch-now', async (req, res) => {
+app.post('/api/email/schedules/:id/dispatch-now', requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const queue = loadScheduledEmails();
   const idx = queue.findIndex((entry) => entry.id === id || entry.referenceId === id);
@@ -1655,7 +2131,7 @@ app.post('/api/email/schedules/:id/dispatch-now', async (req, res) => {
   });
 });
 
-app.post('/api/email/schedules/:id/cancel', (req, res) => {
+app.post('/api/email/schedules/:id/cancel', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const queue = loadScheduledEmails();
   const idx = queue.findIndex((entry) => entry.id === id || entry.referenceId === id);
@@ -1685,7 +2161,7 @@ app.post('/api/email/schedules/:id/cancel', (req, res) => {
   });
 });
 
-app.delete('/api/email/schedules/:id', (req, res) => {
+app.delete('/api/email/schedules/:id', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const queue = loadScheduledEmails();
   const exists = queue.some((entry) => entry.id === id || entry.referenceId === id);
@@ -1704,7 +2180,7 @@ app.delete('/api/email/schedules/:id', (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Transactional Email History & Resend API (/api/email/history*)
 // ─────────────────────────────────────────────────────────────────────────────
-app.get('/api/email/history', (req, res) => {
+app.get('/api/email/history', requireAdminAuth, (req, res) => {
   const limitNum = Math.min(parseInt(String(req.query.limit || '150'), 10) || 150, 400);
   const allLogs = loadEmailHistory();
   const logs = allLogs.slice(0, limitNum);
@@ -1728,7 +2204,7 @@ app.get('/api/email/history', (req, res) => {
   });
 });
 
-app.post('/api/email/history/:id/resend', async (req, res) => {
+app.post('/api/email/history/:id/resend', requireAdminAuth, async (req, res) => {
   const { id } = req.params;
   const history = loadEmailHistory();
   const idx = history.findIndex((h) => h.id === id || h.referenceId === id);
@@ -1778,7 +2254,7 @@ app.post('/api/email/history/:id/resend', async (req, res) => {
   });
 });
 
-app.patch('/api/email/history/:id/status', (req, res) => {
+app.patch('/api/email/history/:id/status', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const nextStatus = req.body?.deliveryStatus as 'delivered' | 'pending' | 'failed';
   const history = loadEmailHistory();
@@ -1943,7 +2419,7 @@ app.post('/api/email/send-calculation', async (req, res) => {
   }
 });
 
-app.get('/api/email/calculation-logs', (_req, res) => {
+app.get('/api/email/calculation-logs', requireAdminAuth, (_req, res) => {
   loadEmailHistory(); // Ensures legacy calculation logs are upgraded
   const logs = readJsonArray(CALCULATION_EMAILS_FILE);
   res.json({
@@ -1957,18 +2433,15 @@ app.get('/api/email/calculation-logs', (_req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Appointments, Contact & Careers Endpoints
 // ─────────────────────────────────────────────────────────────────────────────
-app.post('/api/appointments/notify', async (req, res) => {
+app.post('/api/appointments/notify', publicSubmitLimiter, async (req, res) => {
   const payload = req.body || {};
-  const apptTurnstileToken = extractTurnstileToken(payload);
-  if (apptTurnstileToken !== undefined) {
-    const turnstileCheck = await verifyTurnstileToken(
-      apptTurnstileToken,
-      resolveClientIp(req)
-    );
+  const caller = await resolveVerifiedCaller(req);
+  if (!caller.isAdmin && !caller.uid) {
+    const turnstileCheck = await verifyTurnstileOrProof(req);
     if (!turnstileCheck.success) {
       res.status(403).json({
         success: false,
-        error: turnstileCheck.message || 'Turnstile verification failed.',
+        error: turnstileCheck.message || 'Cloudflare Turnstile verification failed.',
       });
       return;
     }
@@ -2143,11 +2616,27 @@ app.post('/api/appointments/notify', async (req, res) => {
   });
 });
 
-app.get('/api/appointments/notifications', (req, res) => {
-  const notifications = readJsonArray(APPOINTMENT_NOTIFS_FILE);
+app.get('/api/appointments/notifications', async (req, res) => {
+  const caller = await resolveVerifiedCaller(req);
   const refId = String(req.query.referenceId || '').trim();
   const email = String(req.query.email || '').trim().toLowerCase();
+
+  if (!caller.isAdmin) {
+    if (!caller.uid || !caller.email) {
+      res.status(401).json({ success: false, error: 'Authentication required.' });
+      return;
+    }
+    if (email && email !== caller.email) {
+      res.status(403).json({ success: false, error: 'Cannot view notifications for another user.' });
+      return;
+    }
+  }
+
+  const notifications = readJsonArray(APPOINTMENT_NOTIFS_FILE);
   const filtered = notifications.filter((n: any) => {
+    if (!caller.isAdmin && String(n.recipientEmail || '').toLowerCase() !== caller.email) {
+      return false;
+    }
     if (refId && n.referenceId !== refId) return false;
     if (email && String(n.recipientEmail || '').toLowerCase() !== email) return false;
     return true;
@@ -2155,7 +2644,12 @@ app.get('/api/appointments/notifications', (req, res) => {
   res.json({ success: true, notifications: filtered });
 });
 
-app.post('/api/appointments/scan-reminders', (_req, res) => {
+app.post('/api/appointments/scan-reminders', async (req, res) => {
+  const caller = await resolveVerifiedCaller(req);
+  if (!caller.isAdmin && !caller.uid) {
+    res.status(401).json({ success: false, error: 'Authentication required to scan appointment reminders.' });
+    return;
+  }
   res.json({
     success: true,
     scannedCount: 0,
@@ -2166,7 +2660,7 @@ app.post('/api/appointments/scan-reminders', (_req, res) => {
   });
 });
 
-app.post('/api/appointments/preview-reminder-email', (req, res) => {
+app.post('/api/appointments/preview-reminder-email', requireAdminAuth, (req, res) => {
   const clientName = req.body?.clientName || 'Valued Client';
   res.json({
     success: true,
@@ -2187,32 +2681,26 @@ app.get('/api/contact/support-config', (_req, res) => {
   });
 });
 
-app.post('/api/contact/support', async (req, res) => {
+app.post('/api/contact/support', publicSubmitLimiter, async (req, res) => {
   try {
     const body = req.body || {};
-    const supportTurnstileToken = extractTurnstileToken(body);
-    if (supportTurnstileToken !== undefined) {
-      const turnstileCheck = await verifyTurnstileToken(
-        supportTurnstileToken,
-        resolveClientIp(req),
-        'support_contact'
-      );
-      if (!turnstileCheck.success) {
-        res.status(403).json({
-          success: false,
-          error: turnstileCheck.message || 'Turnstile verification failed.',
-        });
-        return;
-      }
+    const turnstileCheck = await verifyTurnstileOrProof(req, 'support_contact');
+    if (!turnstileCheck.success) {
+      res.status(403).json({
+        success: false,
+        persisted: false,
+        error: turnstileCheck.message || 'Cloudflare Turnstile verification failed.',
+      });
+      return;
     }
 
-    const name = String(body.name || '').trim();
-    const email = String(body.email || '').trim();
-    const phone = String(body.phone || '').trim();
-    const companyName = String(body.companyName || '').trim();
-    const department = String(body.department || 'General & Advisory Support').trim();
-    const subject = String(body.subject || '').trim();
-    const message = String(body.message || '').trim();
+    const name = sanitizePlainText(body.name || '', 80);
+    const email = String(body.email || '').trim().toLowerCase();
+    const phone = sanitizePlainText(body.phone || '', 24);
+    const companyName = sanitizePlainText(body.companyName || '', 120);
+    const department = sanitizePlainText(body.department || 'General & Advisory Support', 120);
+    const subject = sanitizePlainText(body.subject || '', 140);
+    const message = sanitizePlainText(body.message || '', 3000);
 
     const errors: Record<string, string> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -2245,14 +2733,95 @@ app.post('/api/contact/support', async (req, res) => {
     if (Object.keys(errors).length > 0) {
       res.status(400).json({
         success: false,
+        persisted: false,
         error: 'Please review the highlighted validation errors.',
         errors,
       });
       return;
     }
 
+    const dupCheck = checkDuplicateSubmission('support_contact', [email, subject, message]);
+    if (dupCheck.isDuplicate && dupCheck.existingReferenceId) {
+      res.status(200).json({
+        success: true,
+        persisted: true,
+        duplicatePrevented: true,
+        liveDelivered: true,
+        referenceId: dupCheck.existingReferenceId,
+        supportEmail: getSupportEmailRecipient(),
+        message: `Your support request (${dupCheck.existingReferenceId}) was already submitted cleanly.`,
+      });
+      return;
+    }
+
+    const adminDb = getAdminFirestore();
+    if (!adminDb) {
+      res.status(503).json({
+        success: false,
+        persisted: false,
+        error:
+          'Durable database service is unavailable (server Firebase Admin credentials not configured). Your support ticket could not be recorded.',
+      });
+      return;
+    }
+
     const referenceId = `SUP-2026-${Math.floor(10000 + Math.random() * 90000)}`;
     const submittedAt = new Date().toISOString();
+    const submissionId = `sup_${referenceId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+    const leadDoc = {
+      id: submissionId,
+      referenceId,
+      type: 'support_contact',
+      requestType: 'Support Contact Ticket',
+      fullName: name,
+      name,
+      email,
+      phone,
+      companyName,
+      serviceCategory: department,
+      department,
+      division: department,
+      subject,
+      message,
+      urgency: 'Standard Advisory (24–48h)',
+      source: 'support_contact_form',
+      submittedAt,
+      followUpStatus: 'New',
+      status: 'new',
+      notionSyncStatus: 'pending',
+      createdAt: FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await adminDb.collection('contact_messages').doc(submissionId).set(leadDoc, { merge: true });
+      recordSubmissionFingerprint(dupCheck.fingerprint, referenceId);
+    } catch (fsErr: any) {
+      console.error(`[Support] Firestore save failed for ${referenceId}:`, fsErr?.message);
+      res.status(503).json({
+        success: false,
+        persisted: false,
+        error: 'Unable to persist support ticket in Firestore. Please try again later.',
+      });
+      return;
+    }
+
+    // Sync to Notion Database A (Website Contact Leads)
+    const notionRes = await syncContactLeadToNotion({
+      id: submissionId,
+      referenceId,
+      clientName: name,
+      email,
+      phone,
+      companyName,
+      serviceArea: subject,
+      department,
+      messageOrNotes: message,
+      urgency: 'Standard Advisory (24–48h)',
+      source: 'support_contact_form',
+      submittedAt,
+      status: 'New',
+    });
 
     const dispatched = await sendSupportContactEmail({
       referenceId,
@@ -2266,34 +2835,32 @@ app.post('/api/contact/support', async (req, res) => {
       submittedAt,
     });
 
-    const requests = readJsonArray(CONTACT_REQUESTS_FILE);
-    const entry = {
-      id: `sup-${Date.now()}`,
-      referenceId,
-      type: 'support_contact',
-      name,
-      email,
-      phone,
-      companyName,
-      department,
-      subject,
-      message,
-      supportEmail: dispatched.supportEmail,
-      liveDelivered: dispatched.result.liveDelivered,
-      transport: dispatched.result.transport,
-      messageId: dispatched.result.messageId,
-      smtpNotice: dispatched.result.smtpNotice,
-      submittedAt,
-    };
-    requests.unshift(entry);
-    if (requests.length > 500) requests.length = 500;
-    writeJsonArray(CONTACT_REQUESTS_FILE, requests);
+    try {
+      await adminDb
+        .collection('contact_messages')
+        .doc(submissionId)
+        .set(
+          {
+            notionPageId: notionRes.pageId || null,
+            notionSyncStatus: notionRes.synced
+              ? 'synced'
+              : notionRes.configured
+              ? 'queued'
+              : 'unconfigured',
+            emailDelivered: dispatched.result.liveDelivered,
+            emailMessageId: dispatched.result.messageId,
+          },
+          { merge: true }
+        );
+    } catch {
+      // non-fatal metadata update
+    }
 
     appendEmailHistory({
-      id: entry.id,
+      id: submissionId,
       messageId: dispatched.result.messageId,
       referenceId,
-      clientName: `${name} (${email})`,
+      clientName: name,
       recipientEmail: dispatched.supportEmail,
       phone,
       companyName,
@@ -2315,67 +2882,562 @@ app.post('/api/contact/support', async (req, res) => {
       smtpNotice: dispatched.result.smtpNotice,
     });
 
+    console.info(
+      `[Support] Persisted ticket ${referenceId} (${maskEmail(email)}) notion=${notionRes.action || 'pending'} email=${dispatched.result.liveDelivered}`
+    );
+
     res.status(dispatched.result.liveDelivered ? 200 : 502).json({
       success: dispatched.result.liveDelivered,
+      persisted: true,
       liveDelivered: dispatched.result.liveDelivered,
       savedLocally: true,
+      submissionId,
       referenceId,
       supportEmail: dispatched.supportEmail,
       messageId: dispatched.result.messageId,
       transport: dispatched.result.transport,
       previewUrl: dispatched.result.previewUrl,
       smtpNotice: dispatched.result.smtpNotice,
+      notionSynced: notionRes.synced,
       error: dispatched.result.liveDelivered
         ? undefined
         : dispatched.result.smtpNotice || 'Brevo SMTP relay did not deliver the support email.',
       message: dispatched.result.liveDelivered
         ? `Your message has been delivered to ${dispatched.supportEmail} (Ref: ${referenceId}).`
-        : `Your inquiry (${referenceId}) was logged, but live Brevo SMTP delivery failed: ${
+        : `Your inquiry (${referenceId}) was saved to our database, but live Brevo SMTP delivery failed: ${
             dispatched.result.smtpNotice || 'relay error'
           }`,
     });
   } catch (err: any) {
-    console.error('[Server] Support contact dispatch error:', err);
+    console.error('[Server] Support contact dispatch error:', err?.message || 'unexpected_error');
     res.status(500).json({
       success: false,
-      error: err?.message || 'Unexpected error while sending support contact email.',
+      persisted: false,
+      error: 'Unexpected error while processing your support message.',
     });
   }
 });
 
-app.post('/api/contact/submit', async (req, res) => {
-  const contactTurnstileToken = extractTurnstileToken(req.body);
-  if (contactTurnstileToken !== undefined) {
-    const turnstileCheck = await verifyTurnstileToken(
-      contactTurnstileToken,
-      resolveClientIp(req)
-    );
+app.post('/api/contact/submit', publicSubmitLimiter, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const expectedAction =
+      body.source === 'homepage_quick_intake' && body.requestType === 'Consultation Meeting'
+        ? 'quick_appointment'
+        : body.source === 'homepage_quick_intake'
+        ? 'quick_inquiry'
+        : body.requestType === 'Consultation Meeting'
+        ? 'appointment_booking'
+        : 'contact_inquiry';
+
+    const turnstileCheck = await verifyTurnstileOrProof(req, expectedAction);
     if (!turnstileCheck.success) {
       res.status(403).json({
         success: false,
-        error: turnstileCheck.message || 'Turnstile verification failed.',
+        persisted: false,
+        error: turnstileCheck.message || 'Cloudflare Turnstile verification failed.',
       });
       return;
     }
-  }
 
-  const requests = readJsonArray(CONTACT_REQUESTS_FILE);
-  const entry = {
-    id: `creq-${Date.now()}`,
-    referenceId: req.body?.referenceId || `INQ-2026-${Math.floor(10000 + Math.random() * 90000)}`,
-    ...req.body,
-    submittedAt: new Date().toISOString(),
-  };
-  requests.unshift(entry);
-  if (requests.length > 500) requests.length = 500;
-  writeJsonArray(CONTACT_REQUESTS_FILE, requests);
-  res.json({ success: true, inquiry: entry });
+    const parsed = contactInquirySchema.safeParse({
+      ...body,
+      clientName: body.clientName || body.fullName || body.name || '',
+      messageOrNotes: body.messageOrNotes || body.message || '',
+      serviceArea: body.serviceArea || body.service || 'General Advisory',
+      department: body.department || body.division || 'Accounticca Advisory',
+    });
+
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        persisted: false,
+        error: parsed.error.issues[0]?.message || 'Please review your inquiry fields.',
+      });
+      return;
+    }
+
+    const input = parsed.data;
+    if (!input.email && !input.phone) {
+      res.status(400).json({
+        success: false,
+        persisted: false,
+        error: 'Please provide at least an email address or phone number.',
+      });
+      return;
+    }
+
+    const dupCheck = checkDuplicateSubmission('contact_submit', [
+      input.email || input.phone,
+      input.serviceArea,
+      input.messageOrNotes,
+    ]);
+    if (dupCheck.isDuplicate && dupCheck.existingReferenceId) {
+      res.status(200).json({
+        success: true,
+        persisted: true,
+        duplicatePrevented: true,
+        referenceId: dupCheck.existingReferenceId,
+        sheetSynced: false,
+      });
+      return;
+    }
+
+    const adminDb = getAdminFirestore();
+    if (!adminDb) {
+      res.status(503).json({
+        success: false,
+        persisted: false,
+        error:
+          'Durable database service is unavailable (server Firebase Admin credentials not configured). Your inquiry could not be saved.',
+      });
+      return;
+    }
+
+    const referenceId = sanitizePlainText(
+      input.referenceId || `INQ-2026-${Math.floor(10000 + Math.random() * 90000)}`,
+      80
+    );
+    const submissionId = `inq_${referenceId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const submittedAt = new Date().toISOString();
+
+    // Never store workspaceAccessToken, turnstileToken, or turnstileProof inside contact records
+    const leadRecord = {
+      id: submissionId,
+      referenceId,
+      firstName: sanitizePlainText(input.firstName || '', 80),
+      lastName: sanitizePlainText(input.lastName || '', 80),
+      fullName: sanitizePlainText(input.clientName, 120),
+      clientName: sanitizePlainText(input.clientName, 120),
+      email: input.email || '',
+      phone: input.phone || '',
+      companyName: sanitizePlainText(input.companyName || 'Direct Client / Individual', 150),
+      serviceCategory: sanitizePlainText(input.serviceArea, 160),
+      service: sanitizePlainText(input.serviceArea, 160),
+      department: sanitizePlainText(input.department || input.division, 120),
+      division: sanitizePlainText(input.division || input.department, 120),
+      subject: sanitizePlainText(input.subject || input.expertiseTopic || input.serviceArea, 180),
+      message: sanitizePlainText(input.messageOrNotes, 5000),
+      urgency: sanitizePlainText(input.urgency, 80),
+      source: sanitizePlainText(input.source, 80),
+      requestType: sanitizePlainText(input.requestType, 80),
+      consultationMode: sanitizePlainText(input.consultationMode, 120),
+      preferredDate: sanitizePlainText(input.preferredDate, 64),
+      preferredTimeSlot: sanitizePlainText(input.preferredTimeSlot, 64),
+      assignedPartner: sanitizePlainText(input.assignedPartner || '', 160),
+      submittedAt,
+      followUpStatus: 'New',
+      status: 'new',
+      notionSyncStatus: 'pending',
+      createdAt: FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await adminDb.collection('contact_messages').doc(submissionId).set(leadRecord, { merge: true });
+      recordSubmissionFingerprint(dupCheck.fingerprint, referenceId);
+    } catch (fsErr: any) {
+      console.error(`[Contact] Firestore save failed for ${referenceId}:`, fsErr?.message);
+      res.status(503).json({
+        success: false,
+        persisted: false,
+        error: 'Unable to save inquiry to durable Firestore database. Please retry.',
+      });
+      return;
+    }
+
+    // Optional transient Google Sheets append (token used in memory only, never persisted)
+    let sheetSynced = false;
+    const transientToken =
+      typeof body.workspaceAccessToken === 'string' ? body.workspaceAccessToken.trim() : '';
+    const transientSheetId =
+      typeof body.spreadsheetId === 'string' ? body.spreadsheetId.trim() : '';
+
+    if (transientToken && transientSheetId) {
+      try {
+        const rowValues = [
+          referenceId,
+          submittedAt,
+          leadRecord.requestType,
+          leadRecord.division,
+          leadRecord.fullName,
+          leadRecord.email || 'N/A',
+          leadRecord.phone || 'N/A',
+          leadRecord.companyName,
+          leadRecord.serviceCategory,
+          leadRecord.urgency,
+          leadRecord.consultationMode,
+          leadRecord.preferredDate,
+          leadRecord.preferredTimeSlot,
+          leadRecord.assignedPartner,
+          leadRecord.message,
+          leadRecord.followUpStatus,
+        ];
+        const sheetsRes = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+            transientSheetId
+          )}/values/Contact!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${transientToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ values: [rowValues] }),
+            signal: AbortSignal.timeout(8000),
+          }
+        );
+        sheetSynced = sheetsRes.ok;
+      } catch {
+        sheetSynced = false;
+      }
+    }
+
+    // Synchronize into Notion Database A (Website Contact Leads)
+    const notionRes = await syncContactLeadToNotion({
+      id: submissionId,
+      referenceId,
+      clientName: leadRecord.fullName,
+      email: leadRecord.email,
+      phone: leadRecord.phone,
+      companyName: leadRecord.companyName,
+      serviceArea: leadRecord.serviceCategory,
+      department: leadRecord.department,
+      messageOrNotes: leadRecord.message,
+      urgency: leadRecord.urgency,
+      source: leadRecord.source,
+      submittedAt,
+      status: 'New',
+    });
+
+    // Optional consultation appointment mirror (when submitted by public visitor)
+    let appointmentDocId: string | undefined;
+    if (input.requestType === 'Consultation Meeting' && body.syncConsultationDoc !== false) {
+      const targetCol =
+        leadRecord.source === 'homepage_quick_intake' ? 'consultation_appointments' : 'appointments';
+      const apptDocPayload: Record<string, any> = {
+        referenceId,
+        fullName: leadRecord.fullName,
+        clientName: leadRecord.fullName,
+        phone: leadRecord.phone,
+        email: leadRecord.email || 'N/A',
+        companyName: leadRecord.companyName,
+        practiceArea: leadRecord.serviceCategory,
+        expertiseArea: sanitizePlainText(input.expertiseTopic || leadRecord.serviceCategory, 160),
+        division: leadRecord.division,
+        consultationMode: leadRecord.consultationMode,
+        preferredDate: leadRecord.preferredDate,
+        date: leadRecord.preferredDate,
+        preferredTimeSlot: leadRecord.preferredTimeSlot,
+        timeSlot: leadRecord.preferredTimeSlot,
+        notes: leadRecord.message,
+        status: 'confirmed',
+        source: leadRecord.source,
+        createdAt: FieldValue.serverTimestamp(),
+      };
+      if (body.appointmentMetadata && typeof body.appointmentMetadata === 'object') {
+        const meta = body.appointmentMetadata;
+        if (typeof meta.practiceAreaId === 'string') apptDocPayload.practiceAreaId = sanitizePlainText(meta.practiceAreaId, 80);
+        if (meta.assignedPartner && typeof meta.assignedPartner === 'object') apptDocPayload.assignedPartner = meta.assignedPartner;
+        if (typeof meta.mode === 'string') apptDocPayload.mode = sanitizePlainText(meta.mode, 32);
+        if (typeof meta.consultationFee === 'number') apptDocPayload.consultationFee = meta.consultationFee;
+        if (typeof meta.paymentStatus === 'string') apptDocPayload.paymentStatus = sanitizePlainText(meta.paymentStatus, 32);
+        if (typeof meta.paymentGateway === 'string') apptDocPayload.paymentGateway = sanitizePlainText(meta.paymentGateway, 80);
+        if (typeof meta.transactionId === 'string') apptDocPayload.transactionId = sanitizePlainText(meta.transactionId, 120);
+        if (typeof meta.userId === 'string') apptDocPayload.userId = sanitizePlainText(meta.userId, 128);
+        if (typeof meta.calendarEventId === 'string') apptDocPayload.calendarEventId = sanitizePlainText(meta.calendarEventId, 160);
+        if (typeof meta.calendarSynced === 'boolean') apptDocPayload.calendarSynced = meta.calendarSynced;
+      }
+      try {
+        await adminDb.collection(targetCol).doc(referenceId).set(apptDocPayload, { merge: true });
+        appointmentDocId = referenceId;
+      } catch (apptErr: any) {
+        console.warn(`[Contact] Consultation mirror notice (${referenceId}):`, apptErr?.message);
+      }
+    }
+
+    // Optional Brevo confirmation email for consultation appointment bookings
+    let emailDelivered = false;
+    if (
+      body.appointmentEmailPayload &&
+      typeof body.appointmentEmailPayload === 'object' &&
+      leadRecord.email.includes('@')
+    ) {
+      const ep = body.appointmentEmailPayload;
+      const relay = getBrevoRelayConfig();
+      const ccList = Array.isArray(ep.ccEmails)
+        ? ep.ccEmails.map((e: unknown) => String(e || '').trim().toLowerCase()).filter((e: string) => e.includes('@'))
+        : ['info@accounticca.com'];
+      if (relay.senderEmail && relay.senderEmail.includes('@') && !ccList.includes(relay.senderEmail.toLowerCase())) {
+        ccList.push(relay.senderEmail.toLowerCase());
+      }
+      const subj = sanitizePlainText(ep.subject || `[${referenceId}] Consultation Confirmation`, 220);
+      const htmlBody = typeof ep.html === 'string' && ep.html.trim() ? ep.html : `<p>Your consultation (${referenceId}) is confirmed for ${leadRecord.preferredDate} (${leadRecord.preferredTimeSlot}).</p>`;
+      const textBody = typeof ep.text === 'string' && ep.text.trim() ? ep.text : `Consultation ${referenceId} confirmed for ${leadRecord.preferredDate} (${leadRecord.preferredTimeSlot}).`;
+      try {
+        const sent = await dispatchBrevoEmail({
+          recipientEmail: leadRecord.email,
+          recipientName: leadRecord.fullName,
+          subject: subj,
+          html: htmlBody,
+          text: textBody,
+          ccEmails: ccList,
+        });
+        emailDelivered = sent.liveDelivered;
+        appendEmailHistory({
+          id: `apt-contact-${Date.now()}`,
+          messageId: sent.messageId,
+          referenceId,
+          appointmentId: appointmentDocId,
+          clientName: leadRecord.fullName,
+          recipientEmail: leadRecord.email,
+          ccEmails: ccList,
+          phone: leadRecord.phone,
+          companyName: leadRecord.companyName,
+          practiceArea: leadRecord.serviceCategory,
+          mode: leadRecord.consultationMode,
+          date: leadRecord.preferredDate,
+          timeSlot: leadRecord.preferredTimeSlot,
+          status: sent.liveDelivered ? 'Confirmed' : 'Failed',
+          subject: subj,
+          html: htmlBody,
+          text: textBody,
+          sentAt: submittedAt,
+          delivered: sent.liveDelivered,
+          deliveryStatus: sent.liveDelivered ? 'delivered' : 'failed',
+          category: 'booking',
+          transport: sent.transport,
+          fromHeader: sent.fromHeader,
+          previewUrl: sent.previewUrl,
+          smtpNotice: sent.smtpNotice,
+        });
+      } catch {
+        emailDelivered = false;
+      }
+    }
+
+    try {
+      await adminDb
+        .collection('contact_messages')
+        .doc(submissionId)
+        .set(
+          {
+            notionPageId: notionRes.pageId || null,
+            notionSyncStatus: notionRes.synced
+              ? 'synced'
+              : notionRes.configured
+              ? 'queued'
+              : 'unconfigured',
+            sheetSynced,
+            emailDelivered,
+          },
+          { merge: true }
+        );
+    } catch {
+      // non-fatal metadata update
+    }
+
+    console.info(
+      `[Contact] Saved lead ${referenceId} (${maskEmail(leadRecord.email)}, ${maskPhone(
+        leadRecord.phone
+      )}) notion=${notionRes.action || 'pending'} sheets=${sheetSynced} email=${emailDelivered}`
+    );
+
+    res.status(200).json({
+      success: true,
+      persisted: true,
+      submissionId,
+      appointmentId: appointmentDocId,
+      referenceId,
+      sheetSynced,
+      emailDelivered,
+      notionSynced: notionRes.synced,
+      notionStatus: notionRes.action || 'queued',
+      inquiry: {
+        id: submissionId,
+        referenceId,
+        clientName: leadRecord.fullName,
+        email: leadRecord.email,
+        serviceArea: leadRecord.serviceCategory,
+        department: leadRecord.department,
+        submittedAt,
+        followUpStatus: leadRecord.followUpStatus,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Contact] Unexpected submission error:', err?.message || 'error');
+    res.status(500).json({
+      success: false,
+      persisted: false,
+      error: 'Unexpected error while submitting your inquiry.',
+    });
+  }
 });
 
-app.get('/api/careers/applications', (req, res) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin CRM Leads, Newsletter Subscribers & Notion Sync Endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+app.get('/api/contact/leads', requireAdminAuth, async (req, res) => {
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    res.status(503).json({
+      success: false,
+      error: 'Durable Firestore Admin database is unavailable in this runtime.',
+    });
+    return;
+  }
+
+  const limitNum = Math.min(parseInt(String(req.query.limit || '100'), 10) || 100, 300);
+  const snap = await adminDb
+    .collection('contact_messages')
+    .orderBy('submittedAt', 'desc')
+    .limit(limitNum)
+    .get();
+
+  const leads = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  res.json({ success: true, count: leads.length, leads });
+});
+
+app.patch('/api/contact/leads/:id', requireAdminAuth, async (req, res) => {
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    res.status(503).json({ success: false, error: 'Durable Firestore Admin database is unavailable.' });
+    return;
+  }
+
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : String(req.params.id || '');
+  const allowedStatuses = new Set(['New', 'Pending', 'In Progress', 'Replied', 'Completed']);
+  const requestedStatus = sanitizePlainText(req.body?.followUpStatus || req.body?.status || '', 40);
+  const followUpNotes =
+    req.body?.followUpNotes !== undefined ? sanitizePlainText(req.body.followUpNotes, 2000) : undefined;
+
+  if (requestedStatus && !allowedStatuses.has(requestedStatus)) {
+    res.status(400).json({
+      success: false,
+      error: 'Status must be one of: New, Pending, In Progress, Replied, Completed.',
+    });
+    return;
+  }
+
+  const docRef = adminDb.collection('contact_messages').doc(id);
+  const snap = await docRef.get();
+  if (!snap.exists) {
+    res.status(404).json({ success: false, error: 'Lead record not found.' });
+    return;
+  }
+
+  const existing = snap.data() || {};
+  const nextStatus = (requestedStatus || existing.followUpStatus || 'New') as
+    | 'New'
+    | 'Pending'
+    | 'In Progress'
+    | 'Replied'
+    | 'Completed';
+  const nextNotes = followUpNotes !== undefined ? followUpNotes : existing.followUpNotes || '';
+
+  await docRef.set(
+    {
+      followUpStatus: nextStatus,
+      followUpNotes: nextNotes,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  const notionRes = await syncContactLeadToNotion({
+    id,
+    referenceId: existing.referenceId || id,
+    clientName: existing.fullName || existing.clientName || 'Client',
+    email: existing.email || '',
+    phone: existing.phone || '',
+    companyName: existing.companyName || '',
+    serviceArea: existing.serviceCategory || existing.service || 'General Advisory',
+    department: existing.department || existing.division || '',
+    messageOrNotes: existing.message || '',
+    urgency: existing.urgency || '',
+    source: existing.source || 'website',
+    submittedAt: existing.submittedAt || new Date().toISOString(),
+    status: nextStatus,
+    followUpNotes: nextNotes,
+    notionPageId: existing.notionPageId || null,
+  });
+
+  if (notionRes.pageId) {
+    await docRef.set(
+      {
+        notionPageId: notionRes.pageId,
+        notionSyncStatus: notionRes.synced ? 'synced' : 'queued',
+      },
+      { merge: true }
+    );
+  }
+
+  res.json({
+    success: true,
+    id,
+    followUpStatus: nextStatus,
+    followUpNotes: nextNotes,
+    notionSynced: notionRes.synced,
+  });
+});
+
+app.get('/api/newsletter/subscribers', requireAdminAuth, async (req, res) => {
+  const adminDb = getAdminFirestore();
+  if (!adminDb) {
+    res.status(503).json({
+      success: false,
+      error: 'Durable Firestore Admin database is unavailable in this runtime.',
+    });
+    return;
+  }
+
+  const limitNum = Math.min(parseInt(String(req.query.limit || '200'), 10) || 200, 500);
+  const snap = await adminDb
+    .collection('newsletterSubscribers')
+    .orderBy('lastUpdated', 'desc')
+    .limit(limitNum)
+    .get();
+
+  const subscribers = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  res.json({ success: true, count: subscribers.length, subscribers });
+});
+
+app.get('/api/notion/status', requireAdminAuth, async (_req, res) => {
+  const status = await getNotionSyncStatus();
+  res.json({ success: true, ...status });
+});
+
+app.post('/api/notion/sync/retry', requireAdminAuth, async (_req, res) => {
+  const result = await retryFailedNotionSyncs();
+  res.json({ success: true, ...result });
+});
+
+app.get('/api/careers/applications', async (req, res) => {
+  const caller = await resolveVerifiedCaller(req);
   const apps = readJsonArray(CAREER_APPLICATIONS_FILE);
   const refId = String(req.query.refId || '').trim().toLowerCase();
   const email = String(req.query.email || '').trim().toLowerCase();
+
+  if (!caller.isAdmin) {
+    if (!refId) {
+      res.status(401).json({
+        success: false,
+        error: 'Administrator sign-in is required to list or search applications by email.',
+      });
+      return;
+    }
+    const matched = apps
+      .filter((a: any) => String(a.referenceId || '').toLowerCase() === refId)
+      .map((a: any) => ({
+        referenceId: a.referenceId,
+        position: a.position,
+        department: a.department,
+        status: a.status,
+        submittedAt: a.submittedAt,
+      }));
+    res.json({ success: true, applications: matched });
+    return;
+  }
+
   let filtered = apps;
   if (refId) {
     filtered = apps.filter((a: any) => String(a.referenceId || '').toLowerCase() === refId);
@@ -2385,27 +3447,26 @@ app.get('/api/careers/applications', (req, res) => {
   res.json({ success: true, applications: filtered });
 });
 
-app.post('/api/careers/apply', async (req, res) => {
+app.post('/api/careers/apply', publicSubmitLimiter, async (req, res) => {
   const careerTurnstileToken = extractTurnstileToken(req.body);
-  if (careerTurnstileToken !== undefined) {
-    const turnstileCheck = await verifyTurnstileToken(
-      careerTurnstileToken,
-      resolveClientIp(req)
-    );
+  const careerTurnstileProof =
+    typeof req.body?.turnstileProof === 'string' ? req.body.turnstileProof : undefined;
+  if (careerTurnstileToken !== undefined || careerTurnstileProof !== undefined) {
+    const turnstileCheck = await verifyTurnstileOrProof(req);
     if (!turnstileCheck.success) {
       res.status(403).json({
         success: false,
-        error: turnstileCheck.message || 'Turnstile verification failed.',
+        error: turnstileCheck.message || 'Cloudflare Turnstile verification failed.',
       });
       return;
     }
   }
 
   const body = req.body || {};
-  const candidateName = String(body.fullName || body.candidateName || '').trim();
+  const candidateName = sanitizePlainText(body.fullName || body.candidateName || '', 120);
   const candidateEmail = String(body.email || body.candidateEmail || '').trim().toLowerCase();
 
-  if (!candidateName || !candidateEmail || !candidateEmail.includes('@')) {
+  if (!candidateName || !candidateEmail || candidateEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(candidateEmail)) {
     res.status(400).json({
       success: false,
       error: 'Valid candidate full name and email address are required.',
@@ -2414,9 +3475,10 @@ app.post('/api/careers/apply', async (req, res) => {
   }
 
   const submittedAt = new Date().toISOString();
-  const applicationRefId = String(
-    body.applicationRefId || body.referenceId || `ELAW-2026-${Math.floor(1000 + Math.random() * 9000)}`
-  ).trim();
+  const applicationRefId = sanitizePlainText(
+    body.applicationRefId || body.referenceId || `ELAW-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    80
+  );
 
   const normalizedData: CareerApplicationData = {
     applicationRefId,
@@ -2589,6 +3651,22 @@ app.post('/api/careers/apply', async (req, res) => {
   apps.unshift(entry);
   writeJsonArray(CAREER_APPLICATIONS_FILE, apps);
 
+  const adminDb = getAdminFirestore();
+  if (adminDb) {
+    try {
+      await adminDb.collection('job_applications').doc(applicationRefId).set(
+        {
+          ...entry,
+          createdAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch {
+      // non-fatal mirror
+    }
+  }
+  console.info(`[Careers] Application ${applicationRefId} (${maskEmail(candidateEmail)}) hrEmail=${hrSent.liveDelivered}`);
+
   res.json({
     success: true,
     applicationRefId,
@@ -2630,11 +3708,11 @@ app.get('/api/payment/uddoktapay/config', (_req, res) => {
   });
 });
 
-app.post('/api/payment/uddoktapay/config', (req, res) => {
+app.post('/api/payment/uddoktapay/config', requireAdminAuth, (req, res) => {
   res.json({ success: true, config: req.body });
 });
 
-app.get('/api/payment/uddoktapay/invoices', (_req, res) => {
+app.get('/api/payment/uddoktapay/invoices', requireAdminAuth, (_req, res) => {
   const invoices = readJsonArray(UDDOKTAPAY_INVOICES_FILE);
   res.json({ success: true, invoices });
 });
@@ -2703,11 +3781,11 @@ app.post('/api/verify-payment', async (req, res) => {
   }
 });
 
-app.post('/api/payment/uddoktapay/refund', (req, res) => {
+app.post('/api/payment/uddoktapay/refund', requireAdminAuth, (req, res) => {
   res.json({ status: true, message: 'Refund processed', data: req.body });
 });
 
-app.post('/api/payment/uddoktapay/auth-verify', (_req, res) => {
+app.post('/api/payment/uddoktapay/auth-verify', requireAdminAuth, (_req, res) => {
   res.json({ status: true, verified: true, message: 'UddoktaPay API credentials verified.' });
 });
 
@@ -2717,7 +3795,7 @@ app.get('/api/shop/products', (_req, res) => {
   res.json({ success: true, products });
 });
 
-app.post('/api/shop/products', (req, res) => {
+app.post('/api/shop/products', requireAdminAuth, (req, res) => {
   res.json({ success: true, product: req.body });
 });
 
@@ -2851,11 +3929,11 @@ app.get('/api/workspace/shop-sheet-config', (_req, res) => {
   res.json({ success: true, spreadsheetId: '', sheetName: 'Orders' });
 });
 
-app.post('/api/workspace/sync-shop-sheet', (_req, res) => {
+app.post('/api/workspace/sync-shop-sheet', requireAdminAuth, (_req, res) => {
   res.json({ success: true, syncedAt: new Date().toISOString() });
 });
 
-app.post('/api/workspace/sync-contact-sheet', (_req, res) => {
+app.post('/api/workspace/sync-contact-sheet', requireAdminAuth, (_req, res) => {
   res.json({ success: true, syncedAt: new Date().toISOString() });
 });
 
@@ -3000,7 +4078,7 @@ async function runAutomatedVerification(): Promise<{ success: boolean; stage?: s
   return { success: true };
 }
 
-app.get('/api/github/status', async (_req, res) => {
+app.get('/api/github/status', requireAdminAuth, async (_req, res) => {
   try {
     await ensureGitInitialized();
 
@@ -3080,7 +4158,7 @@ app.get('/api/github/status', async (_req, res) => {
   }
 });
 
-app.post('/api/github/verify', async (_req, res) => {
+app.post('/api/github/verify', requireAdminAuth, async (_req, res) => {
   const result = await runAutomatedVerification();
   res.json({
     success: result.success,
@@ -3091,7 +4169,7 @@ app.post('/api/github/verify', async (_req, res) => {
   });
 });
 
-app.post('/api/github/commit', async (req, res) => {
+app.post('/api/github/commit', requireAdminAuth, async (req, res) => {
   try {
     await ensureGitInitialized();
     const message = String(req.body?.message || 'chore: sync project updates and compliance modules').trim();
@@ -3135,7 +4213,7 @@ app.post('/api/github/commit', async (req, res) => {
   }
 });
 
-app.post('/api/github/sync', async (req, res) => {
+app.post('/api/github/sync', requireAdminAuth, async (req, res) => {
   try {
     await ensureGitInitialized();
 

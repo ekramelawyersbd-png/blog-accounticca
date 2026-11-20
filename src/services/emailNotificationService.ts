@@ -9,6 +9,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 import { 
   generateAppointmentEmailHtml, 
   generateAppointmentReminderEmailHtml, 
@@ -16,6 +17,23 @@ import {
 } from '../utils/appointmentEmailTemplate';
 import { EmailTemplateGenerator } from '../utils/emailGenerator';
 import { Appointment } from './appointmentService';
+
+async function buildAppointmentApiHeaders(includeContentType = true): Promise<Record<string, string>> {
+  const extra: Record<string, string> = includeContentType
+    ? { 'Content-Type': 'application/json' }
+    : {};
+  if (auth.currentUser) {
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      if (idToken) {
+        extra['Authorization'] = `Bearer ${idToken}`;
+      }
+    } catch {
+      // fallback to admin header if present
+    }
+  }
+  return getAdminAuthHeaders(extra);
+}
 
 export interface EmailNotificationAudit {
   id: string;
@@ -118,17 +136,18 @@ export async function dispatchAppointmentStatusNotification(
     subject,
     html,
     sentAt,
-    delivered: true,
-    transport: 'Firebase Cloud Functions & ELA Mailer Hub',
+    delivered: false,
+    transport: 'Brevo SMTP Relay Gateway',
     cancellationReason: payload.cancellationReason
   };
 
   // 1. Dispatch through server notification route (passes EmailTemplateGenerator-compiled HTML to Brevo relay)
   if (generatedEmail.enabled !== false) {
     try {
+      const headers = await buildAppointmentApiHeaders(true);
       const res = await fetch('/api/appointments/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           ...payload,
           templateId: generatedEmail.templateId || targetTemplateId,
@@ -140,10 +159,14 @@ export async function dispatchAppointmentStatusNotification(
           text,
         })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.notification?.messageId) {
-          auditRecord.messageId = data.notification.messageId;
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.success) {
+        auditRecord.delivered = Boolean(data.liveDelivered ?? data.success);
+        if (data?.notification?.messageId || data?.messageId) {
+          auditRecord.messageId = data.notification?.messageId || data.messageId;
+        }
+        if (data?.notification?.transport) {
+          auditRecord.transport = data.notification.transport;
         }
       }
     } catch (err) {
@@ -151,28 +174,33 @@ export async function dispatchAppointmentStatusNotification(
     }
   }
 
-  // 2. Persist audit record in Firestore collection `emailNotifications`
-  try {
-    const notifsCol = collection(db, 'emailNotifications');
-    await addDoc(notifsCol, {
-      referenceId: payload.referenceId,
-      appointmentId: appointment.id,
-      recipientEmail,
-      clientName: payload.clientName,
-      status: newStatus,
-      subject,
-      messageId: auditRecord.messageId,
-      practiceArea: payload.practiceArea,
-      mode: payload.mode,
-      date: payload.date,
-      timeSlot: payload.timeSlot,
-      cancellationReason: payload.cancellationReason || null,
-      sentAt: serverTimestamp(),
-      delivered: true,
-      transport: 'Firebase Cloud Functions / ELA Mail Gateway'
-    });
-  } catch (err) {
-    console.warn('[Email Notification] Firestore logging fallback:', err);
+  // 2. Persist audit record in Firestore collection `emailNotifications` if signed in
+  let firestoreSaved = false;
+  if (auth.currentUser) {
+    try {
+      const notifsCol = collection(db, 'emailNotifications');
+      await addDoc(notifsCol, {
+        userId: auth.currentUser.uid,
+        referenceId: payload.referenceId,
+        appointmentId: appointment.id,
+        recipientEmail,
+        clientName: payload.clientName,
+        status: newStatus,
+        subject,
+        messageId: auditRecord.messageId,
+        practiceArea: payload.practiceArea,
+        mode: payload.mode,
+        date: payload.date,
+        timeSlot: payload.timeSlot,
+        cancellationReason: payload.cancellationReason || null,
+        sentAt: serverTimestamp(),
+        delivered: auditRecord.delivered,
+        transport: auditRecord.transport
+      });
+      firestoreSaved = true;
+    } catch (err) {
+      console.warn('[Email Notification] Firestore logging fallback:', err);
+    }
   }
 
   // 3. Persist in local storage for offline / instant UI availability
@@ -185,7 +213,7 @@ export async function dispatchAppointmentStatusNotification(
     console.warn('[Email Notification] Local cache storage notice:', err);
   }
 
-  return { success: true, notification: auditRecord };
+  return { success: auditRecord.delivered || firestoreSaved, notification: auditRecord };
 }
 
 /**
@@ -198,19 +226,24 @@ export async function fetchAppointmentNotifications(
   const results: EmailNotificationAudit[] = [];
   const seenIds = new Set<string>();
 
-  // 1. Fetch from server API
+  // 1. Fetch from server API (authenticated users/admins only)
   try {
-    const params = new URLSearchParams();
-    if (referenceId) params.append('referenceId', referenceId);
-    if (userEmail) params.append('email', userEmail);
-    const res = await fetch(`/api/appointments/notifications?${params.toString()}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data.notifications)) {
-        for (const item of data.notifications) {
-          if (!seenIds.has(item.messageId || item.id)) {
-            seenIds.add(item.messageId || item.id);
-            results.push(item);
+    const headers = await buildAppointmentApiHeaders(false);
+    if (headers['Authorization'] || headers['x-admin-token']) {
+      const params = new URLSearchParams();
+      if (referenceId) params.append('referenceId', referenceId);
+      if (userEmail) params.append('email', userEmail);
+      const res = await fetch(`/api/appointments/notifications?${params.toString()}`, {
+        headers
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.notifications)) {
+          for (const item of data.notifications) {
+            if (!seenIds.has(item.messageId || item.id)) {
+              seenIds.add(item.messageId || item.id);
+              results.push(item);
+            }
           }
         }
       }
@@ -298,9 +331,10 @@ export async function scanUpcomingAppointmentReminders(
   message: string;
 }> {
   try {
+    const headers = await buildAppointmentApiHeaders(true);
     const res = await fetch('/api/appointments/scan-reminders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ appointments })
     });
     if (res.ok) {
@@ -382,9 +416,10 @@ export async function previewAppointmentReminderEmail(
   payload: AppointmentEmailPayload
 ): Promise<{ subject: string; html: string; text: string }> {
   try {
+    const headers = await buildAppointmentApiHeaders(true);
     const res = await fetch('/api/appointments/preview-reminder-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload)
     });
     if (res.ok) {

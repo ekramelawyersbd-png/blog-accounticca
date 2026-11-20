@@ -1,162 +1,415 @@
 rules_version = '2';
+
+// Target Named Firestore Database:
+//   Project ID: gen-lang-client-0361533735
+//   Database ID: ai-studio-accounticcainsig-89414606-29ba-4643-944b-e0ac41725d03
+// Deployed explicitly to the provisioned named database target.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     function isValidId(id) {
-      return id is string && id.size() >= 1 && id.size() <= 128;
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_@.\\-]+$');
     }
 
     function incoming() {
       return request.resource.data;
     }
 
-    function isSignedIn() {
-      return request.auth != null;
+    function existing() {
+      return resource.data;
     }
 
-    // Public & Dual-Auth Application Collections
-    // Note: Users may authenticate via either the primary Firestore project Auth (gen-lang-client-0396222608)
-    // or the custom domain Auth (accounticca.com / elawyersnew) or verified workspace session.
-    match /comments/{commentId} {
-      allow get, list: if true;
-      allow create, update: if isValidId(commentId) && incoming().text is string && incoming().text.size() <= 5000;
-      allow delete: if isValidId(commentId);
+    function hasVerifiedEmail() {
+      return isSignedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
     }
 
-    match /workspace_tool_signings/{signingId} {
-      allow get, list: if true;
-      allow create, update: if isValidId(signingId) && incoming().toolId is string && incoming().toolId.size() <= 128;
-      allow delete: if isValidId(signingId);
+    function isAllowlistedAdminEmail() {
+      return hasVerifiedEmail()
+        && request.auth.token.email.lower() in [
+          'hmekram@gmail.com',
+          'ekram.elawyersbd@gmail.com',
+          'ekram@elawyersbd.com',
+          'admin@erpforu.com',
+          'superadmin@erpforu.com'
+        ];
     }
 
-    match /compliance_analytics_events/{eventId} {
-      allow get, list: if true;
-      allow create, update: if isValidId(eventId) && incoming().eventName is string && incoming().eventName.size() <= 128;
-      allow delete: if isValidId(eventId);
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true
+        || isAllowlistedAdminEmail()
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
-    match /users/{userId} {
-      allow get, list: if true;
-      allow create, update: if isValidId(userId);
-      allow delete: if isValidId(userId) && isSignedIn() && request.auth.uid == userId;
+    function isDocOwner(data) {
+      return isSignedIn() && data != null && (
+        (data.userId is string && data.userId == request.auth.uid)
+        || (data.uid is string && data.uid == request.auth.uid)
+        || (data.userUid is string && data.userUid == request.auth.uid)
+        || (
+          hasVerifiedEmail() && (
+            (data.email is string && data.email.lower() == request.auth.token.email.lower())
+            || (data.userEmail is string && data.userEmail.lower() == request.auth.token.email.lower())
+            || (data.recipientEmail is string && data.recipientEmail.lower() == request.auth.token.email.lower())
+            || (data.primaryRecipient is string && data.primaryRecipient.lower() == request.auth.token.email.lower())
+            || (data.clientEmail is string && data.clientEmail.lower() == request.auth.token.email.lower())
+          )
+        )
+      );
     }
 
-    match /user_purchases/{purchaseId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(purchaseId);
+    function isValidUserProfile(data) {
+      return data is map
+        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 256))
+        && (!('role' in data) || (data.role is string && data.role.size() <= 64));
     }
 
-    match /payments/{paymentId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(paymentId);
+    function isValidComment(data) {
+      return data is map
+        && data.articleId is string && data.articleId.size() >= 1 && data.articleId.size() <= 256
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 256
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 5000
+        && (!('userId' in data) || data.userId == null || (data.userId is string && data.userId.size() <= 128))
+        && (!('authorEmail' in data) || data.authorEmail == null || (data.authorEmail is string && data.authorEmail.size() <= 256))
+        && (!('helpfulCount' in data) || data.helpfulCount is number);
     }
 
-    match /appointments/{appointmentId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(appointmentId);
+    function isValidToolSigning(data) {
+      return data is map
+        && data.toolId is string && data.toolId.size() >= 1 && data.toolId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && (!('toolName' in data) || (data.toolName is string && data.toolName.size() <= 256))
+        && (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() <= 256));
     }
 
-    match /testimonials/{testimonialId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(testimonialId);
+    function isValidLmsAuditLog(data) {
+      return data is map
+        && (!('userId' in data) || data.userId == null || (data.userId is string && data.userId == request.auth.uid))
+        && (!('action' in data) || (data.action is string && data.action.size() <= 256))
+        && (!('details' in data) || (data.details is string && data.details.size() <= 2000));
     }
 
-    match /products/{productId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(productId);
-    }
-
-    match /favorites/{favoriteId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(favoriteId);
+    // -------------------------------------------------------------------------
+    // RESTRICTED PII & BACKEND-MANAGED COLLECTIONS (NO PUBLIC ACCESS)
+    // Public submissions MUST go through validated Express backend endpoints
+    // (Turnstile + Zod + rate limiting + Firebase Admin SDK).
+    // -------------------------------------------------------------------------
+    match /contact_messages/{msgId} {
+      allow read, write: if isAdmin();
     }
 
     match /newsletterSubscribers/{subscriberId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(subscriberId);
+      allow read, write: if isAdmin();
+    }
+
+    match /notion_sync_queue/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admin_revoked_sessions/{jti} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admin_revocation_watermarks/{emailKey} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /consultation_appointments/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /r2MaterialUploads/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /r2MaterialAccessLogs/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // OWNER-SCOPED USER PROFILES, BOOKINGS, PAYMENTS & PORTAL DOCUMENTS
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      allow get: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && request.auth.uid == userId
+        && (!('role' in incoming()) || incoming().role in ['client', 'user', 'subscriber', 'student'])
+      );
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && request.auth.uid == userId
+        && (!('role' in incoming()) || incoming().role == existing().get('role', incoming().role))
+      );
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+    }
+
+    match /appointments/{appointmentId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(appointmentId)
+        && incoming().userId == request.auth.uid
+        && incoming().clientName is string && incoming().clientName.size() <= 256
+        && incoming().email is string && incoming().email.size() <= 256
+      );
+      allow update: if isAdmin() || (
+        isValidId(appointmentId)
+        && isDocOwner(existing())
+        && (!('userId' in incoming()) || incoming().userId == existing().userId)
+      );
+      allow delete: if isAdmin();
     }
 
     match /emailNotifications/{notificationId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(notificationId);
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(notificationId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /user_purchases/{purchaseId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(purchaseId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(paymentId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /purchases/{purchaseId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow write: if isAdmin();
     }
 
     match /client_documents/{docId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(docId);
-    }
-
-    match /job_applications/{appId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(appId);
-    }
-
-    match /contact_messages/{msgId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(msgId);
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(docId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || isDocOwner(resource.data);
     }
 
     match /workspace_documents/{docId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(docId);
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(docId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || isDocOwner(resource.data);
     }
 
     match /taxCalculations/{calcId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(calcId);
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(calcId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || isDocOwner(resource.data);
     }
 
+    match /favorites/{favoriteId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(favoriteId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || isDocOwner(resource.data);
+    }
+
+    match /job_applications/{appId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(appId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || isDocOwner(resource.data);
+    }
+
+    match /jobApplications/{appId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(appId)
+        && incoming().userId == request.auth.uid
+      );
+      allow update, delete: if isAdmin() || isDocOwner(resource.data);
+    }
+
+    match /training_admissions/{admissionId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(admissionId)
+        && (!('userId' in incoming()) || incoming().userId == request.auth.uid)
+        && incoming().applicantName is string && incoming().applicantName.size() <= 256
+        && incoming().email is string && incoming().email.size() <= 256
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /calculation_email_reports/{reportId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(reportId)
+        && incoming().referenceId is string && incoming().referenceId.size() <= 128
+        && incoming().toolId is string && incoming().toolId.size() <= 128
+        && (!('userId' in incoming()) || incoming().userId == request.auth.uid)
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------------
+    // LMS COLLECTIONS (OWNER / STUDENT / ADMIN SCOPED)
+    // -------------------------------------------------------------------------
     match /lms_portal_config/{configId} {
       allow get, list: if true;
-      allow create, update, delete: if isValidId(configId);
+      allow write: if isAdmin();
     }
 
     match /lms_courses/{courseId} {
       allow get, list: if true;
-      allow create, update, delete: if isValidId(courseId);
+      allow write: if isAdmin();
     }
 
     match /lms_enrollments/{enrollmentId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(enrollmentId);
+      allow get, list: if isAdmin() || (isSignedIn() && (enrollmentId == request.auth.uid || isDocOwner(resource.data)));
+      allow create, update: if isAdmin() || (isSignedIn() && isValidId(enrollmentId) && enrollmentId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /userCourses/{docId} {
+      allow get, list: if isAdmin() || (isSignedIn() && (docId.matches(request.auth.uid + '_.*') || isDocOwner(resource.data)));
+      allow write: if isAdmin();
     }
 
     match /lms_progress/{progressId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(progressId);
+      allow get, list: if isAdmin() || (isSignedIn() && (progressId == request.auth.uid || isDocOwner(resource.data)));
+      allow create, update: if isAdmin() || (isSignedIn() && isValidId(progressId) && (progressId == request.auth.uid || incoming().userId == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    match /lmsProgress/{progressId} {
+      allow get, list: if isAdmin() || (isSignedIn() && (progressId == request.auth.uid || isDocOwner(resource.data)));
+      allow write: if isAdmin();
     }
 
     match /lms_attempts/{attemptId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(attemptId);
+      allow get, list: if isAdmin() || (isSignedIn() && isDocOwner(resource.data));
+      allow create: if isAdmin() || (isSignedIn() && isValidId(attemptId) && incoming().userId == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     match /lms_certificates/{certificateId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(certificateId);
+      allow get, list: if isAdmin() || (isSignedIn() && isDocOwner(resource.data));
+      allow write: if isAdmin();
     }
 
     match /lms_exam_results/{resultId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(resultId);
+      allow get, list: if isAdmin() || (isSignedIn() && isDocOwner(resource.data));
+      allow create: if isAdmin() || (isSignedIn() && isValidId(resultId) && incoming().userId == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     match /lms_audit_logs/{logId} {
-      allow get, list: if true;
-      allow create, update, delete: if isValidId(logId);
+      allow get, list: if isAdmin() || (isSignedIn() && isDocOwner(resource.data));
+      allow create: if isAdmin() || (isSignedIn() && isValidId(logId) && isValidLmsAuditLog(incoming()));
+      allow update, delete: if isAdmin();
     }
 
-    match /calculation_email_reports/{reportId} {
+    // -------------------------------------------------------------------------
+    // PUBLIC CATALOGS & NON-PII DISCUSSIONS
+    // -------------------------------------------------------------------------
+    match /products/{productId} {
       allow get, list: if true;
-      allow create, update: if isValidId(reportId) && incoming().referenceId is string && incoming().toolId is string;
-      allow delete: if isValidId(reportId);
+      allow write: if isAdmin();
+    }
+
+    match /testimonials/{testimonialId} {
+      allow get, list: if true;
+      allow write: if isAdmin();
+    }
+
+    match /comments/{commentId} {
+      allow get, list: if true;
+      allow create: if isValidId(commentId) && isValidComment(incoming());
+      allow update: if isAdmin() || (
+        isValidId(commentId)
+        && (
+          (isSignedIn() && existing().userId == request.auth.uid && isValidComment(incoming()))
+          || (
+            incoming().diff(existing()).affectedKeys().hasOnly(['helpfulCount', 'updatedAt'])
+            && incoming().helpfulCount is number
+          )
+        )
+      );
+      allow delete: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    match /workspace_tool_signings/{signingId} {
+      allow get, list: if isAdmin() || isDocOwner(resource.data);
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && isValidId(signingId)
+        && isValidToolSigning(incoming())
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /compliance_analytics_events/{eventId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(eventId)
+        && incoming().eventName is string
+        && incoming().eventName.size() <= 128;
+      allow update, delete: if isAdmin();
     }
 
     match /test/{docId} {
-      allow get, list: if true;
+      allow get: if docId == 'connection';
+      allow list, write: if false;
     }
 
+    // Strict default deny for all unmatched paths
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if false;
     }
   }
 }

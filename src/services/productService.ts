@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { SHOP_PRODUCTS, ShopProduct, inferProductType } from '../data/shopProducts';
-import { getStoredAdminToken } from '../contexts/ShopAuthContext';
+import { getAdminAuthHeaders, getStoredAdminToken } from '../contexts/ShopAuthContext';
 import { appendShopProductToSheet } from './shopSheetsSync';
 
 const STORAGE_KEY = 'accounticca_shop_products_catalog';
@@ -96,12 +96,7 @@ export async function fetchProducts(): Promise<ShopProduct[]> {
 
   // 1. Try server-side API (with or without admin auth header)
   try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const res = await fetch('/api/shop/products', { headers });
+    const res = await fetch('/api/shop/products', { headers: getAdminAuthHeaders() });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.products) && data.products.length > 0) {
@@ -214,10 +209,7 @@ export async function saveProduct(product: ShopProduct): Promise<ShopProduct> {
     try {
       await fetch('/api/shop/products', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(normalizedProduct)
       });
     } catch (serverErr) {
@@ -263,9 +255,7 @@ export async function toggleProductPublishStatus(productId: string): Promise<Sho
     try {
       await fetch(`/api/shop/products/${encodeURIComponent(prod.id)}/toggle-publish`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: getAdminAuthHeaders()
       });
     } catch (serverErr) {
       console.warn('[ProductService] Backend toggle warning:', serverErr);
@@ -321,10 +311,7 @@ export async function updateProductPrice(
     try {
       await fetch(`/api/shop/products/${encodeURIComponent(prod.id)}/price`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ price: validPrice, originalPrice: validOrigPrice })
       });
     } catch (serverErr) {
@@ -362,9 +349,7 @@ export async function deleteProduct(productId: string): Promise<void> {
     try {
       await fetch(`/api/shop/products/${encodeURIComponent(productId)}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: getAdminAuthHeaders()
       });
     } catch (serverErr) {
       console.warn('[ProductService] Backend delete warning:', serverErr);
@@ -391,9 +376,7 @@ export async function resetProductsToDefault(): Promise<ShopProduct[]> {
     try {
       await fetch('/api/shop/products/reset', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: getAdminAuthHeaders()
       });
     } catch (serverErr) {
       console.warn('[ProductService] Backend reset warning:', serverErr);

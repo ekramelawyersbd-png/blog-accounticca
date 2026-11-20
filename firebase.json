@@ -1,5 +1,6 @@
 {
   "firestore": {
+    "database": "ai-studio-accounticcainsig-89414606-29ba-4643-944b-e0ac41725d03",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },

@@ -11,6 +11,7 @@ import {
 import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth';
 import { getFunctions } from 'firebase/functions';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 // Suppress internal @firebase/firestore 10s WebChannel timeout console errors in proxied iframe environments
 try {
@@ -18,17 +19,6 @@ try {
 } catch {
   // Ignore if setLogLevel is unavailable
 }
-
-// Primary Firebase configuration for Firestore & backend project (gen-lang-client-0396222608)
-const firebaseConfig = {
-  apiKey: "AIzaSyD0HcNrqIDq_tNPhPX4zO73aYrE8e1z-gg",
-  authDomain: "gen-lang-client-0396222608.firebaseapp.com",
-  projectId: "gen-lang-client-0396222608",
-  storageBucket: "gen-lang-client-0396222608.firebasestorage.app",
-  messagingSenderId: "425825496026",
-  appId: "1:425825496026:web:f1564f14d5ae5ba920eee3",
-  measurementId: "G-P4WQ33CP7G"
-};
 
 // Custom Domain Auth configuration for https://accounticca.com/__/auth/handler
 // Uses the Firebase project that owns the accounticca.com Firebase Hosting domain
@@ -43,12 +33,26 @@ const customDomainFirebaseConfig = {
   measurementId: "G-5L7XVT8MDQ"
 };
 
-// Initialize Firebase Apps
+// Blog Accounticca Firebase configuration for https://blog.accounticca.com/ & Analytics (G-ZHZ01KNB7B)
+const blogAccounticcaConfig = {
+  apiKey: "AIzaSyBqo37wCFYp0SQTmAT9h0bl78YEg18rAyU",
+  authDomain: "blogaccounticca.firebaseapp.com",
+  projectId: "blogaccounticca",
+  storageBucket: "blogaccounticca.firebasestorage.app",
+  messagingSenderId: "176585173933",
+  appId: "1:176585173933:web:e1c7f1973102e0bc8f0f24",
+  measurementId: "G-ZHZ01KNB7B"
+};
+
+// Initialize Primary App from provisioned firebase-applet-config.json + auxiliary apps
 export const app = initializeApp(firebaseConfig);
 export const customDomainApp = initializeApp(customDomainFirebaseConfig, 'accounticcaAuthApp');
+export const blogAccounticcaApp = initializeApp(blogAccounticcaConfig, 'blogAccounticcaApp');
 export const fallbackApp = app;
 
-const FIRESTORE_DB_ID = "ai-studio-accounticcainsig-89414606-29ba-4643-944b-e0ac41725d03";
+const FIRESTORE_DB_ID =
+  firebaseConfig.firestoreDatabaseId ||
+  'ai-studio-accounticcainsig-89414606-29ba-4643-944b-e0ac41725d03';
 
 // Initialize Firestore with specific database ID, forced long-polling for iframe/proxy resilience, and local cache
 let firestoreDb: ReturnType<typeof getFirestore>;
@@ -85,9 +89,10 @@ if (typeof window !== 'undefined') {
 
 // Initialize Auth & Cloud Functions
 // customDomainAuth serves https://accounticca.com/__/auth/handler ("to continue to accounticca.com")
-// fallbackAuth serves gen-lang-client-0396222608.firebaseapp.com (matches Firestore DB project & *.ai.studio / *.run.app)
+// fallbackAuth serves provisioned applet authDomain (matches Firestore DB project & *.ai.studio / *.run.app)
 export const customDomainAuth = getAuth(customDomainApp);
 export const fallbackAuth = getAuth(app);
+export const blogAccounticcaAuth = getAuth(blogAccounticcaApp);
 
 const isAccounticcaCustomRoot =
   typeof window !== 'undefined' &&
@@ -118,12 +123,18 @@ facebookProvider.setCustomParameters({
   display: 'popup'
 });
 
-// Initialize Analytics (supported in browser environment)
+// Initialize Analytics (supported in browser environment) using blogaccounticca Measurement ID (G-ZHZ01KNB7B)
 export let analytics: ReturnType<typeof getAnalytics> | null = null;
+export let primaryAnalytics: ReturnType<typeof getAnalytics> | null = null;
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
     if (supported) {
-      analytics = getAnalytics(app);
+      analytics = getAnalytics(blogAccounticcaApp);
+      try {
+        primaryAnalytics = getAnalytics(app);
+      } catch {
+        // Primary analytics optional when blogaccounticca analytics is active
+      }
     }
   }).catch(() => {
     // Ignore analytics init failure in non-supported environments

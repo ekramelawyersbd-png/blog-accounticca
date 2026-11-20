@@ -811,6 +811,14 @@ export function Navbar() {
                       <p className="text-xs text-slate-500 truncate">{user.email}</p>
                     </div>
                     <Link
+                      to="/client-dashboard"
+                      className="flex items-center gap-3 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition-colors"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Briefcase className="w-4 h-4 text-emerald-600" />
+                      Client Dashboard
+                    </Link>
+                    <Link
                       to="/dashboard"
                       className="flex items-center gap-3 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition-colors"
                       onClick={() => setUserMenuOpen(false)}
@@ -1280,6 +1288,14 @@ export function Navbar() {
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-200/80">
                   <Link
+                    to="/client-dashboard"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-emerald-700 shadow-2xs min-h-[30px]"
+                  >
+                    <Briefcase className="w-3 h-3 text-emerald-600" />
+                    <span>Client Hub</span>
+                  </Link>
+                  <Link
                     to="/dashboard"
                     onClick={() => setIsOpen(false)}
                     className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-emerald-700 shadow-2xs min-h-[30px]"
@@ -1293,7 +1309,7 @@ export function Navbar() {
                       logout();
                       setIsOpen(false);
                     }}
-                    className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] font-bold text-rose-700 hover:bg-rose-100 min-h-[30px] cursor-pointer"
+                    className="col-span-2 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] font-bold text-rose-700 hover:bg-rose-100 min-h-[30px] cursor-pointer"
                   >
                     <LogOut className="w-3 h-3" />
                     <span>Log Out</span>

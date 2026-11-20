@@ -42,6 +42,7 @@ import { cacheAdminEmailTemplates } from '../../utils/emailGenerator';
 import { DynamicEmailBuilder, type ActiveBuilderInsertionTarget } from './DynamicEmailBuilder';
 import { EmailTemplatePreviewModal } from './EmailTemplatePreviewModal';
 import { ScheduledEmailQueuePanel } from './ScheduledEmailQueuePanel';
+import { getAdminAuthHeaders } from '../../contexts/ShopAuthContext';
 
 interface BrevoRelaySummary {
   host: string;
@@ -357,7 +358,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
     try {
       const res = await fetch(`/api/email/templates/${activeTemplate.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: nameInput,
           enabled: enabledInput,
@@ -405,7 +406,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
     try {
       const res = await fetch(`/api/email/templates/${targetId}/reset`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -479,7 +480,7 @@ export const TransactionalEmailTemplateManager: React.FC = () => {
     try {
       const res = await fetch(`/api/email/templates/${activeTemplate.id}/test`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           recipientEmail: testRecipient.trim(),
           subjectTemplate: subjectInput,

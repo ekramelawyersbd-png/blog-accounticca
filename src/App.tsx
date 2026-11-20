@@ -66,6 +66,7 @@ import { ShopAdminRouteGuard } from './components/auth/ShopAdminRouteGuard';
 import { LmsRouteGuard } from './components/auth/LmsRouteGuard';
 import { ResourceLibraryPage } from './pages/ResourceLibraryPage';
 import { ClientPortalPage } from './pages/ClientPortalPage';
+import { ClientDashboardPage } from './pages/ClientDashboardPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthProvider as LegacyAuthProvider } from './context/AuthContext';
 import { ShopAuthProvider } from './contexts/ShopAuthContext';
@@ -386,6 +387,8 @@ export default function App() {
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="portal" element={<ClientPortalPage />} />
                 <Route path="client-portal" element={<ClientPortalPage />} />
+                <Route path="client-dashboard" element={<ClientDashboardPage />} />
+                <Route path="client/dashboard" element={<ClientDashboardPage />} />
                 <Route path="settings" element={<Navigate to="/profile" replace />} />
                 <Route path="privacy" element={<PrivacyPolicy />} />
                 <Route path="terms" element={<TermsConditions />} />

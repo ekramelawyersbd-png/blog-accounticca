@@ -11,6 +11,81 @@
       },
       "required": ["email"]
     },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator registry record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "maxLength": 64 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["email", "role", "active"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Server-validated client inquiry persisted from Contact, Quick Contact, Support, and Booking forms",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "clientName": { "type": "string", "maxLength": 256 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 64 },
+        "companyName": { "type": "string", "maxLength": 256 },
+        "serviceArea": { "type": "string", "maxLength": 160 },
+        "department": { "type": "string", "maxLength": 160 },
+        "subject": { "type": "string", "maxLength": 256 },
+        "messageOrNotes": { "type": "string", "maxLength": 5000 },
+        "urgency": { "type": "string", "maxLength": 128 },
+        "source": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 },
+        "submittedAt": { "type": "string", "maxLength": 64 },
+        "followUpNotes": { "type": "string", "maxLength": 2000 },
+        "notionPageId": { "type": "string", "maxLength": 128 },
+        "notionSyncStatus": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "referenceId", "clientName", "serviceArea", "messageOrNotes", "source", "status"]
+    },
+    "NewsletterSubscriber": {
+      "title": "NewsletterSubscriber",
+      "description": "Normalized newsletter subscriber record with consent and synchronization state",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "name": { "type": "string", "maxLength": 256 },
+        "organization": { "type": "string", "maxLength": 256 },
+        "designation": { "type": "string", "maxLength": 128 },
+        "topics": { "type": "array" },
+        "frequency": { "type": "string", "maxLength": 64 },
+        "source": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 64 },
+        "consentAccepted": { "type": "boolean" },
+        "consentStatus": { "type": "string", "maxLength": 64 },
+        "subscribedAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "notionPageId": { "type": "string", "maxLength": 128 },
+        "notionSyncStatus": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "email", "status", "consentAccepted"]
+    },
+    "NotionSyncQueueJob": {
+      "title": "NotionSyncQueueJob",
+      "description": "Durable retry queue entry for failed Notion synchronization operations",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string", "maxLength": 128 },
+        "targetType": { "type": "string", "maxLength": 64 },
+        "recordId": { "type": "string", "maxLength": 128 },
+        "attempts": { "type": "number" },
+        "status": { "type": "string", "maxLength": 64 },
+        "lastError": { "type": "string", "maxLength": 512 },
+        "nextRetryAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["jobId", "targetType", "recordId", "status"]
+    },
     "Comment": {
       "title": "Comment",
       "description": "Professional commentary and Q&A discussion on legal and tax articles",
@@ -39,17 +114,18 @@
       "description": "Audit log of member tool sessions in Workspace Hub",
       "type": "object",
       "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
         "toolId": { "type": "string", "maxLength": 128 },
         "toolName": { "type": "string", "maxLength": 256 },
-        "category": { "type": "string", "maxLength": 128 },
+        "toolCategory": { "type": "string", "maxLength": 128 },
         "toolPath": { "type": "string", "maxLength": 256 },
         "userEmail": { "type": "string", "maxLength": 256 },
         "userName": { "type": "string", "maxLength": 256 },
-        "userUid": { "type": "string", "maxLength": 128 },
-        "signedAtIso": { "type": "string", "maxLength": 64 },
-        "status": { "type": "string", "maxLength": 64 }
+        "signedAt": { "type": "string", "maxLength": 64 },
+        "sessionStatus": { "type": "string", "maxLength": 64 }
       },
-      "required": ["toolId", "toolName", "userEmail"]
+      "required": ["userId", "toolId", "toolName", "userEmail"]
     },
     "ComplianceAnalyticsEvent": {
       "title": "ComplianceAnalyticsEvent",
@@ -108,6 +184,19 @@
       },
       "required": ["userId", "productId"]
     },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Payment gateway verification and transaction record",
+      "type": "object",
+      "properties": {
+        "transactionId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId", "status"]
+    },
     "Favorite": {
       "title": "Favorite",
       "description": "User bookmarked article or statutory tool",
@@ -151,12 +240,158 @@
         "subject": { "type": "string", "maxLength": 512 }
       },
       "required": ["referenceId", "toolId", "toolName", "primaryRecipient", "sentAt"]
+    },
+    "EmailNotification": {
+      "title": "EmailNotification",
+      "description": "Transactional email dispatch and reminder log scoped by owner or admin",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "recipientEmail": { "type": "string", "maxLength": 256 },
+        "subject": { "type": "string", "maxLength": 512 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["recipientEmail", "subject"]
+    },
+    "JobApplication": {
+      "title": "JobApplication",
+      "description": "Career application submission scoped by applicant user or admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "referenceId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "status"]
+    },
+    "TrainingAdmission": {
+      "title": "TrainingAdmission",
+      "description": "Training course admission application scoped to owner or admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "applicantName": { "type": "string", "maxLength": 256 },
+        "email": { "type": "string", "maxLength": 256 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "applicantName", "email", "courseId"]
+    },
+    "UserCourseAccess": {
+      "title": "UserCourseAccess",
+      "description": "Approved user course entitlement record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["email", "courseId", "status"]
+    },
+    "LmsPortalConfig": {
+      "title": "LmsPortalConfig",
+      "description": "Public LMS portal configuration settings",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 256 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      }
+    },
+    "LmsCourse": {
+      "title": "LmsCourse",
+      "description": "LMS curriculum and course metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "status": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["title"]
+    },
+    "LmsEnrollment": {
+      "title": "LmsEnrollment",
+      "description": "Student LMS enrollment record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "status": { "type": "string", "maxLength": 64 }
+      }
+    },
+    "LmsProgress": {
+      "title": "LmsProgress",
+      "description": "Student LMS lesson completion progress",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      }
+    },
+    "LmsAttempt": {
+      "title": "LmsAttempt",
+      "description": "Student LMS quiz or assessment attempt",
+      "type": "object",
+      "properties": {
+        "attemptId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["userId"]
+    },
+    "LmsCertificate": {
+      "title": "LmsCertificate",
+      "description": "Issued student completion certificate",
+      "type": "object",
+      "properties": {
+        "certificateId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 }
+      }
+    },
+    "LmsExamResult": {
+      "title": "LmsExamResult",
+      "description": "Student LMS final exam result",
+      "type": "object",
+      "properties": {
+        "resultId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["userId"]
+    },
+    "LmsAuditLog": {
+      "title": "LmsAuditLog",
+      "description": "LMS student activity and compliance audit event",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 256 }
+      }
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "User profile records"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized administrator registry"
+    },
+    "/contact_messages/{msgId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Server-validated client inquiry records (admin-only reads)"
+    },
+    "/newsletterSubscribers/{subscriberId}": {
+      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
+      "description": "Newsletter subscriber ledger synced with Brevo and Notion (admin-only reads)"
+    },
+    "/notion_sync_queue/{jobId}": {
+      "schema": { "$ref": "#/entities/NotionSyncQueueJob" },
+      "description": "Durable Notion retry queue for transient integration failures"
     },
     "/comments/{commentId}": {
       "schema": { "$ref": "#/entities/Comment" },
@@ -174,6 +409,10 @@
       "schema": { "$ref": "#/entities/Appointment" },
       "description": "Client consultation bookings"
     },
+    "/emailNotifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/EmailNotification" },
+      "description": "Owner-scoped transactional email notifications"
+    },
     "/products/{productId}": {
       "schema": { "$ref": "#/entities/Product" },
       "description": "Digital legal and tax compliance products"
@@ -182,9 +421,33 @@
       "schema": { "$ref": "#/entities/UserPurchase" },
       "description": "User product and course entitlements"
     },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/PaymentRecord" },
+      "description": "User payment verification records"
+    },
+    "/purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/UserPurchase" },
+      "description": "Verified backend purchase ledger"
+    },
     "/favorites/{favoriteId}": {
       "schema": { "$ref": "#/entities/Favorite" },
       "description": "Bookmarked articles and compliance tools"
+    },
+    "/job_applications/{appId}": {
+      "schema": { "$ref": "#/entities/JobApplication" },
+      "description": "Career application submissions"
+    },
+    "/jobApplications/{appId}": {
+      "schema": { "$ref": "#/entities/JobApplication" },
+      "description": "Legacy career application submissions alias"
+    },
+    "/training_admissions/{admissionId}": {
+      "schema": { "$ref": "#/entities/TrainingAdmission" },
+      "description": "Professional training admission applications"
+    },
+    "/userCourses/{docId}": {
+      "schema": { "$ref": "#/entities/UserCourseAccess" },
+      "description": "Approved user course entitlements"
     },
     "/testimonials/{testimonialId}": {
       "schema": { "$ref": "#/entities/Testimonial" },
@@ -193,6 +456,42 @@
     "/calculation_email_reports/{reportId}": {
       "schema": { "$ref": "#/entities/CalculationEmailReport" },
       "description": "Sent statutory calculation email reports and dispatch ledger"
+    },
+    "/lms_portal_config/{configId}": {
+      "schema": { "$ref": "#/entities/LmsPortalConfig" },
+      "description": "Public LMS portal configuration"
+    },
+    "/lms_courses/{courseId}": {
+      "schema": { "$ref": "#/entities/LmsCourse" },
+      "description": "Public LMS course catalog"
+    },
+    "/lms_enrollments/{enrollmentId}": {
+      "schema": { "$ref": "#/entities/LmsEnrollment" },
+      "description": "Student LMS enrollment records"
+    },
+    "/lms_progress/{progressId}": {
+      "schema": { "$ref": "#/entities/LmsProgress" },
+      "description": "Student LMS progress ledger"
+    },
+    "/lmsProgress/{progressId}": {
+      "schema": { "$ref": "#/entities/LmsProgress" },
+      "description": "Legacy student LMS progress ledger alias"
+    },
+    "/lms_attempts/{attemptId}": {
+      "schema": { "$ref": "#/entities/LmsAttempt" },
+      "description": "Student LMS quiz and assessment attempts"
+    },
+    "/lms_certificates/{certificateId}": {
+      "schema": { "$ref": "#/entities/LmsCertificate" },
+      "description": "Student LMS completion certificates"
+    },
+    "/lms_exam_results/{resultId}": {
+      "schema": { "$ref": "#/entities/LmsExamResult" },
+      "description": "Student LMS exam scores"
+    },
+    "/lms_audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/LmsAuditLog" },
+      "description": "LMS student audit events"
     }
   }
 }

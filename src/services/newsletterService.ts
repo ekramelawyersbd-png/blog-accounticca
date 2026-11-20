@@ -1,17 +1,7 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDocs, 
-  query, 
-  where, 
-  serverTimestamp,
-  getDoc
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
-import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
+import { auth } from '../lib/firebase';
+import { getAdminAuthHeaders } from '../contexts/ShopAuthContext';
 
-export type ProfessionalDesignation = 
+export type ProfessionalDesignation =
   | 'advocate_supreme_court'
   | 'advocate_district_court'
   | 'barrister'
@@ -44,8 +34,12 @@ export interface NewsletterSubscriberInput {
   topics?: string[];
   frequency?: 'weekly' | 'urgent_alerts' | 'both';
   source?: 'sidebar' | 'footer' | 'article' | 'modal';
+  sourceCategory?: string;
   sourceArticleId?: string;
   sourceArticleTitle?: string;
+  consentAccepted?: boolean;
+  turnstileToken?: string;
+  turnstileProof?: string;
 }
 
 export interface NewsletterSubscriber extends NewsletterSubscriberInput {
@@ -55,11 +49,8 @@ export interface NewsletterSubscriber extends NewsletterSubscriberInput {
   userId?: string | null;
 }
 
-const COLLECTION_NAME = 'newsletterSubscribers';
-
 /**
- * Generate a deterministic document ID for a subscriber based on their normalized email.
- * This prevents duplicate document proliferation while remaining valid in Firestore path keys.
+ * Generate a deterministic document ID for local recognition based on normalized email.
  */
 function getSubscriberDocId(email: string): string {
   const clean = email.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
@@ -67,93 +58,178 @@ function getSubscriberDocId(email: string): string {
 }
 
 /**
- * Saves or updates a subscriber in Firestore for future legal and tax updates.
+ * Subscribes or updates preferences via validated backend API
+ * (Cloudflare Turnstile + Admin Firestore + Brevo SMTP + Notion Database B).
  */
 export async function subscribeToNewsletter(
   input: NewsletterSubscriberInput
-): Promise<{ success: boolean; id: string; message: string }> {
+): Promise<{
+  success: boolean;
+  persisted: boolean;
+  id: string;
+  message: string;
+  emailDelivered?: boolean;
+  notionSynced?: boolean;
+}> {
   const cleanEmail = input.email.trim().toLowerCase();
-  
-  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
     throw new Error('Please provide a valid professional email address.');
   }
 
-  const docId = getSubscriberDocId(cleanEmail);
-  const docRef = doc(db, COLLECTION_NAME, docId);
+  if (input.consentAccepted === false) {
+    throw new Error('Consent is required to activate statutory dispatch updates.');
+  }
+
+  const normalizedTopics =
+    input.topics && input.topics.length > 0 ? input.topics : ['tax_vat', 'corporate_rjsc'];
+
+  const response = await fetch('/api/subscribe-newsletter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: cleanEmail,
+      name: input.name?.trim() || undefined,
+      designation: input.designation || 'other',
+      organization: input.organization?.trim() || undefined,
+      topics: normalizedTopics,
+      frequency: input.frequency || 'both',
+      source: input.source || 'sidebar',
+      sourceCategory: input.sourceCategory,
+      sourceArticleId: input.sourceArticleId || undefined,
+      sourceArticleTitle: input.sourceArticleTitle || undefined,
+      consentAccepted: input.consentAccepted ?? true,
+      userId: auth.currentUser?.uid || undefined,
+      turnstileToken: input.turnstileToken,
+      'cf-turnstile-response': input.turnstileToken,
+      turnstileProof: input.turnstileProof,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.persisted) {
+    throw new Error(
+      data?.error ||
+        data?.message ||
+        'Unable to save subscription to our durable database. Please try again.'
+    );
+  }
+
+  const subscriberId = String(data.subscriberId || getSubscriberDocId(cleanEmail));
   const nowIso = new Date().toISOString();
 
-  const recordPayload = {
-    email: cleanEmail,
-    name: input.name?.trim() || null,
-    designation: input.designation || 'other',
-    organization: input.organization?.trim() || null,
-    topics: input.topics && input.topics.length > 0 
-      ? input.topics 
-      : ['tax_vat', 'corporate_rjsc', 'precedents'],
-    frequency: input.frequency || 'both',
-    source: input.source || 'sidebar',
-    sourceArticleId: input.sourceArticleId || null,
-    sourceArticleTitle: input.sourceArticleTitle || null,
-    status: 'active',
-    subscribedAt: nowIso,
-    userId: auth.currentUser?.uid || null,
-    updatedAt: serverTimestamp(),
-  };
-
+  // Cache locally ONLY after backend confirmed durable Firestore save
   try {
-    // Write directly to Firestore with merge: true to update preferences if already subscribed
-    await setDoc(docRef, recordPayload, { merge: true });
-
-    // Local caching for instant recognition across pages & offline resiliency
-    try {
-      localStorage.setItem('accounticca_newsletter_subscriber', JSON.stringify({
-        id: docId,
+    localStorage.setItem(
+      'accounticca_newsletter_subscriber',
+      JSON.stringify({
+        id: subscriberId,
         email: cleanEmail,
         name: input.name,
         designation: input.designation,
+        status: 'active',
         subscribedAt: nowIso,
-        topics: recordPayload.topics
-      }));
+        topics: normalizedTopics,
+      })
+    );
 
-      // Maintain client list of active subscriptions
-      const historyRaw = localStorage.getItem('accounticca_newsletter_list');
-      const history: any[] = historyRaw ? JSON.parse(historyRaw) : [];
-      const idx = history.findIndex((h: any) => h.email === cleanEmail);
-      if (idx >= 0) {
-        history[idx] = { ...recordPayload, id: docId };
-      } else {
-        history.push({ ...recordPayload, id: docId });
-      }
-      localStorage.setItem('accounticca_newsletter_list', JSON.stringify(history));
-    } catch (storageErr) {
-      console.warn('LocalStorage error while saving subscriber:', storageErr);
-    }
-
-    return {
-      success: true,
-      id: docId,
-      message: 'Successfully subscribed to legal & tax updates.'
+    const historyRaw = localStorage.getItem('accounticca_newsletter_list');
+    const history: any[] = historyRaw ? JSON.parse(historyRaw) : [];
+    const idx = history.findIndex((h: any) => h.email === cleanEmail);
+    const localRecord = {
+      id: subscriberId,
+      email: cleanEmail,
+      name: input.name?.trim() || null,
+      designation: input.designation || 'other',
+      organization: input.organization?.trim() || null,
+      topics: normalizedTopics,
+      frequency: input.frequency || 'both',
+      source: input.source || 'sidebar',
+      status: 'active',
+      subscribedAt: nowIso,
     };
-  } catch (error) {
-    console.error('Error subscribing to newsletter in Firestore:', error);
-    handleFirestoreError(error, OperationType.WRITE, `${COLLECTION_NAME}/${docId}`);
-    throw error;
+    if (idx >= 0) {
+      history[idx] = localRecord;
+    } else {
+      history.push(localRecord);
+    }
+    localStorage.setItem('accounticca_newsletter_list', JSON.stringify(history));
+  } catch (storageErr) {
+    console.warn('LocalStorage error while caching subscriber:', storageErr);
   }
+
+  return {
+    success: true,
+    persisted: true,
+    id: subscriberId,
+    emailDelivered: Boolean(data.emailDelivered ?? data.liveDelivered),
+    notionSynced: Boolean(data.notionSynced),
+    message: data.message || 'Successfully subscribed to legal & tax updates.',
+  };
 }
 
 /**
- * Checks if an email is already stored as subscribed in Firestore.
+ * Unsubscribes a user cleanly across Firestore and Notion Database B.
+ */
+export async function unsubscribeFromNewsletter(
+  email: string,
+  reason = 'user_requested'
+): Promise<{ success: boolean; message: string }> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+    throw new Error('Please enter a valid email address to unsubscribe.');
+  }
+
+  const response = await fetch('/api/newsletter/unsubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: cleanEmail, reason }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.success) {
+    throw new Error(data?.error || 'Unable to process unsubscribe request right now.');
+  }
+
+  try {
+    const cachedRaw = localStorage.getItem('accounticca_newsletter_subscriber');
+    if (cachedRaw) {
+      const parsed = JSON.parse(cachedRaw);
+      if (parsed?.email === cleanEmail) {
+        localStorage.removeItem('accounticca_newsletter_subscriber');
+      }
+    }
+    const historyRaw = localStorage.getItem('accounticca_newsletter_list');
+    if (historyRaw) {
+      const history: any[] = JSON.parse(historyRaw);
+      const updated = history.map((h) =>
+        h.email === cleanEmail ? { ...h, status: 'unsubscribed' } : h
+      );
+      localStorage.setItem('accounticca_newsletter_list', JSON.stringify(updated));
+    }
+  } catch {
+    // ignore storage cleanup errors
+  }
+
+  return {
+    success: true,
+    message: data.message || `${cleanEmail} has been unsubscribed.`,
+  };
+}
+
+/**
+ * Checks if an email is actively subscribed via local recognition cache
+ * and (when signed in) authenticated backend lookup.
  */
 export async function checkSubscriberStatus(email: string): Promise<boolean> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail) return false;
 
-  // 1. Quick check in local cache
   try {
     const cached = localStorage.getItem('accounticca_newsletter_subscriber');
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed?.email === cleanEmail) {
+      if (parsed?.email === cleanEmail && parsed?.status !== 'unsubscribed') {
         return true;
       }
     }
@@ -161,13 +237,24 @@ export async function checkSubscriberStatus(email: string): Promise<boolean> {
     // ignore
   }
 
-  // 2. Query Firestore
   try {
-    const docId = getSubscriberDocId(cleanEmail);
-    const docSnap = await getDoc(doc(db, COLLECTION_NAME, docId));
-    return docSnap.exists();
-  } catch (err) {
-    console.warn('Could not verify subscriber in Firestore (offline or rule restricted):', err);
+    let headers: Record<string, string> = getAdminAuthHeaders();
+    if (!headers.Authorization && auth.currentUser) {
+      const idToken = await auth.currentUser.getIdToken();
+      headers = { ...headers, Authorization: `Bearer ${idToken}` };
+    }
+    if (!headers.Authorization && !headers['x-admin-token']) {
+      return false;
+    }
+
+    const res = await fetch(
+      `/api/newsletter/status?email=${encodeURIComponent(cleanEmail)}`,
+      { headers }
+    );
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
+    return Boolean(data?.subscribed);
+  } catch {
     return false;
   }
 }

@@ -16,12 +16,12 @@ interface ShopAuthContextType {
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
+  refreshSession: () => Promise<boolean>;
 }
 
-const ADMIN_TOKEN_KEY = 'accounticca_workspace_admin_token_v2';
-const ADMIN_PROFILE_KEY = 'accounticca_workspace_admin_profile_v2';
-const REQUIRED_ADMIN_EMAIL = 'hmekram@gmail.com';
-const REQUIRED_ADMIN_PASS = '123ekraM.com';
+export const ADMIN_TOKEN_KEY = 'accounticca_workspace_admin_token_v2';
+export const ADMIN_PROFILE_KEY = 'accounticca_workspace_admin_profile_v2';
+export const ADMIN_AUTH_UPDATED_EVENT = 'accounticca:admin-auth-updated';
 
 export function getStoredAdminToken(): string | null {
   try {
@@ -29,6 +29,23 @@ export function getStoredAdminToken(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Returns authentication headers for admin-only backend endpoints.
+ * Preserves any existing `Authorization` header (e.g., Google Workspace OAuth token)
+ * while attaching the admin session token via `x-admin-token`.
+ */
+export function getAdminAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra || {}) };
+  const adminToken = getStoredAdminToken();
+  if (adminToken) {
+    headers['x-admin-token'] = adminToken;
+    if (!headers['Authorization'] && !headers['authorization']) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    }
+  }
+  return headers;
 }
 
 const ShopAuthContext = createContext<ShopAuthContextType | null>(null);
@@ -40,54 +57,66 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  const verifySessionOnServer = useCallback(async (tokenToVerify: string): Promise<boolean> => {
-    if (tokenToVerify.startsWith('local-admin-') || tokenToVerify.startsWith('ws-admin-')) {
-      try {
-        const storedProfile = localStorage.getItem(ADMIN_PROFILE_KEY);
-        const parsed = storedProfile ? JSON.parse(storedProfile) : null;
-        if (parsed && String(parsed.email || '').trim().toLowerCase() === REQUIRED_ADMIN_EMAIL) {
-          setAdminUser(parsed);
-          setIsAuthenticated(true);
-          return true;
-        }
-      } catch {}
-    }
-
-    try {
-      const res = await fetch('/api/admin/verify', {
-        headers: {
-          'Authorization': `Bearer ${tokenToVerify}`
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (
-          data.authenticated &&
-          data.user &&
-          String(data.user.email || '').trim().toLowerCase() === REQUIRED_ADMIN_EMAIL
-        ) {
-          setAdminUser(data.user);
-          setIsAuthenticated(true);
-          return true;
-        }
-      }
-    } catch (err) {
-      console.warn('[Shop Auth] Server verification error:', err);
-    }
-
-    // Session is invalid or server responded unauthorized
+  const clearStoredAdminSession = useCallback(() => {
     try {
       localStorage.removeItem(ADMIN_TOKEN_KEY);
       localStorage.removeItem(ADMIN_PROFILE_KEY);
+      localStorage.removeItem('accounticca_admin_session_token');
     } catch {
-      // ignore
+      // ignore storage errors
     }
     setToken(null);
     setAdminUser(null);
     setIsAuthenticated(false);
-    return false;
   }, []);
+
+  const verifySessionOnServer = useCallback(
+    async (tokenToVerify: string): Promise<boolean> => {
+      if (!tokenToVerify || typeof tokenToVerify !== 'string') {
+        clearStoredAdminSession();
+        return false;
+      }
+
+      try {
+        const res = await fetch('/api/admin/verify', {
+          headers: {
+            'x-admin-token': tokenToVerify,
+            Authorization: `Bearer ${tokenToVerify}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data.authenticated && data.user && data.user.role === 'admin') {
+            setToken(tokenToVerify);
+            setAdminUser(data.user as AdminUser);
+            setIsAuthenticated(true);
+            try {
+              localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(data.user));
+            } catch {
+              // ignore
+            }
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn('[Shop Auth] Server verification error:', err);
+      }
+
+      clearStoredAdminSession();
+      return false;
+    },
+    [clearStoredAdminSession]
+  );
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    const current = getStoredAdminToken();
+    if (!current) {
+      clearStoredAdminSession();
+      return false;
+    }
+    return verifySessionOnServer(current);
+  }, [clearStoredAdminSession, verifySessionOnServer]);
 
   useEffect(() => {
     let mounted = true;
@@ -96,7 +125,7 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
       const existingToken = getStoredAdminToken();
       if (existingToken) {
         await verifySessionOnServer(existingToken);
-      } else {
+      } else if (mounted) {
         setIsAuthenticated(false);
         setAdminUser(null);
       }
@@ -107,58 +136,61 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
+    const handleExternalUpdate = (e: Event) => {
+      const detail = (e as CustomEvent<{ token?: string; user?: AdminUser }>).detail;
+      if (detail?.token && detail?.user?.role === 'admin') {
+        setToken(detail.token);
+        setAdminUser(detail.user);
+        setIsAuthenticated(true);
+        setIsLoading(false);
+      } else if (detail && detail.token === undefined) {
+        clearStoredAdminSession();
+      } else {
+        void refreshSession();
+      }
+    };
+
+    window.addEventListener(ADMIN_AUTH_UPDATED_EVENT, handleExternalUpdate);
     return () => {
       mounted = false;
+      window.removeEventListener(ADMIN_AUTH_UPDATED_EVENT, handleExternalUpdate);
     };
-  }, [verifySessionOnServer]);
+  }, [clearStoredAdminSession, refreshSession, verifySessionOnServer]);
 
   const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     setLoginError(null);
-    const normalizedEmail = email.trim().toLowerCase();
-    const isAuthorizedAdmin = normalizedEmail === REQUIRED_ADMIN_EMAIL && pass.trim() === REQUIRED_ADMIN_PASS;
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const cleanPass = pass || '';
 
-    if (!isAuthorizedAdmin) {
-      const errorMsg = 'Access denied. To enter /workspace, you must login with ID: hmekram@gmail.com and the authorized password.';
-      setLoginError(errorMsg);
-      return { success: false, error: errorMsg };
+    if (!normalizedEmail || !cleanPass.trim()) {
+      const msg = 'Please enter both administrator email and password.';
+      setLoginError(msg);
+      return { success: false, error: msg };
     }
 
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, password: pass.trim() })
+        body: JSON.stringify({ email: normalizedEmail, password: cleanPass })
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || !data.success) {
-        const fallbackToken = `local-admin-${Date.now()}`;
-        const fallbackAdmin: AdminUser = {
-          email: REQUIRED_ADMIN_EMAIL,
-          role: 'admin',
-          name: 'Adv. Ekram Hossain',
-          title: 'Authorized Workspace, LMS & Shop Administrator'
-        };
-        try {
-          localStorage.setItem(ADMIN_TOKEN_KEY, fallbackToken);
-          localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(fallbackAdmin));
-        } catch {}
-        setToken(fallbackToken);
-        setAdminUser(fallbackAdmin);
-        setIsAuthenticated(true);
-        setLoginError(null);
-        return { success: true };
+      if (!res.ok || !data.success || !data.token || !data.user) {
+        const errorMsg =
+          data.error ||
+          data.message ||
+          (res.status === 503
+            ? 'Administrator authentication is not configured on the server. Set ADMIN_PASSWORD_HASH or sign in with verified Google Admin SSO.'
+            : 'Invalid administrator credentials. Server verification failed.');
+        setLoginError(errorMsg);
+        return { success: false, error: errorMsg };
       }
 
-      // Store token
-      const newToken = data.token;
-      const verifiedUser: AdminUser = data.user || {
-        email: REQUIRED_ADMIN_EMAIL,
-        role: 'admin',
-        name: 'Adv. Ekram Hossain',
-        title: 'Authorized Workspace, LMS & Shop Administrator'
-      };
+      const newToken = String(data.token);
+      const verifiedUser = data.user as AdminUser;
+
       try {
         localStorage.setItem(ADMIN_TOKEN_KEY, newToken);
         localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(verifiedUser));
@@ -173,22 +205,9 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
 
       return { success: true };
     } catch {
-      const fallbackToken = `local-admin-${Date.now()}`;
-      const fallbackAdmin: AdminUser = {
-        email: REQUIRED_ADMIN_EMAIL,
-        role: 'admin',
-        name: 'Adv. Ekram Hossain',
-        title: 'Authorized Workspace, LMS & Shop Administrator'
-      };
-      try {
-        localStorage.setItem(ADMIN_TOKEN_KEY, fallbackToken);
-        localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(fallbackAdmin));
-      } catch {}
-      setToken(fallbackToken);
-      setAdminUser(fallbackAdmin);
-      setIsAuthenticated(true);
-      setLoginError(null);
-      return { success: true };
+      const errorMsg = 'Unable to reach authentication server. Administrator sign-in requires live server verification.';
+      setLoginError(errorMsg);
+      return { success: false, error: errorMsg };
     }
   };
 
@@ -199,7 +218,8 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
         await fetch('/api/admin/logout', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${currentToken}`
+            'x-admin-token': currentToken,
+            Authorization: `Bearer ${currentToken}`
           }
         });
       } catch (err) {
@@ -207,16 +227,7 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    try {
-      localStorage.removeItem(ADMIN_TOKEN_KEY);
-      localStorage.removeItem(ADMIN_PROFILE_KEY);
-    } catch {
-      // ignore
-    }
-
-    setToken(null);
-    setAdminUser(null);
-    setIsAuthenticated(false);
+    clearStoredAdminSession();
   };
 
   const clearError = () => {
@@ -233,7 +244,8 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
         loginError,
         login,
         logout,
-        clearError
+        clearError,
+        refreshSession
       }}
     >
       {children}
