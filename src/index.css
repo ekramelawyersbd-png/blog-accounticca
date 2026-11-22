@@ -27,3 +27,45 @@
   background: #94a3b8;
 }
 
+/* Global interactive data-table column sorting indicators */
+th[data-sortable-col="true"] {
+  cursor: pointer;
+  user-select: none;
+  transition: box-shadow 150ms ease, color 150ms ease;
+}
+
+th[data-sortable-col="true"]:hover {
+  box-shadow: inset 0 0 0 9999px rgba(148, 163, 184, 0.14);
+}
+
+th[data-sortable-col="true"]:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: -2px;
+}
+
+th[data-sortable-col="true"]::after {
+  content: "⇅";
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.72em;
+  line-height: 1;
+  vertical-align: middle;
+  opacity: 0.42;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+th[data-sortable-col="true"]:hover::after {
+  opacity: 0.85;
+}
+
+th[data-sortable-col="true"][aria-sort="ascending"]::after {
+  content: "▲";
+  opacity: 1;
+}
+
+th[data-sortable-col="true"][aria-sort="descending"]::after {
+  content: "▼";
+  opacity: 1;
+}
+
+

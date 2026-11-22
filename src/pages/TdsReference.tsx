@@ -9,6 +9,8 @@ import { HighlightText } from '../components/tds/HighlightText';
 import { QuickTdsCalculator } from '../components/tds/QuickTdsCalculator';
 import { ToolSEO } from '../components/SEO';
 import { ContactPageShell } from '../components/layout/ContactPageShell';
+import { useTableSort } from '../hooks/useTableSort';
+import { SortableTh } from '../components/ui/SortableTh';
 
 export type TdsViewMode = 'database' | 'comparator' | 'calculator' | 'treaty';
 
@@ -262,6 +264,12 @@ export function TdsReference() {
     });
   }, [searchQuery, activeSection, activeCategory]);
 
+  const {
+    sortedItems: sortedTdsData,
+    requestSort: requestTdsSort,
+    getSortDirection: getTdsSortDir,
+  } = useTableSort<TdsEntry, 'category' | 'section' | 'rate'>(filteredData);
+
   const filteredTreaties = useMemo(() => {
     if (!treatySearch) return [];
     return treatyData.filter(t => t.country.toLowerCase().includes(treatySearch.toLowerCase()));
@@ -456,18 +464,18 @@ export function TdsReference() {
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full text-left border-collapse">
+          <table data-sort-managed="react" className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                <th className="py-4 px-6 font-semibold text-sm">Category & Description</th>
-                <th className="py-4 px-6 font-semibold text-sm w-48">Tax Section</th>
-                <th className="py-4 px-6 font-semibold text-sm text-right w-32">TDS Rate</th>
+                <SortableTh label="Category & Description" sortKey="category" direction={getTdsSortDir('category')} onSort={requestTdsSort} className="py-4 px-6 font-semibold text-sm" />
+                <SortableTh label="Tax Section" sortKey="section" direction={getTdsSortDir('section')} onSort={requestTdsSort} className="py-4 px-6 font-semibold text-sm w-48" />
+                <SortableTh label="TDS Rate" sortKey="rate" direction={getTdsSortDir('rate')} onSort={requestTdsSort} align="right" className="py-4 px-6 font-semibold text-sm text-right w-32" />
                 <th className="py-4 px-6 font-semibold text-sm text-right w-44">Legal Reference</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredData.length > 0 ? (
-                filteredData.map((item) => (
+              {sortedTdsData.length > 0 ? (
+                sortedTdsData.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="py-4 px-6">
                       <div className="font-semibold text-slate-900 mb-1">{item.category}</div>

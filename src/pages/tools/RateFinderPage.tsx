@@ -42,6 +42,8 @@ import {
 } from '../../data/nationalRateDatabase';
 import { ToolSEO } from '../../components/SEO';
 import { ContactPageShell } from '../../components/layout/ContactPageShell';
+import { useTableSort } from '../../hooks/useTableSort';
+import { SortableTh } from '../../components/ui/SortableTh';
 
 export function RateFinderPage() {
   // Navigation tab states
@@ -143,6 +145,31 @@ export function RateFinderPage() {
 
     return results;
   }, [searchQuery, activeTab, vdsApplicabilityFilter, rateTypeFilter, sroFilter]);
+
+  const rateAccessors = useMemo(
+    () => ({
+      category: (item: RateItem) => item.category,
+      code: (item: RateItem) => item.code,
+      title: (item: RateItem) => item.title,
+      rate: (item: RateItem) => {
+        if (item.category === 'VAT') return (item as VatRateItem).vatRate;
+        if (item.category === 'CUSTOMS') return (item as CustomsRateItem).totalTaxIncidence;
+        return (item as TdsVdsRateItem).baseRateFormatted;
+      },
+      vdsApplicable: (item: RateItem) => (item.vdsApplicable ? 1 : 0),
+      legalBasis: (item: RateItem) => item.sectionOrSchedule || item.code,
+    }),
+    []
+  );
+
+  const {
+    sortedItems: sortedRates,
+    requestSort: requestRateSort,
+    getSortDirection: getRateSortDir,
+  } = useTableSort<
+    RateItem,
+    'category' | 'code' | 'title' | 'rate' | 'vdsApplicable' | 'legalBasis'
+  >(filteredRates, { accessors: rateAccessors });
 
   // Predictive search suggestions
   const predictiveSuggestions = useMemo(() => {
@@ -724,20 +751,20 @@ Effective Total Tax Incidence (TTI): ${dutyBreakdown.effectiveTotalTaxIncidenceP
               /* TABLE VIEW */
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden mb-8">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[900px]">
+                  <table data-sort-managed="react" className="w-full text-left border-collapse min-w-[900px]">
                     <thead>
                       <tr className="bg-slate-900 text-white text-xs uppercase tracking-wider font-semibold">
-                        <th className="py-3.5 px-4">Category</th>
-                        <th className="py-3.5 px-4">Code / Section</th>
-                        <th className="py-3.5 px-4">Product / Service Title</th>
-                        <th className="py-3.5 px-4">Statutory Rate</th>
-                        <th className="py-3.5 px-4">VDS Status</th>
-                        <th className="py-3.5 px-4">Schedule / Legal Basis</th>
-                        <th className="py-3.5 px-4 text-right">Action</th>
+                        <SortableTh label="Category" sortKey="category" direction={getRateSortDir('category')} onSort={requestRateSort} tone="dark" className="py-3.5 px-4 text-white" />
+                        <SortableTh label="Code / Section" sortKey="code" direction={getRateSortDir('code')} onSort={requestRateSort} tone="dark" className="py-3.5 px-4 text-white" />
+                        <SortableTh label="Product / Service Title" sortKey="title" direction={getRateSortDir('title')} onSort={requestRateSort} tone="dark" className="py-3.5 px-4 text-white" />
+                        <SortableTh label="Statutory Rate" sortKey="rate" direction={getRateSortDir('rate')} onSort={requestRateSort} tone="dark" className="py-3.5 px-4 text-white" />
+                        <SortableTh label="VDS Status" sortKey="vdsApplicable" direction={getRateSortDir('vdsApplicable')} onSort={requestRateSort} tone="dark" className="py-3.5 px-4 text-white" />
+                        <SortableTh label="Schedule / Legal Basis" sortKey="legalBasis" direction={getRateSortDir('legalBasis')} onSort={requestRateSort} tone="dark" className="py-3.5 px-4 text-white" />
+                        <th className="py-3.5 px-4 text-right text-white">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 text-sm">
-                      {filteredRates.map((item) => {
+                      {sortedRates.map((item) => {
                         let categoryBadge = null;
                         let rateDisplay = null;
 

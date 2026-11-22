@@ -44,6 +44,8 @@ import { generateTemplatePDF } from '../utils/resourcePdfGenerator';
 import { useShopAuth, getStoredAdminToken } from '../contexts/ShopAuthContext';
 import { ToolSEO } from '../components/SEO';
 import { ContactPageShell } from '../components/layout/ContactPageShell';
+import { useTableSort } from '../hooks/useTableSort';
+import { SortableTh } from '../components/ui/SortableTh';
 
 type TimeFilterOption = 'All' | 'This Month' | 'Last 6 Months' | 'Last Year';
 type MainTabOption = 'regulatory' | 'templates';
@@ -334,6 +336,14 @@ export function ResourceLibraryPage() {
     searchQuery,
     sortBy,
   ]);
+
+  const {
+    sortedItems: sortedRegulatoryDocs,
+    requestSort: requestRegDocSort,
+    getSortDirection: getRegDocSortDir,
+  } = useTableSort<RegulatoryDocument, 'authority' | 'docNo' | 'docDate' | 'subject'>(
+    filteredRegulatoryDocs
+  );
 
   // Filter Templates
   const filteredTemplates = useMemo(() => {
@@ -1032,28 +1042,20 @@ export function ResourceLibraryPage() {
               <div className="space-y-3">
                 {viewMode === 'table' ? (
                   <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-2xs">
-                    <table className="w-full text-left border-collapse">
+                    <table data-sort-managed="react" className="w-full text-left border-collapse">
                       <thead className="bg-[#0A2A66] text-white border-b border-blue-900">
                         <tr>
-                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider w-[20%]">
-                            Authority
-                          </th>
-                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider w-[23%]">
-                            Document No.
-                          </th>
-                          <th className="py-3 px-3 text-xs font-extrabold text-white tracking-wider w-[11%] whitespace-nowrap">
-                            Issue Date
-                          </th>
-                          <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider">
-                            Subject &amp; Scope
-                          </th>
+                          <SortableTh label="Authority" sortKey="authority" direction={getRegDocSortDir('authority')} onSort={requestRegDocSort} tone="dark" className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider w-[20%]" />
+                          <SortableTh label="Document No." sortKey="docNo" direction={getRegDocSortDir('docNo')} onSort={requestRegDocSort} tone="dark" className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider w-[23%]" />
+                          <SortableTh label="Issue Date" sortKey="docDate" direction={getRegDocSortDir('docDate')} onSort={requestRegDocSort} tone="dark" className="py-3 px-3 text-xs font-extrabold text-white tracking-wider w-[11%] whitespace-nowrap" />
+                          <SortableTh label="Subject & Scope" sortKey="subject" direction={getRegDocSortDir('subject')} onSort={requestRegDocSort} tone="dark" className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider" />
                           <th className="py-3 px-3.5 text-xs font-extrabold text-white tracking-wider text-right w-[135px]">
                             Actions
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 text-xs sm:text-sm">
-                        {filteredRegulatoryDocs.length === 0 ? (
+                        {sortedRegulatoryDocs.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="py-14 text-center text-slate-500">
                               <Info className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -1073,7 +1075,7 @@ export function ResourceLibraryPage() {
                             </td>
                           </tr>
                         ) : (
-                          filteredRegulatoryDocs.map((doc) => {
+                          sortedRegulatoryDocs.map((doc) => {
                             const isBookmarked = bookmarkedIds.includes(doc.id);
                             const isCopied = copiedId === doc.id;
                             const isExpanded = expandedDocIds.includes(doc.id);

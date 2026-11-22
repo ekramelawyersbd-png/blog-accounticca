@@ -53,6 +53,8 @@ import { TransactionalEmailTemplateManager } from '../components/admin/Transacti
 import { TransactionalEmailHistoryTab } from '../components/admin/TransactionalEmailHistoryTab';
 import { CalculationEmailHistoryTab } from '../components/admin/CalculationEmailHistoryTab';
 import { AdminSeoManager } from '../components/admin/AdminSeoManager';
+import { useTableSort } from '../hooks/useTableSort';
+import { SortableTh } from '../components/ui/SortableTh';
 import { AdminSearchAnalyticsTab } from '../components/admin/AdminSearchAnalyticsTab';
 import { FirebaseAnalyticsDashboard } from '../components/admin/FirebaseAnalyticsDashboard';
 import { TrainingAdmissionsAdminTab } from '../components/admin/TrainingAdmissionsAdminTab';
@@ -491,6 +493,24 @@ export function AdminShop({
     return matchesSearch && matchesCat && matchesType && matchesStatus;
   });
 
+  const {
+    sortedItems: sortedTransactions,
+    requestSort: requestTxSort,
+    getSortDirection: getTxSortDir,
+  } = useTableSort<
+    (typeof transactions)[number],
+    'transactionId' | 'referenceId' | 'productTitle' | 'amount' | 'status' | 'date'
+  >(transactions);
+
+  const {
+    sortedItems: sortedProducts,
+    requestSort: requestProdSort,
+    getSortDirection: getProdSortDir,
+  } = useTableSort<
+    (typeof filteredProducts)[number],
+    'title' | 'category' | 'status' | 'price' | 'slug'
+  >(filteredProducts);
+
   // Calculate catalog stats
   const totalProducts = products.length;
   const publishedCount = products.filter(p => p.status !== 'draft').length;
@@ -928,20 +948,20 @@ export function AdminShop({
               </div>
 
               <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-                <table className="w-full text-left border-collapse text-xs">
+                <table data-sort-managed="react" className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[10px]">
-                      <th className="py-3 px-4">Transaction ID</th>
-                      <th className="py-3 px-4">Customer / Ref</th>
-                      <th className="py-3 px-4">Product</th>
-                      <th className="py-3 px-4">Amount</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Timestamp</th>
+                      <SortableTh label="Transaction ID" sortKey="transactionId" direction={getTxSortDir('transactionId')} onSort={requestTxSort} className="py-3 px-4" />
+                      <SortableTh label="Customer / Ref" sortKey="referenceId" direction={getTxSortDir('referenceId')} onSort={requestTxSort} className="py-3 px-4" />
+                      <SortableTh label="Product" sortKey="productTitle" direction={getTxSortDir('productTitle')} onSort={requestTxSort} className="py-3 px-4" />
+                      <SortableTh label="Amount" sortKey="amount" direction={getTxSortDir('amount')} onSort={requestTxSort} className="py-3 px-4" />
+                      <SortableTh label="Status" sortKey="status" direction={getTxSortDir('status')} onSort={requestTxSort} className="py-3 px-4" />
+                      <SortableTh label="Timestamp" sortKey="date" direction={getTxSortDir('date')} onSort={requestTxSort} className="py-3 px-4" />
                       <th className="py-3 px-4 text-right">Refund Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {transactions.map((tx, idx) => {
+                    {sortedTransactions.map((tx, idx) => {
                       const isCompleted = tx.status === 'completed';
                       const isRefunded = tx.status === 'refunded';
                       const isPending = tx.status === 'pending';
@@ -1718,7 +1738,7 @@ export function AdminShop({
 
           {/* Products Table (At a glance, zero scroll, 100% visible, black text) */}
           <div className="w-full overflow-hidden border border-slate-300 rounded-2xl bg-white shadow-2xs">
-            <table className="w-full table-fixed text-left border-collapse text-xs text-black">
+            <table data-sort-managed="react" className="w-full table-fixed text-left border-collapse text-xs text-black">
               <colgroup>
                 <col className="w-[28%]" />
                 <col className="w-[15%]" />
@@ -1729,23 +1749,29 @@ export function AdminShop({
               </colgroup>
               <thead>
                 <tr className="bg-slate-100 border-b-2 border-slate-300 text-black font-black uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-3 text-black">Item Details</th>
-                  <th className="py-3 px-3 text-black">Type & Category</th>
-                  <th className="py-3 px-3 text-black">Status</th>
-                  <th className="py-3 px-3 text-black bg-emerald-50/90 border-x border-emerald-200">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-black font-black">Price (BDT)</span>
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-700 text-white uppercase tracking-wider shadow-2xs">
-                        Quick Edit
+                  <SortableTh label="Item Details" sortKey="title" direction={getProdSortDir('title')} onSort={requestProdSort} className="py-3 px-3 text-black" />
+                  <SortableTh label="Type & Category" sortKey="category" direction={getProdSortDir('category')} onSort={requestProdSort} className="py-3 px-3 text-black" />
+                  <SortableTh label="Status" sortKey="status" direction={getProdSortDir('status')} onSort={requestProdSort} className="py-3 px-3 text-black" />
+                  <SortableTh
+                    label={
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-black font-black">Price (BDT)</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-700 text-white uppercase tracking-wider shadow-2xs">
+                          Quick Edit
+                        </span>
                       </span>
-                    </div>
-                  </th>
-                  <th className="py-3 px-3 text-black">Direct Page</th>
+                    }
+                    sortKey="price"
+                    direction={getProdSortDir('price')}
+                    onSort={requestProdSort}
+                    className="py-3 px-3 text-black bg-emerald-50/90 border-x border-emerald-200"
+                  />
+                  <SortableTh label="Direct Page" sortKey="slug" direction={getProdSortDir('slug')} onSort={requestProdSort} className="py-3 px-3 text-black" />
                   <th className="py-3 px-3 text-right text-black">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredProducts.map((prod) => {
+                {sortedProducts.map((prod) => {
                   const isDraft = prod.status === 'draft';
                   const isToggling = togglingId === prod.id;
                   const pType = prod.productType || inferProductType(prod);

@@ -15,6 +15,8 @@ import {
   CertificateEligibilityState
 } from '../../contexts/LmsContext';
 import { LmsCourse } from '../../data/lmsCoursesData';
+import { useTableSort } from '../../hooks/useTableSort';
+import { SortableTh } from '../ui/SortableTh';
 
 export interface LeaderboardStudentEntry {
   studentId: string;
@@ -266,6 +268,15 @@ export const StudentQuizLeaderboard: React.FC<StudentQuizLeaderboardProps> = ({
     );
   }, [rankedStudents, searchTerm]);
 
+  const {
+    sortedItems: sortedLeaderboardRows,
+    requestSort: requestLeaderboardSort,
+    getSortDirection: getLeaderboardSortDir,
+  } = useTableSort<
+    (typeof visibleRows)[number],
+    'rank' | 'fullName' | 'quizzesCompleted' | 'averageQuizScore' | 'totalQuizPoints' | 'certified'
+  >(visibleRows);
+
   const topThree = rankedStudents.slice(0, 3);
 
   return (
@@ -493,19 +504,19 @@ export const StudentQuizLeaderboard: React.FC<StudentQuizLeaderboardProps> = ({
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full text-left border-collapse">
+          <table data-sort-managed="react" className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="py-3 px-4">Rank</th>
-                <th className="py-3 px-4">Student</th>
-                <th className="py-3 px-4">Quizzes Completed</th>
-                <th className="py-3 px-4">Avg. Quiz Score</th>
-                <th className="py-3 px-4">Cumulative Points</th>
-                <th className="py-3 px-4 text-right">Status</th>
+                <SortableTh label="Rank" sortKey="rank" direction={getLeaderboardSortDir('rank')} onSort={requestLeaderboardSort} className="py-3 px-4" />
+                <SortableTh label="Student" sortKey="fullName" direction={getLeaderboardSortDir('fullName')} onSort={requestLeaderboardSort} className="py-3 px-4" />
+                <SortableTh label="Quizzes Completed" sortKey="quizzesCompleted" direction={getLeaderboardSortDir('quizzesCompleted')} onSort={requestLeaderboardSort} className="py-3 px-4" />
+                <SortableTh label="Avg. Quiz Score" sortKey="averageQuizScore" direction={getLeaderboardSortDir('averageQuizScore')} onSort={requestLeaderboardSort} className="py-3 px-4" />
+                <SortableTh label="Cumulative Points" sortKey="totalQuizPoints" direction={getLeaderboardSortDir('totalQuizPoints')} onSort={requestLeaderboardSort} className="py-3 px-4" />
+                <SortableTh label="Status" sortKey="certified" direction={getLeaderboardSortDir('certified')} onSort={requestLeaderboardSort} align="right" className="py-3 px-4 text-right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-              {visibleRows.map((entry) => {
+              {sortedLeaderboardRows.map((entry) => {
                 const completionRatio = Math.round(
                   (entry.quizzesCompleted / entry.totalQuizzes) * 100
                 );

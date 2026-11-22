@@ -4,6 +4,8 @@ import { CalculationEmailActionBarButton } from '../components/tools/Calculation
 import { ToolSEO } from '../components/SEO';
 import { ContactPageShell } from '../components/layout/ContactPageShell';
 import { Scale } from 'lucide-react';
+import { useTableSort } from '../hooks/useTableSort';
+import { SortableTh } from '../components/ui/SortableTh';
 
 interface WhtRule {
   section: string;
@@ -73,6 +75,11 @@ export const WhtFinder: React.FC = () => {
     r.category.toLowerCase().includes(search.toLowerCase()) ||
     r.description.toLowerCase().includes(search.toLowerCase())
   );
+
+  const { sortedItems: sortedWht, requestSort, getSortDirection } = useTableSort<
+    WhtRule,
+    'section' | 'category' | 'baseRate' | 'nonTinRate' | 'threshold'
+  >(filtered);
 
   return (
     <ContactPageShell
@@ -183,18 +190,18 @@ export const WhtFinder: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <table className="w-full text-left border-collapse table-auto">
+          <table data-sort-managed="react" className="w-full text-left border-collapse table-auto">
             <thead>
               <tr className="bg-slate-200 border-b border-slate-300 text-xs font-black uppercase text-black">
-                <th className="py-3 px-4 text-black font-black">Section</th>
-                <th className="py-3 px-4 text-black font-black">Payment Category</th>
-                <th className="py-3 px-4 text-black font-black">Standard Rate (With TIN)</th>
-                <th className="py-3 px-4 text-black font-black">Without TIN / PSR Penalty</th>
-                <th className="py-3 px-4 text-black font-black">Statutory Threshold</th>
+                <SortableTh label="Section" sortKey="section" direction={getSortDirection('section')} onSort={requestSort} className="py-3 px-4 text-black font-black" />
+                <SortableTh label="Payment Category" sortKey="category" direction={getSortDirection('category')} onSort={requestSort} className="py-3 px-4 text-black font-black" />
+                <SortableTh label="Standard Rate (With TIN)" sortKey="baseRate" direction={getSortDirection('baseRate')} onSort={requestSort} className="py-3 px-4 text-black font-black" />
+                <SortableTh label="Without TIN / PSR Penalty" sortKey="nonTinRate" direction={getSortDirection('nonTinRate')} onSort={requestSort} className="py-3 px-4 text-black font-black" />
+                <SortableTh label="Statutory Threshold" sortKey="threshold" direction={getSortDirection('threshold')} onSort={requestSort} className="py-3 px-4 text-black font-black" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs text-black">
-              {filtered.map((item, idx) => (
+              {sortedWht.map((item, idx) => (
                 <tr key={idx} className="hover:bg-slate-50">
                   <td className="py-3 px-4 font-mono font-bold text-blue-700">{item.section}</td>
                   <td className="py-3 px-4">
