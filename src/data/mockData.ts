@@ -37,6 +37,7 @@ import { identificationRegistrationSystemsArticle } from './identificationRegist
 import { sro213ApprovedCharitiesTaxRebateArticle } from './sro213ApprovedCharitiesTaxRebateArticle';
 import { bangladeshIncomeTaxSlabs2026Article } from './bangladeshIncomeTaxSlabs2026Article';
 import { bangladeshTdsRules2026Article } from './bangladeshTdsRules2026Article';
+import { nonIndividualNonCompanyTax2026Article } from './nonIndividualNonCompanyTax2026Article';
 
 import { teamMembers } from './teamData';
 
@@ -86,6 +87,7 @@ export const categories: { id: string; name: Category; description: string }[] =
 ];
 
 export const mockArticles: Article[] = [
+  nonIndividualNonCompanyTax2026Article,
   bangladeshTdsRules2026Article,
   rjscEbrs2026Article,
   salaryTdsArticle,

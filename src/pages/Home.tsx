@@ -131,6 +131,19 @@ export function Home() {
 
   const featuredRegulatoryInsights = [
     {
+      id: 'reg-non-individual-non-company-tax-2026-2031',
+      badge: 'Finance Act, 2026 · AY 2026–2027 to 2030–2031',
+      effectiveDate: '5-Year Statutory Schedule',
+      impactLevel: 'High Impact',
+      title: 'Non-Individual & Non-Company Income Tax Rates (AY 2026–2031): Firms, AOPs, Trusts, Co-operatives & Minimum Tax',
+      summary:
+        'Complete guide under the Income Tax Act, 2023, Finance Act, 2026 & Paripatra 2026–2027: 27.5% rate for firms/AOPs/trusts/AJPs, 20% for co-operative societies, 5% for specified private educational institutions, Section 163 minimum tax (0.60%/0.10%), Section 117 dividend TDS (20%), and Section 170 return deadlines.',
+      statReference: 'Secs. 2, 79, 117, 163 & 170 · ITA 2023',
+      articlePath: '/article/non-individual-non-company-income-tax-rates-bangladesh-2026-2031',
+      toolPath: '/tools/early-filing-incentive',
+      toolLabel: 'Early Filing Tool'
+    },
+    {
       id: 'reg-sro-273-tds-rules-2026',
       badge: 'SRO No. 273-Law/Income Tax-5/2026 · Sec 343',
       effectiveDate: 'Effective 1 July 2026',
@@ -258,6 +271,13 @@ export function Home() {
     filteredLatestArticles.length > 0 ? filteredLatestArticles : recentArticles;
 
   const featuredGuides = [
+    {
+      title: 'Income Tax Rates, Minimum Tax & Return Filing for Non-Individual & Non-Company Assessees (AY 2026–2031)',
+      path: '/article/non-individual-non-company-income-tax-rates-bangladesh-2026-2031',
+      category: 'Income Tax · Finance Act 2026',
+      statRef: '27.5% / 20% / 5% · Secs. 163 & 170',
+      readTime: '18 min read'
+    },
     {
       title: 'বেতন থেকে উৎসে কর কর্তন ২০২৬–২৭: মাসিক TDS হিসাবের নিয়ম, করমুক্ত বেতন ও বিনিয়োগ রেয়াত',
       path: '/article/salary-tds-bangladesh-complete-guide-2026-2027',
