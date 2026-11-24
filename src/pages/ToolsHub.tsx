@@ -73,6 +73,18 @@ export const TOOLS_CATALOG: ToolItem[] = [
     badge: 'AY 2026–27 Updated',
   },
   {
+    id: 'section-163-comparative-dashboard',
+    anchorId: 'section-163-comparative-dashboard-tool',
+    name: 'Regular Income Tax vs. Minimum Tax Dashboard (Section 163)',
+    description: 'Interactive comparative bar chart module visualizing regular income tax against Section 163(5) gross receipts minimum tax and Section 163(2) TDS floors across entity categories, profit margin sensitivity scenarios, and break-even thresholds.',
+    category: 'Taxation',
+    path: '/tools/section-163-minimum-tax-dashboard',
+    icon: BarChart3,
+    color: 'bg-slate-900 text-white',
+    statutoryBasis: 'Income Tax Act 2023 · Section 163 & Finance Act 2026',
+    badge: 'Comparative Bar Chart',
+  },
+  {
     id: 'investment-rebate',
     anchorId: 'investment-rebate-calculator-tool',
     name: 'Investment Tax Rebate & 3-Limit Ceiling Calculator',

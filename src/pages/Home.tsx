@@ -131,6 +131,32 @@ export function Home() {
 
   const featuredRegulatoryInsights = [
     {
+      id: 'reg-capital-gains-comparison-2023-vs-2026',
+      badge: 'Finance Act, 2026 · Secs. 2(77), 56A, 57, 58 & 61',
+      effectiveDate: 'Tax Year 2026–2027',
+      impactLevel: 'High Impact',
+      title: 'Capital Gains Tax Comparison (ITA 2023 vs. Finance Act 2026): 5% Jewellery Tax, 15% Developer Agreements & Firm Conversion',
+      summary:
+        'Comprehensive comparison of Capital Gains Tax in Bangladesh: Section 2(77) inclusion of personal gold/jewellery/paintings/antiques, 5% Seventh Schedule rate, Section 58(3) 15% developer agreement formula with 3 equal instalments, Section 61(4)–(6) firm-to-company conversion exemption, and Section 56A penalties.',
+      statReference: 'Secs. 2(77), 56A, 57, 58(3), 61(4)–(6) · 7th Sch.',
+      articlePath: '/article/capital-gains-tax-comparison-ita-2023-vs-finance-act-2026',
+      toolPath: '/tools/capital-gains-tax',
+      toolLabel: 'Capital Gains Tool'
+    },
+    {
+      id: 'reg-what-is-rjsc-bangladesh-guide',
+      badge: 'Companies Act 1994 · RJSC Statutory Guide',
+      effectiveDate: 'eBRS & Entity Registration',
+      impactLevel: 'Corporate Governance',
+      title: 'What Is RJSC in Bangladesh? Complete Guide to Entity Registration, Governing Laws & Compliance',
+      summary:
+        'Authoritative guide to the Registrar of Joint Stock Companies and Firms (RJSC): Private/Public Ltd companies, OPCs, Foreign Companies, Partnership Firms, Societies & Trade Organizations, 7-step registration process, post-registration compliance, and eBRS online services.',
+      statReference: 'Companies Act 1994 · Partnership Act 1932 · Societies Act 1860',
+      articlePath: '/article/what-is-rjsc-bangladesh-complete-guide',
+      toolPath: '/tools/rjsc-fee-calculator',
+      toolLabel: 'RJSC Fee Calculator'
+    },
+    {
       id: 'reg-non-individual-non-company-tax-2026-2031',
       badge: 'Finance Act, 2026 · AY 2026–2027 to 2030–2031',
       effectiveDate: '5-Year Statutory Schedule',
@@ -140,8 +166,8 @@ export function Home() {
         'Complete guide under the Income Tax Act, 2023, Finance Act, 2026 & Paripatra 2026–2027: 27.5% rate for firms/AOPs/trusts/AJPs, 20% for co-operative societies, 5% for specified private educational institutions, Section 163 minimum tax (0.60%/0.10%), Section 117 dividend TDS (20%), and Section 170 return deadlines.',
       statReference: 'Secs. 2, 79, 117, 163 & 170 · ITA 2023',
       articlePath: '/article/non-individual-non-company-income-tax-rates-bangladesh-2026-2031',
-      toolPath: '/tools/early-filing-incentive',
-      toolLabel: 'Early Filing Tool'
+      toolPath: '/tools/section-163-minimum-tax-dashboard',
+      toolLabel: 'Sec. 163 Bar Chart'
     },
     {
       id: 'reg-sro-273-tds-rules-2026',
@@ -271,6 +297,69 @@ export function Home() {
     filteredLatestArticles.length > 0 ? filteredLatestArticles : recentArticles;
 
   const featuredGuides = [
+    {
+      title: 'What Is the Issuance of Certified Copies in RJSC Bangladesh? Documents & Access Rules',
+      path: '/article/what-is-the-issuance-of-certified-copies-in-rjsc-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: 'MOA · AOA · Historical Records',
+      readTime: '8 min read'
+    },
+    {
+      title: 'What Is Returns Filing in RJSC Bangladesh? Annual Returns & Change Filings',
+      path: '/article/what-is-returns-filing-in-rjsc-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: 'Form XII · Schedule X · Change Filings',
+      readTime: '8 min read'
+    },
+    {
+      title: 'What Is Name Clearance in RJSC Bangladesh? Requirements, Process & eBRS Portal',
+      path: '/article/what-is-name-clearance-in-rjsc-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: '5-Step Name Clearance Guide',
+      readTime: '6 min read'
+    },
+    {
+      title: 'What Is the Applicable Act for Each Type of Entity in Bangladesh?',
+      path: '/article/applicable-act-for-each-type-of-entity-in-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: 'Entity-to-Act Quick Reference',
+      readTime: '7 min read'
+    },
+    {
+      title: 'Capital Gains Tax in Bangladesh: Income Tax Act, 2023 vs. Finance Act, 2026 Comparison',
+      path: '/article/capital-gains-tax-comparison-ita-2023-vs-finance-act-2026',
+      category: 'Income Tax · Finance Act 2026',
+      statRef: '5% Gold · 15% Sec. 58(3) · Sec. 61(4)',
+      readTime: '18 min read'
+    },
+    {
+      title: 'What Are the Applicable Acts for Different Types of RJSC Entities in Bangladesh?',
+      path: '/article/applicable-acts-for-rjsc-entities-in-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: '1994 · 2022 · 1860 · 1932 Acts',
+      readTime: '6 min read'
+    },
+    {
+      title: 'What Are RJSC Entities in Bangladesh? Private, Public, Foreign, Societies & Partnership Firms',
+      path: '/article/what-are-rjsc-entities-in-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: '5 Entity Structures & Laws',
+      readTime: '7 min read'
+    },
+    {
+      title: 'Why Is RJSC Important in Bangladesh? Registration, Law Administration & Accountability',
+      path: '/article/why-is-rjsc-important-in-bangladesh',
+      category: 'Corporate Law · RJSC',
+      statRef: 'Entity Registration & Compliance',
+      readTime: '6 min read'
+    },
+    {
+      title: 'What Is RJSC in Bangladesh? A Complete Guide to the Registrar of Joint Stock Companies and Firms',
+      path: '/article/what-is-rjsc-bangladesh-complete-guide',
+      category: 'Corporate Law · RJSC',
+      statRef: 'Companies Act 1994 · eBRS Portal',
+      readTime: '14 min read'
+    },
     {
       title: 'Income Tax Rates, Minimum Tax & Return Filing for Non-Individual & Non-Company Assessees (AY 2026–2031)',
       path: '/article/non-individual-non-company-income-tax-rates-bangladesh-2026-2031',

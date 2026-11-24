@@ -59,6 +59,7 @@ import { DashboardQuickActions } from '../components/dashboard/DashboardQuickAct
 import { WeeklyActivityTrendChart } from '../components/dashboard/WeeklyActivityTrendChart';
 import { AnnualActivityHeatmap } from '../components/dashboard/AnnualActivityHeatmap';
 import { FirebaseAnalyticsDashboard } from '../components/dashboard/FirebaseAnalyticsDashboard';
+import { Section163ComparativeDashboard } from '../components/tax/Section163ComparativeDashboard';
 import { MyAppointmentsSection } from '../components/portal/MyAppointmentsSection';
 import { SEO } from '../components/SEO';
 import { checkAndDispatchDeadlineNotifications } from '../services/smartNotificationService';
@@ -106,9 +107,11 @@ export function Dashboard() {
     if (target === 'applications') return 'applications';
     return 'overview';
   });
-  const [activeTab, setActiveTab] = useState<'saved' | 'articles' | 'profile' | 'applications' | 'payments' | 'activity' | 'reminders' | 'analytics' | 'purchases' | 'feedback' | 'achievements' | 'deadlines'>(
+  const [activeTab, setActiveTab] = useState<'saved' | 'articles' | 'profile' | 'applications' | 'payments' | 'activity' | 'reminders' | 'analytics' | 'section163' | 'purchases' | 'feedback' | 'achievements' | 'deadlines'>(
     tabParam === 'deadlines' || tabParam === 'calendar' || tabParam === 'schedule'
       ? 'deadlines'
+      : tabParam === 'section163' || tabParam === 'minimum-tax'
+      ? 'section163'
       : tabParam === 'analytics' || tabParam === 'firebase-analytics'
       ? 'analytics'
       : tabParam === 'feedback' || tabParam === 'rating' || tabParam === 'review'
@@ -196,6 +199,8 @@ export function Dashboard() {
     const target = sectionParam || tabParam;
     if (tabParam === 'deadlines' || tabParam === 'calendar' || tabParam === 'schedule') {
       setActiveTab('deadlines');
+    } else if (tabParam === 'section163' || tabParam === 'minimum-tax') {
+      setActiveTab('section163');
     } else if (tabParam === 'analytics' || tabParam === 'firebase-analytics') {
       setActiveTab('analytics');
     } else if (tabParam === 'feedback' || tabParam === 'rating' || tabParam === 'review') {
@@ -243,7 +248,7 @@ export function Dashboard() {
     }
   };
 
-  const switchTab = (tab: 'saved' | 'articles' | 'profile' | 'applications' | 'payments' | 'activity' | 'reminders' | 'analytics' | 'purchases' | 'feedback' | 'achievements' | 'deadlines') => {
+  const switchTab = (tab: 'saved' | 'articles' | 'profile' | 'applications' | 'payments' | 'activity' | 'reminders' | 'analytics' | 'section163' | 'purchases' | 'feedback' | 'achievements' | 'deadlines') => {
     if (
       tab === 'achievements' ||
       tab === 'activity' ||
@@ -601,6 +606,24 @@ export function Dashboard() {
             </button>
 
             <button 
+              id="dashboard-tab-section163"
+              onClick={() => switchTab('section163')} 
+              className={`w-full flex items-center justify-between text-left px-3.5 py-2.5 transition-colors rounded-xl font-bold text-sm cursor-pointer ${
+                activeTab === 'section163' 
+                  ? 'bg-emerald-50 text-emerald-800 shadow-xs' 
+                  : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
+              }`}
+            >
+              <div className="flex items-center justify-start gap-3 text-left min-w-0">
+                <BarChart2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span className="text-left leading-snug">Sec. 163 Tax Comparison</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-500 font-semibold shrink-0">
+                Sec. 163
+              </span>
+            </button>
+
+            <button 
               id="dashboard-tab-analytics"
               onClick={() => switchTab('analytics')} 
               className={`w-full flex items-center justify-between text-left px-3.5 py-2.5 transition-colors rounded-xl font-bold text-sm cursor-pointer ${
@@ -842,6 +865,8 @@ export function Dashboard() {
 
         {activeTab === 'deadlines' ? (
           <ComplianceDeadlinesCalendarView />
+        ) : activeTab === 'section163' ? (
+          <Section163ComparativeDashboard />
         ) : activeTab === 'analytics' ? (
           <FirebaseAnalyticsDashboard />
         ) : activeTab === 'purchases' ? (

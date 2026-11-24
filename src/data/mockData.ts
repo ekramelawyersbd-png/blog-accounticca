@@ -38,6 +38,15 @@ import { sro213ApprovedCharitiesTaxRebateArticle } from './sro213ApprovedChariti
 import { bangladeshIncomeTaxSlabs2026Article } from './bangladeshIncomeTaxSlabs2026Article';
 import { bangladeshTdsRules2026Article } from './bangladeshTdsRules2026Article';
 import { nonIndividualNonCompanyTax2026Article } from './nonIndividualNonCompanyTax2026Article';
+import { whatIsRjscBangladeshArticle } from './whatIsRjscBangladeshArticle';
+import { whyIsRjscImportantBangladeshArticle } from './whyIsRjscImportantBangladeshArticle';
+import { whatAreRjscEntitiesBangladeshArticle } from './whatAreRjscEntitiesBangladeshArticle';
+import { applicableActsRjscEntitiesArticle } from './applicableActsRjscEntitiesArticle';
+import { capitalGainsComparison2023Vs2026Article } from './capitalGainsComparison2023Vs2026Article';
+import { applicableActEachEntityBangladeshArticle } from './applicableActEachEntityBangladeshArticle';
+import { rjscNameClearanceBangladeshArticle } from './rjscNameClearanceBangladeshArticle';
+import { rjscReturnsFilingBangladeshArticle } from './rjscReturnsFilingBangladeshArticle';
+import { rjscCertifiedCopiesBangladeshArticle } from './rjscCertifiedCopiesBangladeshArticle';
 
 import { teamMembers } from './teamData';
 
@@ -87,6 +96,15 @@ export const categories: { id: string; name: Category; description: string }[] =
 ];
 
 export const mockArticles: Article[] = [
+  rjscCertifiedCopiesBangladeshArticle,
+  rjscReturnsFilingBangladeshArticle,
+  rjscNameClearanceBangladeshArticle,
+  applicableActEachEntityBangladeshArticle,
+  capitalGainsComparison2023Vs2026Article,
+  applicableActsRjscEntitiesArticle,
+  whatAreRjscEntitiesBangladeshArticle,
+  whyIsRjscImportantBangladeshArticle,
+  whatIsRjscBangladeshArticle,
   nonIndividualNonCompanyTax2026Article,
   bangladeshTdsRules2026Article,
   rjscEbrs2026Article,

@@ -26,6 +26,7 @@ import { WealthSurchargePage } from './pages/tools/WealthSurchargePage';
 import { InvestmentRebatePage } from './pages/tools/InvestmentRebatePage';
 import { AgriculturalTaxPage } from './pages/tools/AgriculturalTaxPage';
 import { MinimumTurnoverTaxPage } from './pages/tools/MinimumTurnoverTaxPage';
+import { Section163ComparativeDashboardPage } from './pages/tools/Section163ComparativeDashboardPage';
 import { DvcVerificationPage } from './pages/tools/DvcVerificationPage';
 import { ResourceLibraryPage as StandaloneResourceLibraryPage } from './pages/tools/ResourceLibraryPage';
 import { EarlyFilingIncentivePage } from './pages/tools/EarlyFilingIncentivePage';
@@ -341,6 +342,8 @@ export default function App() {
                 <Route path="tools/investment-rebate" element={<InvestmentRebatePage />} />
                 <Route path="tools/agricultural-tax" element={<AgriculturalTaxPage />} />
                 <Route path="tools/minimum-turnover-tax" element={<MinimumTurnoverTaxPage />} />
+                <Route path="tools/section-163-minimum-tax-dashboard" element={<Section163ComparativeDashboardPage />} />
+                <Route path="section-163-dashboard" element={<Section163ComparativeDashboardPage />} />
                 <Route path="tools/dvc-verification" element={<DvcVerificationPage />} />
                 <Route path="tools/resource-library" element={<StandaloneResourceLibraryPage />} />
                 <Route path="tools/early-filing-incentive" element={<EarlyFilingIncentivePage />} />

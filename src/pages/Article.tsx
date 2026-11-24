@@ -58,6 +58,7 @@ import { TurnoverTaxCalculator } from '../components/tax/TurnoverTaxCalculator';
 import { TurnoverSlabsSummaryCard } from '../components/tax/TurnoverSlabsSummaryCard';
 import { TaxRebateCeilingCard } from '../components/tax/TaxRebateCeilingCard';
 import { CorporateTaxRateCalculator } from '../components/tax/CorporateTaxRateCalculator';
+import { Section163ComparativeDashboard } from '../components/tax/Section163ComparativeDashboard';
 import { CorporateComplianceMasteryQuiz } from '../components/tax/CorporateComplianceMasteryQuiz';
 import { CapitalGainsTaxCalculator } from '../components/tax/CapitalGainsTaxCalculator';
 import { TaxReturnChecklist } from '../components/tax/TaxReturnChecklist';
@@ -1272,8 +1273,21 @@ export function Article() {
               </>
             )}
 
+            {article.id === 'non-individual-non-company-income-tax-rates-bangladesh-2026-2031' && (
+              <div className="my-12 scroll-mt-24" id="section-163-comparative-dashboard">
+                <Section163ComparativeDashboard
+                  initialEntity="firm_aop_trust"
+                  initialGrossReceipts={10000000}
+                  initialProfitMargin={5}
+                />
+              </div>
+            )}
+
             {article.id === 'minimum-turnover-tax-slabs-bangladesh-2026-2027' && (
               <>
+                <div className="my-12 scroll-mt-24" id="section-163-comparative-dashboard">
+                  <Section163ComparativeDashboard />
+                </div>
                 <div className="my-12 scroll-mt-24" id="turnover-slabs-summary-card">
                   <TurnoverSlabsSummaryCard className="shadow-lg hover:shadow-xl transition-shadow duration-300 ring-1 ring-slate-900/5" />
                 </div>
@@ -1322,7 +1336,9 @@ export function Article() {
               </div>
             )}
 
-            {(article.id === 'capital-gains-tax-bangladesh-finance-act-2026' || article.id === 'capital-gains-tax-calculation-examples-ay-2026-27') && (
+            {(article.id === 'capital-gains-tax-bangladesh-finance-act-2026' ||
+              article.id === 'capital-gains-tax-calculation-examples-ay-2026-27' ||
+              article.id === 'capital-gains-tax-comparison-ita-2023-vs-finance-act-2026') && (
               <div className="my-12 scroll-mt-24" id="capital-gains-tax-calculator-tool">
                 <CapitalGainsTaxCalculator className="shadow-lg hover:shadow-xl transition-shadow duration-300 ring-1 ring-slate-900/5" />
               </div>
