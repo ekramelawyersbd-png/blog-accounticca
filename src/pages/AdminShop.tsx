@@ -38,7 +38,8 @@ import {
   History,
   Globe,
   Calculator,
-  GraduationCap
+  GraduationCap,
+  Cloud
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
@@ -58,6 +59,7 @@ import { SortableTh } from '../components/ui/SortableTh';
 import { AdminSearchAnalyticsTab } from '../components/admin/AdminSearchAnalyticsTab';
 import { FirebaseAnalyticsDashboard } from '../components/admin/FirebaseAnalyticsDashboard';
 import { TrainingAdmissionsAdminTab } from '../components/admin/TrainingAdmissionsAdminTab';
+import { AdminCloudflareTab } from '../components/admin/AdminCloudflareTab';
 import { 
   ShopProduct, 
   SHOP_CATEGORIES, 
@@ -136,7 +138,7 @@ const RECENT_TRANSACTIONS = [
 export function AdminShop({
   initialTab = 'catalog'
 }: {
-  initialTab?: 'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics' | 'training-admissions';
+  initialTab?: 'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics' | 'training-admissions' | 'cloudflare';
 } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -156,7 +158,10 @@ export function AdminShop({
     }
   };
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics' | 'training-admissions'>(() => {
+  const [activeAdminTab, setActiveAdminTab] = useState<'catalog' | 'analytics' | 'payments' | 'email-templates' | 'email-history' | 'seo' | 'search-analytics' | 'training-admissions' | 'cloudflare'>(() => {
+    if (location.pathname.includes('/cloudflare') || location.search.includes('tab=cloudflare')) {
+      return 'cloudflare';
+    }
     if (location.pathname.includes('/seo') || location.search.includes('tab=seo')) {
       return 'seo';
     }
@@ -176,7 +181,9 @@ export function AdminShop({
   });
 
   useEffect(() => {
-    if (location.pathname.includes('/seo') || location.search.includes('tab=seo')) {
+    if (location.pathname.includes('/cloudflare') || location.search.includes('tab=cloudflare')) {
+      setActiveAdminTab('cloudflare');
+    } else if (location.pathname.includes('/seo') || location.search.includes('tab=seo')) {
       setActiveAdminTab('seo');
     } else if (location.pathname.includes('/search') || location.search.includes('tab=search-analytics')) {
       setActiveAdminTab('search-analytics');
@@ -671,6 +678,18 @@ export function AdminShop({
               <Search className="w-4 h-4 text-emerald-400" />
               <span>Search & Gaps</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveAdminTab('cloudflare')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all inline-flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
+                activeAdminTab === 'cloudflare'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <Cloud className="w-4 h-4 text-amber-500" />
+              <span>Cloudflare Edge</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -710,7 +729,11 @@ export function AdminShop({
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        {activeAdminTab === 'search-analytics' ? (
+        {activeAdminTab === 'cloudflare' ? (
+          <div className="space-y-8 animate-in fade-in duration-200">
+            <AdminCloudflareTab />
+          </div>
+        ) : activeAdminTab === 'search-analytics' ? (
           <div className="space-y-8 animate-in fade-in duration-300">
             <AdminSearchAnalyticsTab />
           </div>

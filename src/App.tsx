@@ -82,6 +82,7 @@ import { EmailPreviewProvider } from './contexts/EmailPreviewContext';
 import { BookmarkNotificationToast } from './components/BookmarkNotificationToast';
 import { FormSubmissionToast } from './components/ui/FormSubmissionToast';
 import { ScrollManager } from './components/layout/ScrollManager';
+import { CloudflareAnalytics } from './components/CloudflareAnalytics';
 import { NotFound } from './pages/NotFound';
 import { PersonalIncomeTaxCourse } from './pages/PersonalIncomeTaxCourse';
 import { StudentLearningPortalPage } from './pages/StudentLearningPortalPage';
@@ -113,6 +114,7 @@ export default function App() {
                     <EmailPreviewProvider>
                       <BrowserRouter>
                 <ScrollManager />
+                <CloudflareAnalytics />
                 <Routes>
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Home />} />
@@ -275,6 +277,7 @@ export default function App() {
                     <Route path="admin/email-templates" element={<ShopAdminRouteGuard><AdminShop initialTab="email-templates" /></ShopAdminRouteGuard>} />
                     <Route path="admin/email-history" element={<ShopAdminRouteGuard><AdminShop initialTab="email-history" /></ShopAdminRouteGuard>} />
                     <Route path="admin/seo" element={<ShopAdminRouteGuard><AdminShop initialTab="seo" /></ShopAdminRouteGuard>} />
+                    <Route path="admin/cloudflare" element={<ShopAdminRouteGuard><AdminShop initialTab="cloudflare" /></ShopAdminRouteGuard>} />
                     <Route path="admin/regulatory-library" element={<ShopAdminRouteGuard><AdminRegulatoryLibraryPage /></ShopAdminRouteGuard>} />
                     <Route path="resource-library/admin" element={<ShopAdminRouteGuard><AdminRegulatoryLibraryPage /></ShopAdminRouteGuard>} />
                     <Route path="SRO/TDS2026" element={<SRO_TDS_2026_Content />} />

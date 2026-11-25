@@ -1,0 +1,2 @@
+# Cloudflare Pages SPA fallback routing (static files & /assets/* take priority automatically)
+/* /index.html 200

@@ -8,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
+  root: path.resolve(__dirname),
+  base: '/',
+  appType: 'spa',
   plugins: [
     react(),
     tailwindcss(),
@@ -20,7 +23,13 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
-    hmr: false,
+    hmr: true,
+    allowedHosts: true,
+  },
+  preview: {
+    port: 3000,
+    host: '0.0.0.0',
+    allowedHosts: true,
   },
   build: {
     chunkSizeWarningLimit: 2000,

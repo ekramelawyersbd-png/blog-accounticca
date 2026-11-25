@@ -77,6 +77,18 @@ import {
   getNotionSyncStatus,
   getNotionConfiguration,
 } from './src/lib/notionService';
+import {
+  cloudflareEdgeMiddleware,
+  extractCloudflareEdgeContext,
+  CLOUDFLARE_CACHE_POLICIES,
+  buildCloudflareHeaderProbeMatrix,
+  readWranglerProjectInfo,
+  purgeCloudflareZoneCache,
+  fetchCloudflareStatusTelemetry,
+  recordTurnstileVerificationEvent,
+  getRecentTurnstileEvents,
+  clearTurnstileVerificationEvents,
+} from './src/lib/cloudflareMiddleware';
 
 const execFileAsync = promisify(execFile);
 
@@ -85,6 +97,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.set('trust proxy', true);
+app.use(cloudflareEdgeMiddleware());
 
 const publicSubmitLimiter = rateLimit({
   keyPrefix: 'public_submit',
@@ -546,6 +559,7 @@ app.get('/api/security/turnstile/config', (_req, res) => {
 });
 
 app.post('/api/security/turnstile/verify', publicSubmitLimiter, async (req, res) => {
+  const startedAt = Date.now();
   const token = extractTurnstileToken(req.body) || '';
   const expectedAction =
     typeof req.body?.action === 'string' && req.body.action.trim()
@@ -553,6 +567,17 @@ app.post('/api/security/turnstile/verify', publicSubmitLimiter, async (req, res)
       : undefined;
   const clientIp = resolveClientIp(req);
   const result = await verifyTurnstileToken(token, clientIp, expectedAction);
+  recordTurnstileVerificationEvent({
+    req,
+    status: result.success ? 'success' : 'failure',
+    method: 'siteverify',
+    action: result.action || expectedAction || 'general',
+    hostname: result.hostname || null,
+    usingTestKey: result.usingTestKey,
+    errorCodes: result.errorCodes,
+    reason: result.message || null,
+    latencyMs: Date.now() - startedAt,
+  });
   if (!result.success) {
     res.status(403).json(result);
     return;
@@ -568,6 +593,7 @@ async function verifyTurnstileOrProof(
   req: express.Request,
   expectedAction?: string
 ): Promise<{ success: boolean; message?: string; errorCodes?: string[] }> {
+  const startedAt = Date.now();
   const body = req.body || {};
   const clientIp = resolveClientIp(req);
   const rawProof =
@@ -577,18 +603,51 @@ async function verifyTurnstileOrProof(
 
   if (rawProof) {
     const proofResult = consumeTurnstileVerificationProof(rawProof, clientIp);
+    const hasLiveSecret = Boolean(
+      process.env.TURNSTILE_SECRET?.trim() ||
+        process.env.TURNSTILE_SECRET_KEY?.trim() ||
+        process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY?.trim()
+    );
     if (!proofResult.valid) {
+      recordTurnstileVerificationEvent({
+        req,
+        status: 'failure',
+        method: 'proof',
+        action: expectedAction || 'general',
+        usingTestKey: !hasLiveSecret,
+        errorCodes: ['invalid-proof'],
+        reason: proofResult.reason || 'Cloudflare Turnstile verification proof is invalid or expired.',
+        latencyMs: Date.now() - startedAt,
+      });
       return {
         success: false,
         message: proofResult.reason || 'Cloudflare Turnstile verification proof is invalid or expired.',
         errorCodes: ['invalid-proof'],
       };
     }
+    recordTurnstileVerificationEvent({
+      req,
+      status: 'success',
+      method: 'proof',
+      action: expectedAction || 'general',
+      usingTestKey: !hasLiveSecret,
+      latencyMs: Date.now() - startedAt,
+    });
     return { success: true };
   }
 
   const token = extractTurnstileToken(body);
   if (!token || !token.trim()) {
+    recordTurnstileVerificationEvent({
+      req,
+      status: 'failure',
+      method: 'siteverify',
+      action: expectedAction || 'general',
+      usingTestKey: resolveServerTurnstileSiteKey() === CLOUDFLARE_TEST_SITE_KEY,
+      errorCodes: ['missing-input-response'],
+      reason: 'Cloudflare Turnstile human verification is required.',
+      latencyMs: Date.now() - startedAt,
+    });
     return {
       success: false,
       message: 'Cloudflare Turnstile human verification is required.',
@@ -597,6 +656,17 @@ async function verifyTurnstileOrProof(
   }
 
   const check = await verifyTurnstileToken(token, clientIp, expectedAction);
+  recordTurnstileVerificationEvent({
+    req,
+    status: check.success ? 'success' : 'failure',
+    method: 'siteverify',
+    action: check.action || expectedAction || 'general',
+    hostname: check.hostname || null,
+    usingTestKey: check.usingTestKey,
+    errorCodes: check.errorCodes,
+    reason: check.message || null,
+    latencyMs: Date.now() - startedAt,
+  });
   if (!check.success) {
     return {
       success: false,
@@ -786,6 +856,143 @@ app.post('/api/admin/invalidate-all', requireAdminAuth, async (req, res) => {
   res.json({
     success: true,
     message: `All active administrator sessions for ${maskEmail(adminUser.email)} have been invalidated.`,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cloudflare Edge Diagnostics, Header Probe & Zone Cache Purge (Admin Only)
+// ─────────────────────────────────────────────────────────────────────────────
+app.get('/api/admin/cloudflare/status', requireAdminAuth, (req, res) => {
+  const edge = extractCloudflareEdgeContext(req);
+  const siteKey = resolveServerTurnstileSiteKey();
+  const hasTurnstileSecret = Boolean(
+    process.env.TURNSTILE_SECRET?.trim() ||
+      process.env.TURNSTILE_SECRET_KEY?.trim() ||
+      process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY?.trim()
+  );
+  const allowedHostnames = (process.env.TURNSTILE_HOSTNAMES ?? 'blog.accounticca.com,accounticca.com,localhost')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean);
+  const siteKeyPreview =
+    siteKey.length > 12 ? `${siteKey.slice(0, 8)}...${siteKey.slice(-4)}` : siteKey;
+
+  const r2AccountConfigured = Boolean(process.env.R2_ACCOUNT_ID?.trim());
+  const r2Configured = Boolean(
+    process.env.R2_ACCOUNT_ID?.trim() &&
+      process.env.R2_ACCESS_KEY_ID?.trim() &&
+      process.env.R2_SECRET_ACCESS_KEY?.trim()
+  );
+  const r2BucketName = (process.env.R2_BUCKET_NAME || 'elawyers-lms-assets').trim();
+  const r2SignedUrlTtlSeconds = Number(process.env.R2_SIGNED_URL_TTL_SECONDS || 3600) || 3600;
+
+  const zoneConfigured = Boolean(process.env.CLOUDFLARE_ZONE_ID?.trim());
+  const tokenConfigured = Boolean(process.env.CLOUDFLARE_API_TOKEN?.trim());
+  const analyticsConfigured = Boolean(process.env.VITE_CLOUDFLARE_ANALYTICS_TOKEN?.trim());
+
+  res.json({
+    success: true,
+    checkedAt: new Date().toISOString(),
+    edge,
+    turnstile: {
+      configured: hasTurnstileSecret,
+      usingTestKey: siteKey === CLOUDFLARE_TEST_SITE_KEY || !hasTurnstileSecret,
+      siteKeyPreview,
+      allowedHostnames,
+    },
+    r2: {
+      configured: r2Configured,
+      mode: r2Configured ? 'cloudflare-r2' : 'local-fallback',
+      bucketName: r2BucketName,
+      signedUrlTtlSeconds: r2SignedUrlTtlSeconds,
+      accountConfigured: r2AccountConfigured,
+    },
+    analytics: {
+      configured: analyticsConfigured,
+    },
+    cacheApi: {
+      purgeConfigured: zoneConfigured && tokenConfigured,
+      zoneConfigured,
+      tokenConfigured,
+    },
+    wrangler: readWranglerProjectInfo(__dirname),
+    cachePolicies: CLOUDFLARE_CACHE_POLICIES,
+  });
+});
+
+app.get('/api/admin/cloudflare/test-headers', requireAdminAuth, (_req, res) => {
+  res.json({
+    success: true,
+    checkedAt: new Date().toISOString(),
+    matrix: buildCloudflareHeaderProbeMatrix(),
+  });
+});
+
+app.post('/api/admin/cloudflare/purge-cache', requireAdminAuth, strictAuthLimiter, async (req, res) => {
+  const mode = req.body?.mode === 'everything' ? 'everything' : 'urls';
+  const urls = Array.isArray(req.body?.urls) ? req.body.urls.map((u: unknown) => String(u)) : [];
+  const result = await purgeCloudflareZoneCache({ mode, urls });
+  res.status(result.statusCode).json({
+    success: result.success,
+    message: result.message,
+    rayId: result.rayId || null,
+    purgedCount: result.purgedCount,
+  });
+});
+
+app.get('/api/admin/cloudflare/telemetry', requireAdminAuth, async (req, res) => {
+  try {
+    const siteKey = resolveServerTurnstileSiteKey();
+    const hasTurnstileSecret = Boolean(
+      process.env.TURNSTILE_SECRET?.trim() ||
+        process.env.TURNSTILE_SECRET_KEY?.trim() ||
+        process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY?.trim()
+    );
+    const allowedTurnstileHostnames = (
+      process.env.TURNSTILE_HOSTNAMES ?? 'blog.accounticca.com,accounticca.com,localhost'
+    )
+      .split(',')
+      .map((h) => h.trim())
+      .filter(Boolean);
+
+    const telemetry = await fetchCloudflareStatusTelemetry({
+      req,
+      rootDir: __dirname,
+      turnstileConfigured: hasTurnstileSecret,
+      turnstileUsingTestKey: siteKey === CLOUDFLARE_TEST_SITE_KEY || !hasTurnstileSecret,
+      allowedTurnstileHostnames,
+    });
+
+    res.json({
+      success: true,
+      ...telemetry,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Unable to collect Cloudflare telemetry.',
+    });
+  }
+});
+
+app.get('/api/admin/cloudflare/turnstile-logs', requireAdminAuth, (req, res) => {
+  const limit = Number(req.query.limit || 50);
+  const { events, summary } = getRecentTurnstileEvents(limit);
+  res.json({
+    success: true,
+    fetchedAt: new Date().toISOString(),
+    limit: Math.max(1, Math.min(50, Math.floor(limit || 50))),
+    summary,
+    events,
+  });
+});
+
+app.delete('/api/admin/cloudflare/turnstile-logs', requireAdminAuth, strictAuthLimiter, (_req, res) => {
+  clearTurnstileVerificationEvents();
+  res.json({
+    success: true,
+    clearedAt: new Date().toISOString(),
+    message: 'Turnstile verification logs cleared.',
   });
 });
 
@@ -4321,8 +4528,9 @@ async function startServer() {
   const frontendRouter = express.Router();
 
   const resolveRequestOrigin = (req: express.Request) => {
+    const cfEdge = (req as any).cloudflareEdge || extractCloudflareEdgeContext(req);
     const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim();
-    const proto = forwardedProto || req.protocol || 'https';
+    const proto = cfEdge?.visitorScheme || forwardedProto || req.protocol || 'https';
     const host = req.get('host');
     if (host) return `${proto}://${host}`;
     return process.env.APP_URL || 'https://accounticca.ai.studio';
@@ -4405,7 +4613,9 @@ async function startServer() {
       try {
         const { createServer: createViteServer } = await import('vite');
         const vite = await createViteServer({
-          server: { middlewareMode: true, hmr: false },
+          root: __dirname,
+          base: '/',
+          server: { middlewareMode: true, hmr: true, allowedHosts: true },
           appType: 'spa',
         });
         frontendRouter.use(vite.middlewares);
@@ -4422,6 +4632,14 @@ async function startServer() {
       next();
     });
   }
+
+  // Prevent unmatched /api/* requests from falling through to SPA HTML or proxy loops
+  app.use('/api', (req, res) => {
+    res.status(404).json({
+      success: false,
+      error: `API route not found: ${req.method} ${req.originalUrl}`,
+    });
+  });
 
   app.use(frontendRouter);
 
