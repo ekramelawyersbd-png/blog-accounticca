@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, fallbackAuth } from '../lib/firebase';
+import { authService } from '../services/authService';
 
 export interface AdminUser {
   email: string;
@@ -14,6 +17,8 @@ interface ShopAuthContextType {
   isLoading: boolean;
   loginError: string | null;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  syncActiveFirebaseAdmin: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
   refreshSession: () => Promise<boolean>;
@@ -57,6 +62,20 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loginError, setLoginError] = useState<string | null>(null);
 
+  const persistAdminSession = useCallback((newToken: string, verifiedUser: AdminUser) => {
+    try {
+      localStorage.setItem(ADMIN_TOKEN_KEY, newToken);
+      localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(verifiedUser));
+      localStorage.setItem('accounticca_admin_session_token', newToken);
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+    setToken(newToken);
+    setAdminUser(verifiedUser);
+    setIsAuthenticated(true);
+    setLoginError(null);
+  }, []);
+
   const clearStoredAdminSession = useCallback(() => {
     try {
       localStorage.removeItem(ADMIN_TOKEN_KEY);
@@ -70,53 +89,111 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
   }, []);
 
-  const verifySessionOnServer = useCallback(
-    async (tokenToVerify: string): Promise<boolean> => {
-      if (!tokenToVerify || typeof tokenToVerify !== 'string') {
-        clearStoredAdminSession();
-        return false;
+  const exchangeFirebaseIdTokenForAdminSession = useCallback(
+    async (idToken: string): Promise<{ success: boolean; error?: string }> => {
+      if (!idToken) {
+        return { success: false, error: 'Missing Firebase ID token for administrator verification.' };
       }
-
       try {
-        const res = await fetch('/api/admin/verify', {
+        const res = await fetch('/api/admin/oauth-sync', {
+          method: 'POST',
           headers: {
-            'x-admin-token': tokenToVerify,
-            Authorization: `Bearer ${tokenToVerify}`
-          }
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ idToken }),
         });
 
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}));
-          if (data.authenticated && data.user && data.user.role === 'admin') {
-            setToken(tokenToVerify);
-            setAdminUser(data.user as AdminUser);
-            setIsAuthenticated(true);
-            try {
-              localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(data.user));
-            } catch {
-              // ignore
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success || !data.token || !data.user) {
+          return {
+            success: false,
+            error:
+              data.error ||
+              data.message ||
+              'Your signed-in account is not authorized as an administrator.',
+          };
+        }
+
+        persistAdminSession(String(data.token), data.user as AdminUser);
+        return { success: true };
+      } catch {
+        return {
+          success: false,
+          error: 'Unable to reach authentication server to verify administrator session.',
+        };
+      }
+    },
+    [persistAdminSession]
+  );
+
+  const syncActiveFirebaseAdmin = useCallback(async (): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    const activeFbUser = fallbackAuth.currentUser || auth.currentUser;
+    if (!activeFbUser) {
+      return { success: false, error: 'No active Google/Firebase session found.' };
+    }
+    try {
+      const idToken = await activeFbUser.getIdToken(true);
+      const result = await exchangeFirebaseIdTokenForAdminSession(idToken);
+      if (!result.success && result.error) {
+        setLoginError(result.error);
+      }
+      return result;
+    } catch {
+      return { success: false, error: 'Unable to refresh Firebase ID token for admin sync.' };
+    }
+  }, [exchangeFirebaseIdTokenForAdminSession]);
+
+  const verifySessionOnServer = useCallback(
+    async (tokenToVerify: string): Promise<boolean> => {
+      if (tokenToVerify && typeof tokenToVerify === 'string') {
+        try {
+          const res = await fetch('/api/admin/verify', {
+            headers: {
+              'x-admin-token': tokenToVerify,
+              Authorization: `Bearer ${tokenToVerify}`,
+            },
+          });
+
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            if (data.authenticated && data.user && data.user.role === 'admin') {
+              persistAdminSession(tokenToVerify, data.user as AdminUser);
+              return true;
             }
+          }
+        } catch (err) {
+          console.warn('[Shop Auth] Server verification error:', err);
+        }
+      }
+
+      // If stored admin session expired or server restarted, try seamless Firebase ID token re-sync
+      const activeFbUser = fallbackAuth.currentUser || auth.currentUser;
+      if (activeFbUser) {
+        try {
+          const idToken = await activeFbUser.getIdToken();
+          const synced = await exchangeFirebaseIdTokenForAdminSession(idToken);
+          if (synced.success) {
             return true;
           }
+        } catch {
+          // Proceed to clear stale token
         }
-      } catch (err) {
-        console.warn('[Shop Auth] Server verification error:', err);
       }
 
       clearStoredAdminSession();
       return false;
     },
-    [clearStoredAdminSession]
+    [clearStoredAdminSession, exchangeFirebaseIdTokenForAdminSession, persistAdminSession]
   );
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     const current = getStoredAdminToken();
-    if (!current) {
-      clearStoredAdminSession();
-      return false;
-    }
-    return verifySessionOnServer(current);
-  }, [clearStoredAdminSession, verifySessionOnServer]);
+    return verifySessionOnServer(current || '');
+  }, [verifySessionOnServer]);
 
   useEffect(() => {
     let mounted = true;
@@ -125,9 +202,22 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
       const existingToken = getStoredAdminToken();
       if (existingToken) {
         await verifySessionOnServer(existingToken);
-      } else if (mounted) {
-        setIsAuthenticated(false);
-        setAdminUser(null);
+      } else {
+        const activeFbUser = fallbackAuth.currentUser || auth.currentUser;
+        if (activeFbUser) {
+          try {
+            const idToken = await activeFbUser.getIdToken();
+            await exchangeFirebaseIdTokenForAdminSession(idToken);
+          } catch {
+            if (mounted) {
+              setIsAuthenticated(false);
+              setAdminUser(null);
+            }
+          }
+        } else if (mounted) {
+          setIsAuthenticated(false);
+          setAdminUser(null);
+        }
       }
       if (mounted) {
         setIsLoading(false);
@@ -155,7 +245,43 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       window.removeEventListener(ADMIN_AUTH_UPDATED_EVENT, handleExternalUpdate);
     };
-  }, [clearStoredAdminSession, refreshSession, verifySessionOnServer]);
+  }, [
+    clearStoredAdminSession,
+    exchangeFirebaseIdTokenForAdminSession,
+    refreshSession,
+    verifySessionOnServer,
+  ]);
+
+  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    setLoginError(null);
+    try {
+      const sessionUser = await authService.loginWithGoogle();
+      if (!sessionUser?.token) {
+        const msg = 'Google sign-in completed, but no verifiable ID token was returned.';
+        setLoginError(msg);
+        return { success: false, error: msg };
+      }
+
+      const syncResult = await exchangeFirebaseIdTokenForAdminSession(sessionUser.token);
+      if (!syncResult.success) {
+        const msg =
+          syncResult.error ||
+          `Account "${sessionUser.email}" is not in the authorized administrator allowlist.`;
+        setLoginError(msg);
+        return { success: false, error: msg };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      const code = String(err?.code || '');
+      const msg =
+        code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request'
+          ? 'Google sign-in popup was closed before completion.'
+          : err?.message || 'Google administrator sign-in failed. Please try again.';
+      setLoginError(msg);
+      return { success: false, error: msg };
+    }
+  };
 
   const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     setLoginError(null);
@@ -172,40 +298,49 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, password: cleanPass })
+        body: JSON.stringify({ email: normalizedEmail, password: cleanPass }),
       });
 
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || !data.success || !data.token || !data.user) {
-        const errorMsg =
-          data.error ||
-          data.message ||
-          (res.status === 503
-            ? 'Administrator authentication is not configured on the server. Set ADMIN_PASSWORD_HASH or sign in with verified Google Admin SSO.'
-            : 'Invalid administrator credentials. Server verification failed.');
-        setLoginError(errorMsg);
-        return { success: false, error: errorMsg };
+      if (res.ok && data.success && data.token && data.user) {
+        persistAdminSession(String(data.token), data.user as AdminUser);
+        return { success: true };
       }
 
-      const newToken = String(data.token);
-      const verifiedUser = data.user as AdminUser;
-
-      try {
-        localStorage.setItem(ADMIN_TOKEN_KEY, newToken);
-        localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(verifiedUser));
-      } catch (e) {
-        console.warn('LocalStorage error:', e);
+      // If server password hash is unset (503) or credentials differ from server hash (401),
+      // verify against Firebase Auth email/password and exchange the verified Firebase ID token.
+      if (res.status === 503 || res.status === 401) {
+        const authInstances = auth === fallbackAuth ? [auth] : [auth, fallbackAuth];
+        for (const authInst of authInstances) {
+          try {
+            const cred = await signInWithEmailAndPassword(authInst, normalizedEmail, cleanPass);
+            const idToken = await cred.user.getIdToken();
+            const synced = await exchangeFirebaseIdTokenForAdminSession(idToken);
+            if (synced.success) {
+              return { success: true };
+            }
+            if (synced.error) {
+              setLoginError(synced.error);
+              return { success: false, error: synced.error };
+            }
+          } catch {
+            // Try next auth instance or fall back to server error message
+          }
+        }
       }
 
-      setToken(newToken);
-      setAdminUser(verifiedUser);
-      setIsAuthenticated(true);
-      setLoginError(null);
-
-      return { success: true };
+      const errorMsg =
+        res.status === 503
+          ? 'Server password login is not configured. Click "Sign in with Google" above using your authorized administrator Google account.'
+          : data.error ||
+            data.message ||
+            'Invalid administrator credentials. Verify your password or click "Sign in with Google" above.';
+      setLoginError(errorMsg);
+      return { success: false, error: errorMsg };
     } catch {
-      const errorMsg = 'Unable to reach authentication server. Administrator sign-in requires live server verification.';
+      const errorMsg =
+        'Unable to reach authentication server. Administrator sign-in requires live server verification.';
       setLoginError(errorMsg);
       return { success: false, error: errorMsg };
     }
@@ -219,8 +354,8 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
           method: 'POST',
           headers: {
             'x-admin-token': currentToken,
-            Authorization: `Bearer ${currentToken}`
-          }
+            Authorization: `Bearer ${currentToken}`,
+          },
         });
       } catch (err) {
         console.warn('Logout notice:', err);
@@ -243,9 +378,11 @@ export function ShopAuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         loginError,
         login,
+        loginWithGoogle,
+        syncActiveFirebaseAdmin,
         logout,
         clearError,
-        refreshSession
+        refreshSession,
       }}
     >
       {children}

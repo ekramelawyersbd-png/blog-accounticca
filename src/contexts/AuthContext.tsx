@@ -86,6 +86,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           };
           setAuthUser(sessionUser);
           localStorage.setItem('erp_auth_user', JSON.stringify(sessionUser));
+
+          // Automatically bridge authorized Firebase admin sessions to backend admin token
+          if (isAdmin && token && !localStorage.getItem('accounticca_workspace_admin_token_v2')) {
+            try {
+              const syncRes = await fetch('/api/admin/oauth-sync', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ idToken: token })
+              });
+              if (syncRes.ok) {
+                const syncData = await syncRes.json().catch(() => ({}));
+                if (syncData.token && syncData.user) {
+                  localStorage.setItem('accounticca_workspace_admin_token_v2', syncData.token);
+                  localStorage.setItem('accounticca_workspace_admin_profile_v2', JSON.stringify(syncData.user));
+                  localStorage.setItem('accounticca_admin_session_token', syncData.token);
+                  window.dispatchEvent(
+                    new CustomEvent('accounticca:admin-auth-updated', {
+                      detail: { token: syncData.token, user: syncData.user }
+                    })
+                  );
+                }
+              }
+            } catch {
+              // Non-fatal; ShopAdminLogin also supports explicit sync / Google SSO
+            }
+          }
         } catch {
           // Fallback session user if token refresh fails while offline
           const fallbackSession: ERPAuthUser = {

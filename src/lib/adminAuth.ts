@@ -31,13 +31,33 @@ const DEFAULT_ADMIN_ALLOWLIST = [
 
 const DATA_DIR = path.join(os.tmpdir(), 'accounticca-runtime-data');
 const REVOCATION_FILE = path.join(DATA_DIR, 'admin-session-revocations.json');
+const SESSION_SECRET_FILE = path.join(DATA_DIR, 'admin-session-secret.key');
 
 interface RevocationState {
   revokedJtis: Record<string, number>;
   revokedAllBeforeByEmail: Record<string, number>;
 }
 
-const BOOT_FALLBACK_SESSION_SECRET = crypto.randomBytes(32).toString('hex');
+function loadOrCreatePersistentFallbackSecret(): string {
+  try {
+    if (fs.existsSync(SESSION_SECRET_FILE)) {
+      const existing = fs.readFileSync(SESSION_SECRET_FILE, 'utf8').trim();
+      if (existing.length >= 32) {
+        return existing;
+      }
+    }
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const generated = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(SESSION_SECRET_FILE, generated, { encoding: 'utf8', mode: 0o600 });
+    return generated;
+  } catch {
+    return crypto.randomBytes(32).toString('hex');
+  }
+}
+
+const BOOT_FALLBACK_SESSION_SECRET = loadOrCreatePersistentFallbackSecret();
 let warnedMissingSecret = false;
 
 function getSessionSecret(): string {
@@ -52,14 +72,19 @@ function getSessionSecret(): string {
   if (!warnedMissingSecret) {
     warnedMissingSecret = true;
     console.warn(
-      '[AdminAuth] ADMIN_SESSION_SECRET is unset or shorter than 16 chars; using an ephemeral per-process secret (sessions invalidate on server restart).'
+      '[AdminAuth] ADMIN_SESSION_SECRET is unset; using a persistent local fallback secret in runtime tmpdir.'
     );
   }
   return BOOT_FALLBACK_SESSION_SECRET;
 }
 
 export function getAuthorizedAdminEmails(): Set<string> {
-  const fromEnv = (process.env.ADMIN_EMAILS || process.env.AUTHORIZED_ADMIN_EMAILS || '')
+  const fromEnv = (
+    process.env.ADMIN_ALLOWED_EMAILS ||
+    process.env.ADMIN_EMAILS ||
+    process.env.AUTHORIZED_ADMIN_EMAILS ||
+    ''
+  )
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter((e) => e.includes('@'));
@@ -359,7 +384,8 @@ export async function loginAdminWithPassword(
   const password = String(passwordRaw || '');
 
   const configuredHash = (process.env.ADMIN_PASSWORD_HASH || '').trim();
-  if (!configuredHash) {
+  const configuredEnvPassword = (process.env.ADMIN_PASSWORD || '').trim();
+  if (!configuredHash && !configuredEnvPassword) {
     return {
       success: false,
       status: 503,
@@ -368,7 +394,16 @@ export async function loginAdminWithPassword(
     };
   }
 
-  if (!isAuthorizedAdminEmail(email) || !password || !verifyAdminPasswordHash(password, configuredHash)) {
+  let passwordValid = false;
+  if (configuredHash) {
+    passwordValid = verifyAdminPasswordHash(password, configuredHash);
+  } else if (configuredEnvPassword) {
+    const a = Buffer.from(password, 'utf8');
+    const b = Buffer.from(configuredEnvPassword, 'utf8');
+    passwordValid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+
+  if (!isAuthorizedAdminEmail(email) || !password || !passwordValid) {
     recordFailedLogin(clientIp);
     console.warn(`[AdminAuth] Failed password login attempt for ${maskEmail(email)} from IP ${clientIp}`);
     return {

@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config({ override: true });
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -88,6 +89,8 @@ import {
   recordTurnstileVerificationEvent,
   getRecentTurnstileEvents,
   clearTurnstileVerificationEvents,
+  fetchCloudflareRealtimeAnalytics,
+  fetchCloudflareWafBlockedChallengedEvents,
 } from './src/lib/cloudflareMiddleware';
 
 const execFileAsync = promisify(execFile);
@@ -994,6 +997,52 @@ app.delete('/api/admin/cloudflare/turnstile-logs', requireAdminAuth, strictAuthL
     clearedAt: new Date().toISOString(),
     message: 'Turnstile verification logs cleared.',
   });
+});
+
+app.get('/api/admin/cloudflare/analytics', requireAdminAuth, async (req, res) => {
+  try {
+    const windowParam = typeof req.query.window === 'string' ? req.query.window : '1h';
+    const analytics = await fetchCloudflareRealtimeAnalytics(windowParam);
+    res.json({
+      success: true,
+      ...analytics,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Unable to retrieve Cloudflare traffic analytics.',
+    });
+  }
+});
+
+app.get('/api/admin/cloudflare/waf-events', requireAdminAuth, async (req, res) => {
+  try {
+    const ruleId = typeof req.query.ruleId === 'string' ? req.query.ruleId : undefined;
+    const since = typeof req.query.since === 'string' ? req.query.since : undefined;
+    const until = typeof req.query.until === 'string' ? req.query.until : undefined;
+    const rawAction = typeof req.query.action === 'string' ? req.query.action : 'all';
+    const action =
+      rawAction === 'blocked' || rawAction === 'challenged' ? rawAction : 'all';
+    const limit = Number(req.query.limit || 100);
+
+    const payload = await fetchCloudflareWafBlockedChallengedEvents({
+      ruleId,
+      since,
+      until,
+      action,
+      limit,
+    });
+
+    res.json({
+      success: true,
+      ...payload,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Unable to retrieve Cloudflare WAF blocked and challenged events.',
+    });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4604,6 +4653,8 @@ async function startServer() {
     });
   };
 
+  const httpServer = http.createServer(app);
+  let viteServer: any = null;
   let viteReadyPromise: Promise<void> = Promise.resolve();
 
   if (IS_PROD) {
@@ -4612,13 +4663,15 @@ async function startServer() {
     viteReadyPromise = (async () => {
       try {
         const { createServer: createViteServer } = await import('vite');
-        const vite = await createViteServer({
+        const hmrOption =
+          process.env.DISABLE_HMR === 'true' ? false : { server: httpServer };
+        viteServer = await createViteServer({
           root: __dirname,
           base: '/',
-          server: { middlewareMode: true, hmr: true, allowedHosts: true },
+          server: { middlewareMode: true, hmr: hmrOption, allowedHosts: true },
           appType: 'spa',
         });
-        frontendRouter.use(vite.middlewares);
+        frontendRouter.use(viteServer.middlewares);
       } catch (viteErr) {
         console.warn('[Server] Vite dev middleware unavailable, falling back to static dist:', viteErr);
         mountStaticProd();
@@ -4643,35 +4696,34 @@ async function startServer() {
 
   app.use(frontendRouter);
 
-  let server: any = null;
   const maxRetries = 10;
   let retryCount = 0;
 
+  httpServer.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      retryCount++;
+      if (retryCount <= maxRetries) {
+        console.warn(`[Server] Port ${PORT} busy, retrying (${retryCount}/${maxRetries}) in 500ms...`);
+        setTimeout(() => {
+          try {
+            httpServer.close();
+          } catch {}
+          listenWithRetry();
+        }, 500);
+        return;
+      }
+    }
+    console.error('[Server] Fatal listener error:', err);
+    process.exit(1);
+  });
+
   function listenWithRetry() {
-    server = app.listen(Number(PORT), '0.0.0.0', () => {
+    httpServer.listen(Number(PORT), '0.0.0.0', () => {
       console.log(
         `[Accounticca x E-Lawyers BD] Server running on http://0.0.0.0:${PORT} (Node ${process.version}, mode: ${IS_PROD ? 'production' : 'development'})`
       );
       console.log(`  ➜  Local:   http://localhost:${PORT}/`);
       console.log(`  ➜  Network: http://0.0.0.0:${PORT}/`);
-    });
-
-    server.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        retryCount++;
-        if (retryCount <= maxRetries) {
-          console.warn(`[Server] Port ${PORT} busy, retrying (${retryCount}/${maxRetries}) in 500ms...`);
-          setTimeout(() => {
-            try {
-              server.close();
-            } catch {}
-            listenWithRetry();
-          }, 500);
-          return;
-        }
-      }
-      console.error('[Server] Fatal listener error:', err);
-      process.exit(1);
     });
   }
 
@@ -4691,15 +4743,13 @@ async function startServer() {
     console.log(`[Server] ${signal} received. Closing HTTP server gracefully...`);
     clearTimeout(scheduleInitialTimer);
     clearInterval(scheduleIntervalTimer);
-    if (server) {
-      server.close(() => {
+    Promise.resolve(viteServer?.close?.()).catch(() => {}).finally(() => {
+      httpServer.close(() => {
         console.log('[Server] HTTP server closed cleanly.');
         process.exit(0);
       });
       setTimeout(() => process.exit(0), 3000).unref();
-    } else {
-      process.exit(0);
-    }
+    });
   };
 
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));
