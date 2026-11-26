@@ -40,6 +40,7 @@ import { SHOP_PRODUCTS, ShopProduct } from '../data/shopProducts';
 import { usePurchases } from '../contexts/PurchaseContext';
 import { ProductPurchaseActions } from '../components/shop/ProductPurchaseActions';
 import { BangladeshTaxMapExplorer } from '../components/tools/BangladeshTaxMapExplorer';
+import { StrategicPartnershipSection } from '../components/home/StrategicPartnershipSection';
 
 function ResilientImage({
   src,
@@ -1697,8 +1698,11 @@ export function Home() {
         </div>
       </section>
 
-      {/* 5. Curated Statutory & Compliance Guides Directory with Instant Filter */}
-      <section className="w-full mx-auto max-w-full px-4 py-8 sm:px-6 lg:px-10 xl:px-12">
+      {/* 5. Strategic Ecosystem Partnership — Accounticca × E-Lawyers */}
+      <section className="w-full py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200/80">
+        <StrategicPartnershipSection />
+
+        {/* Hidden Curated Statutory & Compliance Guides Directory */}
         <div className="hidden bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-2xs">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <div>

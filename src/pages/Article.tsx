@@ -20,6 +20,7 @@ import { useBookmarks } from '../contexts/BookmarkContext';
 import { useFocusMode } from '../contexts/FocusModeContext';
 import { FocusModeReaderBar } from '../components/article/FocusModeReaderBar';
 import { QuoteCardGeneratorModal } from '../components/article/QuoteCardGeneratorModal';
+import { BlogPartnershipBanner } from '../components/article/BlogPartnershipBanner';
 
 import { ComplianceChecklist } from '../components/ComplianceChecklist';
 import { ImageCarousel } from '../components/ImageCarousel';
@@ -59,6 +60,8 @@ import { TurnoverSlabsSummaryCard } from '../components/tax/TurnoverSlabsSummary
 import { TaxRebateCeilingCard } from '../components/tax/TaxRebateCeilingCard';
 import { CorporateTaxRateCalculator } from '../components/tax/CorporateTaxRateCalculator';
 import { Section163ComparativeDashboard } from '../components/tax/Section163ComparativeDashboard';
+import { PartnershipFirmSection73Checker } from '../components/tax/PartnershipFirmSection73Checker';
+import { PartnershipAuditThresholdCalculator } from '../components/tax/PartnershipAuditThresholdCalculator';
 import { CorporateComplianceMasteryQuiz } from '../components/tax/CorporateComplianceMasteryQuiz';
 import { CapitalGainsTaxCalculator } from '../components/tax/CapitalGainsTaxCalculator';
 import { TaxReturnChecklist } from '../components/tax/TaxReturnChecklist';
@@ -396,14 +399,49 @@ export function Article() {
         return <ImageCarousel images={carouselImages} />;
       }
       
-      if (
-        elementChildren.some(
-          (child: any) =>
-            React.isValidElement(child) &&
-            ((child.props as any)?.node?.tagName === "document-checklist" ||
-              (child.props as any)?.node?.tagName === "vat-apportionment-calculator")
-        )
-      ) {
+      const blockTagNames = new Set([
+        'document-checklist',
+        'other-sources-checklist',
+        'tds-lottery-gifts-screener',
+        'taxable-exempt-screener',
+        'vat-apportionment-calculator',
+        'partnership-audit-threshold-calculator',
+        'div',
+        'section',
+        'article',
+        'aside',
+        'figure',
+        'table',
+        'ul',
+        'ol',
+        'blockquote',
+        'pre',
+        'hr',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+      ]);
+
+      const hasBlockNodeChild = Array.isArray(node?.children) && node.children.some(
+        (hastChild: any) =>
+          hastChild?.type === 'element' &&
+          typeof hastChild?.tagName === 'string' &&
+          blockTagNames.has(hastChild.tagName.toLowerCase())
+      );
+
+      const hasBlockReactChild = elementChildren.some((child: any) => {
+        if (!React.isValidElement(child)) return false;
+        const tagFromNode = (child.props as any)?.node?.tagName;
+        if (typeof tagFromNode === 'string' && blockTagNames.has(tagFromNode.toLowerCase())) {
+          return true;
+        }
+        return typeof child.type === 'string' && blockTagNames.has(child.type.toLowerCase());
+      });
+
+      if (hasBlockNodeChild || hasBlockReactChild) {
         return <div className="mb-4">{children}</div>;
       }
       const highlightedChildren = highlightGlossaryInReactNodes(
@@ -851,98 +889,8 @@ export function Article() {
                 {article.excerpt}
               </p>
               
-              <div className="flex flex-wrap items-center justify-between gap-6 pb-8 border-b border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-4">
-                  <img src={article.author.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'} alt={article.author.name} className="w-12 h-12 rounded-full border border-slate-200 object-cover" />
-                  <div>
-                    <p className={`font-bold ${headingColorClass}`}>{article.author.name}</p>
-                    <div className="flex items-center gap-3 text-sm text-slate-500">
-                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {format(new Date(article.publishedAt), 'MMM d, yyyy')}</span>
-                      <span>&bull;</span>
-                      <EstimatedReadingTime content={localizedContent} variant="inline" />
-                      {!isFocusMode && (
-                        <>
-                          <span>&bull;</span>
-                          <a href="#professional-comments-section" className="flex items-center gap-1 text-slate-600 hover:text-emerald-700 font-semibold transition-colors">
-                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Discussion</span>
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Text-to-Speech (TTS) Reader Button */}
-                    <ReadAloudButton
-                      content={localizedContent}
-                      title={article.title}
-                      variant="pill"
-                      showSecurityBadge={true}
-                    />
-
-                    {/* Focus Mode Toggle Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void import('../services/firebaseAnalyticsService').then(
-                          ({ trackUxEngagementEvent }) =>
-                            trackUxEngagementEvent({
-                              eventName: 'focus_mode_toggle',
-                              contentType: 'article',
-                              contentId: article.id,
-                              title: article.title,
-                              category: articleCategoryName,
-                              action: isFocusMode ? 'exit_focus_mode' : 'enter_focus_mode',
-                              scrollDepthPct: scrollProgress
-                            })
-                        );
-                        toggleFocusMode();
-                      }}
-                      title={isFocusMode ? "Exit Focus Mode (Esc)" : "Enter Focus Mode: Hide navigation and sidebars for clean, distraction-free reading"}
-                      aria-label="Toggle Focus Mode"
-                      className={`px-3.5 py-2.5 rounded-xl border font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
-                        isFocusMode 
-                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' 
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
-                      }`}
-                    >
-                      {isFocusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4 text-emerald-600" />}
-                      <span className="text-sm font-semibold">{isFocusMode ? "Exit Focus" : "Focus Mode"}</span>
-                      <kbd className="hidden sm:inline-block text-[10px] bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded font-mono">
-                        F
-                      </kbd>
-                    </button>
-
-                    <button 
-                      id="article-bookmark-btn"
-                      onClick={toggleSave} 
-                      title={isSaved ? "Remove from Saved Items" : "Save this article to your private Dashboard"}
-                      aria-label={isSaved ? "Remove from Saved Items" : "Save this article to your private Dashboard"}
-                      className={`px-4 py-2.5 rounded-xl border font-semibold transition-all flex items-center gap-2 cursor-pointer ${
-                        isSaved 
-                          ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm' 
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
-                      }`}
-                    >
-                      <Bookmark className={`w-4 h-4 transition-transform active:scale-125 duration-150 ${isSaved ? 'fill-current text-emerald-600' : ''}`} />
-                      <span className="hidden sm:inline text-sm">{isSaved ? "Saved to Dashboard" : "Save Article"}</span>
-                    </button>
-                  </div>
-
-                  {saveFeedback && (
-                    <div id="bookmark-save-feedback" className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl text-xs shadow-xs animate-in fade-in">
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>{saveFeedback}</span>
-                      <Link to="/dashboard?tab=saved" className="font-bold underline ml-1 hover:text-emerald-950">
-                        View Dashboard &rarr;
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Persistent Accounticca × E-Lawyers Strategic Ecosystem Partnership Banner */}
+              <BlogPartnershipBanner />
 
               {/* Top Social Sharing Bar (Hidden in Focus Mode) */}
               {!isFocusMode && (
@@ -1181,6 +1129,17 @@ export function Article() {
                     <div className="my-10 not-prose scroll-mt-24" id="vat-apportionment-calculator-tool">
                       <VatApportionmentCalculator />
                     </div>
+                  ),
+                  "partnership-audit-threshold-calculator": () => (
+                    <div className="my-8 not-prose scroll-mt-24" id="partnership-audit-threshold-calculator">
+                      <PartnershipAuditThresholdCalculator
+                        forceLanguage={
+                          article.id === 'bangladesh-partnership-firm-audit-dvs-ics-2026-2027-bangla'
+                            ? 'bn'
+                            : undefined
+                        }
+                      />
+                    </div>
                   )
                 } as any}
               >
@@ -1280,6 +1239,18 @@ export function Article() {
                   initialGrossReceipts={10000000}
                   initialProfitMargin={5}
                 />
+              </div>
+            )}
+
+            {article.id === 'partnership-firm-audit-requirements-bangladesh-2026-2027' && (
+              <div className="my-12 scroll-mt-24 not-prose" id="partnership-firm-section-73-checker">
+                <PartnershipFirmSection73Checker />
+              </div>
+            )}
+
+            {article.id === 'bangladesh-partnership-firm-audit-dvs-ics-2026-2027-bangla' && (
+              <div className="my-12 scroll-mt-24 not-prose" id="partnership-firm-section-73-checker">
+                <PartnershipFirmSection73Checker forceLanguage="bn" />
               </div>
             )}
 

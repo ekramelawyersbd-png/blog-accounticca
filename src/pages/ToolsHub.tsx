@@ -425,6 +425,18 @@ export const TOOLS_CATALOG: ToolItem[] = [
     badge: '8 Integrations Active',
   },
   {
+    id: 'audit-eligibility-calculator',
+    anchorId: 'audit-eligibility-calculator-tool',
+    name: 'Audit Eligibility Calculator',
+    description: 'Check whether a Bangladesh partnership firm requires CA-audited financial statements (turnover > BDT 10 crore or capital > BDT 5 crore) or only a certified Income Computation Sheet (ICS).',
+    category: 'Audit, Workspace & Docs',
+    path: '/tools/audit-eligibility-calculator',
+    icon: FileCheck2,
+    color: 'bg-slate-900 text-white',
+    statutoryBasis: 'Income Tax Act 2023 · Sec 73(1) & 73(2) · Finance Act 2026',
+    badge: 'Sec. 73 · 2026–27',
+  },
+  {
     id: 'dvc-verification',
     anchorId: 'dvc-verification-tool',
     name: 'ICAB Document Verification Code (DVC) Compliance Tool',
@@ -595,6 +607,34 @@ export const ToolsHub: React.FC = () => {
         category="BusinessApplication"
       />
 
+      {/* Featured Tool Card: Audit Eligibility Calculator */}
+      <div className="bg-white rounded-2xl border border-emerald-200/90 shadow-xs p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <FileCheck2 className="w-6 h-6" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-emerald-800">
+              Featured Tool · Section 73 (Tax Year 2026–2027)
+            </p>
+            <h2 className="text-lg sm:text-xl font-extrabold text-slate-950 tracking-tight mt-0.5">
+              Audit Eligibility Calculator
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1 max-w-2xl">
+              Enter a partnership firm&apos;s annual turnover and capital to instantly check whether CA-audited financial statements (turnover &gt; BDT 10 crore or capital &gt; BDT 5 crore) or only a certified Income Computation Sheet (ICS) is required.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="/tools/audit-eligibility-calculator"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-xs transition-colors whitespace-nowrap shrink-0 self-start lg:self-center"
+        >
+          <span>Open Calculator</span>
+          <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        </Link>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -627,7 +667,7 @@ export const ToolsHub: React.FC = () => {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search all 32 tools or statutory acts..."
+            placeholder={`Search all ${TOOLS_CATALOG.length} tools or statutory acts...`}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"

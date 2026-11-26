@@ -47,6 +47,8 @@ import { applicableActEachEntityBangladeshArticle } from './applicableActEachEnt
 import { rjscNameClearanceBangladeshArticle } from './rjscNameClearanceBangladeshArticle';
 import { rjscReturnsFilingBangladeshArticle } from './rjscReturnsFilingBangladeshArticle';
 import { rjscCertifiedCopiesBangladeshArticle } from './rjscCertifiedCopiesBangladeshArticle';
+import { partnershipFirmAudit2026Article } from './partnershipFirmAudit2026Article';
+import { partnershipFirmAuditBangla2026Article } from './partnershipFirmAuditBangla2026Article';
 
 import { teamMembers } from './teamData';
 
@@ -96,6 +98,8 @@ export const categories: { id: string; name: Category; description: string }[] =
 ];
 
 export const mockArticles: Article[] = [
+  partnershipFirmAuditBangla2026Article,
+  partnershipFirmAudit2026Article,
   rjscCertifiedCopiesBangladeshArticle,
   rjscReturnsFilingBangladeshArticle,
   rjscNameClearanceBangladeshArticle,

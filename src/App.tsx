@@ -28,6 +28,7 @@ import { AgriculturalTaxPage } from './pages/tools/AgriculturalTaxPage';
 import { MinimumTurnoverTaxPage } from './pages/tools/MinimumTurnoverTaxPage';
 import { Section163ComparativeDashboardPage } from './pages/tools/Section163ComparativeDashboardPage';
 import { DvcVerificationPage } from './pages/tools/DvcVerificationPage';
+import { AuditEligibilityCalculatorPage } from './pages/tools/AuditEligibilityCalculatorPage';
 import { ResourceLibraryPage as StandaloneResourceLibraryPage } from './pages/tools/ResourceLibraryPage';
 import { EarlyFilingIncentivePage } from './pages/tools/EarlyFilingIncentivePage';
 import { LossCarryForwardToolPage } from './pages/tools/LossCarryForwardToolPage';
@@ -348,6 +349,8 @@ export default function App() {
                 <Route path="tools/section-163-minimum-tax-dashboard" element={<Section163ComparativeDashboardPage />} />
                 <Route path="section-163-dashboard" element={<Section163ComparativeDashboardPage />} />
                 <Route path="tools/dvc-verification" element={<DvcVerificationPage />} />
+                <Route path="tools/audit-eligibility-calculator" element={<AuditEligibilityCalculatorPage />} />
+                <Route path="audit-eligibility-calculator" element={<Navigate to="/tools/audit-eligibility-calculator" replace />} />
                 <Route path="tools/resource-library" element={<StandaloneResourceLibraryPage />} />
                 <Route path="tools/early-filing-incentive" element={<EarlyFilingIncentivePage />} />
                 <Route path="tools/loss-carry-forward-calculator" element={<LossCarryForwardToolPage />} />
@@ -443,6 +446,11 @@ export default function App() {
                 <Route path="corporate-vat-compliance-monthly-return-protocol-bangladesh" element={<Navigate to="/article/corporate-vat-compliance-monthly-return-protocol-bangladesh" replace />} />
                 <Route path="corporate-vat-compliance-bangladesh" element={<Navigate to="/article/corporate-vat-compliance-monthly-return-protocol-bangladesh" replace />} />
                 <Route path="mushak-9-1-return-guide-bangladesh" element={<Navigate to="/article/corporate-vat-compliance-monthly-return-protocol-bangladesh" replace />} />
+                <Route path="partnership-firm-audit-requirements-bangladesh-2026-2027" element={<Navigate to="/article/partnership-firm-audit-requirements-bangladesh-2026-2027" replace />} />
+                <Route path="partnership-firm-audit-bangladesh-2026" element={<Navigate to="/article/partnership-firm-audit-requirements-bangladesh-2026-2027" replace />} />
+                <Route path="income-computation-sheet-partnership-firm-bangladesh" element={<Navigate to="/article/partnership-firm-audit-requirements-bangladesh-2026-2027" replace />} />
+                <Route path="partnership-firm-audit-bangla-2026-2027" element={<Navigate to="/article/bangladesh-partnership-firm-audit-dvs-ics-2026-2027-bangla" replace />} />
+                <Route path="partnership-firm-audit-bn" element={<Navigate to="/article/bangladesh-partnership-firm-audit-dvs-ics-2026-2027-bangla" replace />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

@@ -15,6 +15,9 @@ import { useShopAuth } from '../contexts/ShopAuthContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ServiceSEO } from '../components/SEO';
 
+// Feature flag: keep Google Admin SSO visible in inactive state until activation is requested
+const GOOGLE_ADMIN_SSO_ENABLED = false;
+
 export function ShopAdminLogin() {
   const {
     login,
@@ -48,8 +51,9 @@ export function ShopAdminLogin() {
     }
   }, [isAuthenticated, authLoading, navigate, redirectTo]);
 
-  // If an authorized admin is already signed into Firebase Google Auth, auto-sync seamlessly
+  // If an authorized admin is already signed into Firebase Google Auth, auto-sync seamlessly (only when SSO is active)
   useEffect(() => {
+    if (!GOOGLE_ADMIN_SSO_ENABLED) return;
     if (!authLoading && !isAuthenticated && authUser?.role === 'admin') {
       let active = true;
       void syncActiveFirebaseAdmin().then((res) => {
@@ -64,6 +68,7 @@ export function ShopAdminLogin() {
   }, [authLoading, isAuthenticated, authUser?.role, syncActiveFirebaseAdmin, navigate, redirectTo]);
 
   const handleGoogleAdminSignIn = async () => {
+    if (!GOOGLE_ADMIN_SSO_ENABLED) return;
     clearError();
     setErrorMsg(null);
     setIsGoogleSubmitting(true);
@@ -161,13 +166,18 @@ export function ShopAdminLogin() {
             </div>
           )}
 
-          {/* Primary Google Admin SSO Action */}
+          {/* Primary Google Admin SSO Action (Inactive — Display Only) */}
           <div className="space-y-2">
             <button
               type="button"
-              onClick={() => void handleGoogleAdminSignIn()}
-              disabled={isGoogleSubmitting || isSubmitting}
-              className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 whitespace-nowrap"
+              onClick={GOOGLE_ADMIN_SSO_ENABLED ? () => void handleGoogleAdminSignIn() : undefined}
+              disabled={!GOOGLE_ADMIN_SSO_ENABLED || isGoogleSubmitting || isSubmitting}
+              aria-disabled={!GOOGLE_ADMIN_SSO_ENABLED}
+              className={
+                GOOGLE_ADMIN_SSO_ENABLED
+                  ? 'w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 whitespace-nowrap'
+                  : 'w-full py-3 px-4 bg-slate-100 text-slate-400 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 cursor-not-allowed select-none whitespace-nowrap'
+              }
             >
               {isGoogleSubmitting ? (
                 <>
@@ -176,7 +186,11 @@ export function ShopAdminLogin() {
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                  <svg
+                    className={`w-4 h-4 shrink-0 ${GOOGLE_ADMIN_SSO_ENABLED ? '' : 'opacity-45 grayscale'}`}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
                     <path
                       fill="#4285F4"
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -194,12 +208,18 @@ export function ShopAdminLogin() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  <span>Sign in with Google (Authorized Admin SSO)</span>
+                  <span>
+                    {GOOGLE_ADMIN_SSO_ENABLED
+                      ? 'Sign in with Google (Authorized Admin SSO)'
+                      : 'Sign in with Google (Inactive)'}
+                  </span>
                 </>
               )}
             </button>
-            <p className="text-[11px] text-center text-slate-500">
-              Recommended — cryptographically verified via Firebase RS256 ID token on the server.
+            <p className="text-[11px] text-center text-slate-400">
+              {GOOGLE_ADMIN_SSO_ENABLED
+                ? 'Recommended — cryptographically verified via Firebase RS256 ID token on the server.'
+                : 'Currently inactive — display only until activated.'}
             </p>
           </div>
 

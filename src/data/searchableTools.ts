@@ -313,6 +313,42 @@ export const searchableTaxTools: SearchableTool[] = [
     featured: true
   },
   {
+    id: 'audit-eligibility-calculator',
+    name: 'Audit Eligibility Calculator (CA Audit vs. ICS Only — Section 73)',
+    shortName: 'Audit Eligibility Calculator',
+    category: 'Tax Calculator',
+    description: 'Enter Annual Turnover and Capital to check whether CA-audited financial statements (> BDT 10 Cr turnover or > BDT 5 Cr capital) are mandatory or only an Income Computation Sheet (ICS) is required.',
+    path: '/tools/audit-eligibility-calculator',
+    iconName: 'Calculator',
+    badge: 'Sec. 73 Tool',
+    tags: ['audit eligibility calculator', 'ca audit mandatory', 'ics only', 'income computation sheet', '10 crore turnover', '5 crore capital', 'partnership firm audit', 'section 73', 'dvs', 'dvc'],
+    featured: true
+  },
+  {
+    id: 'partnership-firm-audit-ics-2026-2027',
+    name: 'Partnership Firm Audit, DVS & Income Computation Sheet (Tax Year 2026–2027)',
+    shortName: 'Partnership Firm Audit & ICS',
+    category: 'Statutory Guide',
+    description: 'Section 73 (Finance Act 2026) compliance guide and interactive checker for partnership firms: BDT 10 Cr turnover / BDT 5 Cr capital audit thresholds, ICAB DVS/DVC rules, and mandatory certified ICS.',
+    path: '/article/partnership-firm-audit-requirements-bangladesh-2026-2027',
+    iconName: 'FileText',
+    badge: 'Sec. 73 · 2026–27',
+    tags: ['partnership firm audit', 'section 73', 'finance act 2026', 'section 59', '10 crore turnover', '5 crore capital', 'dvs', 'dvc', 'icab', 'income computation sheet', 'ics', 'cma', 'income tax lawyer', 'taxable profit'],
+    featured: true
+  },
+  {
+    id: 'partnership-firm-audit-ics-bangla-2026-2027',
+    name: 'বাংলাদেশে অংশীদারি ফার্মের অডিট সংক্রান্ত নতুন বিধান (করবর্ষ ২০২৬–২০২৭ | DVS ও ICS)',
+    shortName: 'অংশীদারি ফার্মের অডিট ও ICS',
+    category: 'Statutory Guide',
+    description: 'অর্থ আইন ২০২৬ ও আয়কর আইন ২০২৩-এর ধারা ৭৩ অনুযায়ী অংশীদারি ফার্মের ১০ কোটি টাকা টার্নওভার / ৫ কোটি টাকা মূলধন অডিট সীমা, ICAB DVS/DVC এবং বাধ্যতামূলক আয় পরিগণনাপত্র (ICS) গাইড।',
+    path: '/article/bangladesh-partnership-firm-audit-dvs-ics-2026-2027-bangla',
+    iconName: 'FileText',
+    badge: 'ধারা ৭৩ · বাংলা',
+    tags: ['অংশীদারি ফার্মের অডিট', 'আয় পরিগণনাপত্র', 'ধারা ৭৩', 'অর্থ আইন ২০২৬', '১০ কোটি টাকা টার্নওভার', '৫ কোটি টাকা মূলধন', 'dvs', 'dvc', 'ics', 'partnership firm audit bangla'],
+    featured: true
+  },
+  {
     id: 'corporate-tax-return-deadline-guide',
     name: 'Corporate Income Tax Return Deadline 2026 (কোম্পানি রিটার্ন দাখিলের সংবিধিবদ্ধ সময়সীমা)',
     shortName: 'Corporate Return Deadline',
